@@ -70,10 +70,10 @@ namespace pvd
 		// Provider can override this function to handle the event if needed.
 		virtual bool SendEvent(const std::shared_ptr<MediaEvent> &event);
 
-		std::shared_ptr<ov::Url> GetRequestedUrl() const;
+		std::shared_ptr<const ov::Url> GetRequestedUrl() const;
 		void SetRequestedUrl(const std::shared_ptr<ov::Url> &requested_url);
 
-		std::shared_ptr<ov::Url> GetFinalUrl() const;
+		std::shared_ptr<const ov::Url> GetFinalUrl() const;
 		void SetFinalUrl(const std::shared_ptr<ov::Url> &final_url);
 
 		int64_t GetCurrentTimestampMs();

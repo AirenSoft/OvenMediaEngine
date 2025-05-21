@@ -193,7 +193,7 @@ namespace pvd
 		return SendFrame(event);
 	}
 
-	std::shared_ptr<ov::Url> Stream::GetRequestedUrl() const
+	std::shared_ptr<const ov::Url> Stream::GetRequestedUrl() const
 	{
 		return _requested_url;
 	}
@@ -203,7 +203,7 @@ namespace pvd
 		_requested_url = requested_url;
 	}
 
-	std::shared_ptr<ov::Url> Stream::GetFinalUrl() const
+	std::shared_ptr<const ov::Url> Stream::GetFinalUrl() const
 	{
 		return _final_url;
 	}
