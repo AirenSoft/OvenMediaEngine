@@ -15,11 +15,10 @@ bool EncoderAAC::SetCodecParams()
 	_codec_context->bit_rate = GetRefTrack()->GetBitrate();
 	_codec_context->sample_fmt = (AVSampleFormat)GetSupportedFormat();
 	_codec_context->sample_rate = GetRefTrack()->GetSampleRate();
-	_codec_context->channel_layout = static_cast<uint64_t>(GetRefTrack()->GetChannel().GetLayout());
-	_codec_context->channels = GetRefTrack()->GetChannel().GetCounts();
+	::av_channel_layout_default(&_codec_context->ch_layout, GetRefTrack()->GetChannel().GetCounts());
 	_codec_context->initial_padding = 0;
 
-	_bitstream_format = cmn::BitstreamFormat::AAC_ADTS;
+	_bitstream_format = cmn::BitstreamFormat::AAC_ADTS;;
 	
 	_packet_type = cmn::PacketType::RAW;
 

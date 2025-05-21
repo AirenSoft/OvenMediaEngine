@@ -13,7 +13,7 @@ OPUS_VERSION=1.3.1
 VPX_VERSION=1.11.0
 FDKAAC_VERSION=2.0.2
 NASM_VERSION=2.15.05
-FFMPEG_VERSION=5.0.1
+FFMPEG_VERSION=5.1.4
 JEMALLOC_VERSION=5.3.0
 PCRE2_VERSION=10.39
 OPENH264_VERSION=2.4.0
@@ -274,18 +274,6 @@ install_ffmpeg()
         PATH=$PATH:/usr/local/nvidia/bin:/usr/local/cuda/bin
     fi
 
-    # If there is an enable-xma option, add xilinx video sdk 3.0
-    if [ "$XILINX_XMA_CODEC_HWACCELS" = true ] ; then
-        FFMPEG_DOWNLOAD_URL=https://github.com/Xilinx/app-ffmpeg4-xma.git
-        ADDI_ENCODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
-        ADDI_DECODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
-        ADDI_FILTERS+=",multiscale_xma,xvbm_convert"
-     	ADDI_LIBS+=" --enable-x86asm --enable-libxma2api --enable-libxvbm --enable-libxrm --enable-cross-compile "
-        ADDI_CFLAGS+=" -I/opt/xilinx/xrt/include/xma2 "
-        ADDI_LDFLAGS+="-L/opt/xilinx/xrt/lib -L/opt/xilinx/xrm/lib  -Wl,-rpath,/opt/xilinx/xrt/lib,-rpath,/opt/xilinx/xrm/lib"
-        ADDI_EXTRA_LIBS+="--extra-libs=-lxma2api --extra-libs=-lxrt_core --extra-libs=-lxrm --extra-libs=-lxrt_coreutil --extra-libs=-lpthread --extra-libs=-ldl "
-    fi
-
     if [ "$VIDEOLAN_X264_CODEC" == true ]; then
         ADDI_LIBS+=" --enable-libx264 "
         ADDI_ENCODER+=",libx264"
@@ -312,17 +300,32 @@ install_ffmpeg()
     # Defining a Temporary Installation Path
     DIR=${TEMP_PATH}/ffmpeg
 
-    # Download
-    if [ "$XILINX_XMA_CODEC_HWACCELS" = false ] ; then
-	    (rm -rf ${DIR}  && mkdir -p ${DIR} && \
-	    cd ${DIR} && \
-	    curl -sSLf ${FFMPEG_DOWNLOAD_URL} | tar -xz --strip-components=1 ) || fail_exit "ffmpeg"
-    else
-        # Download FFmpeg for xilinx video sdk 3.0
-	    (rm -rf ${DIR}  && mkdir -p ${DIR} && \
-	    git clone --depth=1 --branch U30_GA_3 https://github.com/Xilinx/app-ffmpeg4-xma.git ${DIR}) || fail_exit "ffmpeg"	
-        # Compatible with nvcc 10.x and later
-        (cd ${DIR} && sed -i 's/compute_30/compute_50/g' configure &&  sed -i 's/sm_30/sm_50/g' configure) || fail_exit "ffmpeg"
+    # Download FFmpeg
+    (rm -rf ${DIR}  && mkdir -p ${DIR} && \
+    cd ${DIR} && \
+    curl -sSLf ${FFMPEG_DOWNLOAD_URL} | tar -xz --strip-components=1 ) || fail_exit "ffmpeg"
+
+    # If there is an enable-xma option, add xilinx video sdk 
+
+    if [ "$XILINX_XMA_CODEC_HWACCELS" = true ] ; then
+        XILINX_XMA_PATCH_PATH=$SCRIPT_PATH/patches/u30_ffmpeg_5.1.4_diff.patch
+        if [ ! -f $XILINX_XMA_PATCH_PATH ]; then
+            echo "Could not found the patch file $XILINX_XMA_PATCH_PATH"
+            fail_exit "ffmpeg"
+        fi
+        # Apply patch for XMA
+        echo "Applying the patch founed in $XILINX_XMA_PATCH_PATH"
+
+        # Apply path to ffmpeg
+        (cd ${DIR} && git apply $XILINX_XMA_PATCH_PATH) || fail_exit "ffmpeg"
+
+        ADDI_ENCODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
+        ADDI_DECODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
+        ADDI_FILTERS+=",multiscale_xma,xvbm_convert"
+     	ADDI_LIBS+=" --enable-x86asm --enable-libxma2api --enable-libxvbm --enable-libxrm --enable-cross-compile "
+        ADDI_CFLAGS+=" -I/opt/xilinx/xrt/include/xma2 "
+        ADDI_LDFLAGS+="-L/opt/xilinx/xrt/lib -L/opt/xilinx/xrm/lib  -Wl,-rpath,/opt/xilinx/xrt/lib,-rpath,/opt/xilinx/xrm/lib"
+        ADDI_EXTRA_LIBS+="--extra-libs=-lxma2api --extra-libs=-lxrt_core --extra-libs=-lxrm --extra-libs=-lxrt_coreutil --extra-libs=-lpthread --extra-libs=-ldl "
     fi
 	
     # If there is an enable-nilogan option, add patch from libxcoder_logan-path 
@@ -343,23 +346,16 @@ install_ffmpeg()
         #ADDI_EXTRA_LIBS="-lpthread"
     fi
     
-    # Patch for Enterprise
-    if [[ "$(type -t install_patch_ffmpeg)"  == 'function' ]];
-    then
-        install_patch_ffmpeg ${DIR}
-    fi
-
     # Build & Install
     (cd ${DIR} && PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PREFIX}/lib64/pkgconfig:${PREFIX}/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH} ./configure \
     --prefix="${PREFIX}" \
     --extra-cflags="-I${PREFIX}/include ${ADDI_CFLAGS}"  \
-    --extra-ldflags="${ADDI_LDFLAGS} -L${PREFIX}/lib -Wl,-rpath,${PREFIX}/lib " \
+    --extra-ldflags="${ADDI_LDFLAGS} -L${PREFIX}/lib -Wl,-rpath,${PREFIX}/lib -Wl,--disable-new-dtags" \
     --extra-libs=-ldl ${ADDI_EXTRA_LIBS} \
     ${ADDI_LICENSE} \
-    --disable-everything --disable-programs --disable-avdevice --disable-dwt --disable-lsp --disable-lzo --disable-faan --disable-pixelutils \
+    --disable-everything --disable-programs --disable-avdevice --disable-dwt --disable-lsp --disable-faan --disable-pixelutils \
     --enable-shared --enable-zlib --enable-libopus --enable-libvpx --enable-libfdk_aac --enable-libopenh264 --enable-openssl --enable-network --enable-libsrt --enable-dct --enable-rdft --enable-libwebp ${ADDI_LIBS} \
     ${ADDI_HWACCEL} \
-    --enable-ffmpeg \
     --enable-encoder=libvpx_vp8,libopus,libfdk_aac,libopenh264,mjpeg,png,libwebp${ADDI_ENCODER} \
     --enable-decoder=aac,aac_latm,aac_fixed,mp3float,mp3,h264,hevc,opus,vp8${ADDI_DECODER} \
     --enable-parser=aac,aac_latm,aac_fixed,h264,hevc,opus,vp8 \
@@ -596,7 +592,7 @@ case $i in
     NETINT_LOGAN_XCODER_COMPILE_PATH="${i#*=}" 
     shift
     ;;
-    --enable-nvc)
+    --enable-nvc|--enable-nv)
     NVIDIA_NV_CODEC_HWACCELS=true
     shift
     ;;

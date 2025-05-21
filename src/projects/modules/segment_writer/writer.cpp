@@ -258,8 +258,7 @@ bool Writer::FillCodecParameters(const std::shared_ptr<const Track> &track, AVCo
 			codec_parameters->codec_type = AVMEDIA_TYPE_AUDIO;
 			codec_parameters->codec_id = AvCodecIdFromMediaCodecId(media_track->GetCodecId());
 			codec_parameters->bit_rate = media_track->GetBitrate();
-			codec_parameters->channels = static_cast<int>(media_track->GetChannel().GetCounts());
-			codec_parameters->channel_layout = AvChannelLayoutFromAudioChannelLayout(media_track->GetChannel().GetLayout());
+			::av_channel_layout_default(&codec_parameters->ch_layout, media_track->GetChannel().GetCounts());
 			codec_parameters->sample_rate = media_track->GetSample().GetRateNum();
 			codec_parameters->frame_size = 1024;
 			codec_parameters->format = static_cast<int>(media_track->GetSample().GetFormat());

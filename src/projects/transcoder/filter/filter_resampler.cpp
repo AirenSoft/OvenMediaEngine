@@ -270,8 +270,8 @@ void FilterResampler::WorkerThread()
 		ret = ::av_buffersrc_write_frame(_buffersrc_ctx, av_frame);
 		if (ret < 0)
 		{
-			logte("An error occurred while feeding the audio filtergraph: pts: %lld, linesize: %d, srate: %d, layout: %d, channels: %d, format: %d, rq: %d",
-				  _frame->pts, _frame->linesize[0], _frame->sample_rate, _frame->channel_layout, _frame->channels, _frame->format, _input_buffer.Size());
+			logte("An error occurred while feeding the audio filtergraph: pts: %lld, linesize: %d, srate: %d, channels: %d, format: %d",
+				  av_frame->pts, av_frame->linesize[0], av_frame->sample_rate, av_frame->ch_layout.nb_channels, av_frame->format);
 
 			continue;
 		}

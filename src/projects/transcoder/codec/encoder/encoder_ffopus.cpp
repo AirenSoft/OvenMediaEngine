@@ -15,8 +15,7 @@ bool EncoderFFOPUS::SetCodecParams()
 	_codec_context->bit_rate = GetRefTrack()->GetBitrate();
 	_codec_context->sample_fmt = (AVSampleFormat)GetSupportedFormat();
 	_codec_context->sample_rate = GetRefTrack()->GetSampleRate();
-	_codec_context->channel_layout = static_cast<uint64_t>(GetRefTrack()->GetChannel().GetLayout());
-	_codec_context->channels = GetRefTrack()->GetChannel().GetCounts();
+	::av_channel_layout_default(&_codec_context->ch_layout, GetRefTrack()->GetChannel().GetCounts());
 	
 	// Support Frequency
 	// 4000 - OPUS_BANDWIDTH_NARROWBAND (8kHz) (2~8 kbps)

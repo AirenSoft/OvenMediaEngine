@@ -374,7 +374,7 @@ namespace ffmpeg
 				case cmn::MediaType::Audio:
 					media_track->SetSampleRate(stream->codecpar->sample_rate);
 					media_track->GetSample().SetFormat(ffmpeg::Conv::ToAudioSampleFormat(stream->codecpar->format));
-					media_track->GetChannel().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(stream->codecpar->channel_layout));
+					media_track->GetChannel().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(stream->codecpar->ch_layout.u.mask));
 					break;
 				default:
 					break;
@@ -494,7 +494,7 @@ namespace ffmpeg
 					media_frame->SetMediaType(media_type);
 					media_frame->SetBytesPerSample(::av_get_bytes_per_sample(static_cast<AVSampleFormat>(frame->format)));
 					media_frame->SetNbSamples(frame->nb_samples);
-					media_frame->GetChannels().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(frame->channel_layout));
+					media_frame->GetChannels().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(frame->ch_layout.u.mask));
 					media_frame->SetSampleRate(frame->sample_rate);
 					media_frame->SetFormat(frame->format);
 					media_frame->SetDuration(frame->pkt_duration);
@@ -704,10 +704,9 @@ namespace ffmpeg
 					else
 					{
 						char channel_layout[16]{};
-						::av_get_channel_layout_string(channel_layout, OV_COUNTOF(channel_layout), parameters->channels, parameters->channel_layout);
-
+						av_channel_layout_describe(&parameters->ch_layout, channel_layout, OV_COUNTOF(channel_layout));
 						// 48000 Hz, stereo, fltp,
-						message.AppendFormat("%d Hz, %s(%d), %s, ", parameters->sample_rate, channel_layout, parameters->channels, ::av_get_sample_fmt_name(static_cast<AVSampleFormat>(parameters->format)));
+						message.AppendFormat("%d Hz, %s, %s, ", parameters->sample_rate, channel_layout, ::av_get_sample_fmt_name(static_cast<AVSampleFormat>(parameters->format)));
 					}
 
 					message.AppendFormat("%d kbps, ", (parameters->bit_rate / 1024));
@@ -796,8 +795,7 @@ namespace ffmpeg
 				break;
 
 				case cmn::MediaType::Audio: {
-					codecpar->channels 				= static_cast<int>(media_track->GetChannel().GetCounts());
-					codecpar->channel_layout 		= ToAVChannelLayout(media_track->GetChannel().GetLayout());
+					av_channel_layout_default(&codecpar->ch_layout, (int)media_track->GetChannel().GetCounts());
 					codecpar->sample_rate 			= media_track->GetSample().GetRateNum();
 					codecpar->frame_size 			= (media_track->GetAudioSamplesPerFrame()!=0)?media_track->GetAudioSamplesPerFrame():1024;
 				}
