@@ -53,6 +53,7 @@ public:
 	bool Parse(const std::shared_ptr<const ov::Data> &data) override;
 	bool Equals(const std::shared_ptr<DecoderConfigurationRecord> &other) override;
 
+	MAY_THROWS(ov::BitReaderError)
 	static std::shared_ptr<HEVCDecoderConfigurationRecord> ParseV2(ov::BitReader &reader)
 	{
 		auto record = std::make_shared<HEVCDecoderConfigurationRecord>();
@@ -94,6 +95,7 @@ public:
 	int32_t GetHeight();
 
 private:
+	MAY_THROWS(ov::BitReaderError)
 	bool ParseV2Internal(ov::BitReader &reader);
 
 private:
