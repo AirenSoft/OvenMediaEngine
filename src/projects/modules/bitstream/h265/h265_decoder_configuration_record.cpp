@@ -243,6 +243,123 @@ bool HEVCDecoderConfigurationRecord::Parse(const std::shared_ptr<const ov::Data>
 	return true;
 }
 
+bool HEVCDecoderConfigurationRecord::ParseV2Internal(ov::BitReader &reader)
+{
+	// check length
+	if (reader.GetRemainingBytes() < MIN_HEVCDECODERCONFIGURATIONRECORD_SIZE)
+	{
+		return false;
+	}
+
+	// configurationVersion
+	_version = reader.ReadU8();
+
+	// general_profile_space
+	_general_profile_space = reader.ReadAs<uint8_t>(2);
+
+	// general_tier_flag
+	_general_tier_flag = reader.ReadAs<uint8_t>(1);
+
+	// general_profile_idc
+	_general_profile_idc = reader.ReadAs<uint8_t>(5);
+
+	// general_profile_compatibility_flags
+	_general_profile_compatibility_flags = reader.ReadU32BE();
+
+	// general_constraint_indicator_flags
+	{
+		auto high = reader.ReadU32BE();
+		auto low = reader.ReadU16BE();
+
+		_general_constraint_indicator_flags = (static_cast<uint64_t>(high) << 16) | low;
+	}
+
+	// general_level_idc
+	_general_level_idc = reader.ReadU8();
+
+	// reserved
+	reader.SkipBits(4);
+
+	// min_spatial_segmentation_idc
+	_min_spatial_segmentation_idc = reader.ReadAs<uint16_t>(12);
+
+	// reserved
+	reader.SkipBits(6);
+
+	// parallelismType
+	_parallelism_type = reader.ReadAs<uint8_t>(2);
+
+	// reserved
+	reader.SkipBits(6);
+
+	// chromaFormat
+	_chroma_format = reader.ReadAs<uint8_t>(2);
+
+	// reserved
+	reader.SkipBits(5);
+
+	// bitDepthLumaMinus8
+	_bit_depth_luma_minus8 = reader.ReadAs<uint8_t>(3);
+
+	// reserved
+	reader.SkipBits(5);
+
+	// bitDepthChromaMinus8
+	_bit_depth_chroma_minus8 = reader.ReadAs<uint8_t>(3);
+
+	// avgFrameRate
+	_avg_frame_rate = reader.ReadU16BE();
+
+	// constantFrameRate
+	_constant_frame_rate = reader.ReadAs<uint8_t>(2);
+
+	// numTemporalLayers
+	_num_temporal_layers = reader.ReadAs<uint8_t>(3);
+
+	// temporalIdNested
+	_temporal_id_nested = reader.ReadAs<uint8_t>(1);
+
+	// lengthSizeMinusOne
+	_length_size_minus_one = reader.ReadAs<uint8_t>(2);
+
+	// numOfArrays
+	auto num_of_arrays = reader.ReadU8();
+
+	for (size_t i = 0; i < num_of_arrays; ++i)
+	{
+		// array_completeness
+		[[maybe_unused]] auto array_completeness = reader.ReadAs<uint8_t>(1);
+
+		// reserved
+		reader.SkipBits(1);
+
+		// NAL_unit_type
+		auto nal_unit_type = reader.ReadAs<uint8_t>(6);
+
+		// numNalus
+		auto num_nalus = reader.ReadU16BE();
+
+		for (size_t j = 0; j < num_nalus; ++j)
+		{
+			// nalUnitLength
+			auto nal_unit_length = reader.ReadU16BE();
+
+			// nalUnit
+			auto nalu_data = reader.ReadBytes(nal_unit_length);
+			auto nalu_type = static_cast<H265NALUnitType>(nal_unit_type);
+
+			// add nalUnit to _nal_units
+			logtd("NALU found: nal_unit_type: %s(%d), length: %d",
+				  EnumToString(nalu_type), nalu_type,
+				  nal_unit_length);
+
+			AddNalUnit(nalu_type, nalu_data->Clone());
+		}
+	}
+
+	return true;
+}
+
 bool HEVCDecoderConfigurationRecord::Equals(const std::shared_ptr<DecoderConfigurationRecord> &other) 
 {
 	if (other == nullptr)

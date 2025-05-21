@@ -53,6 +53,16 @@ public:
 	bool Parse(const std::shared_ptr<const ov::Data> &data) override;
 	bool Equals(const std::shared_ptr<DecoderConfigurationRecord> &other) override;
 
+	static std::shared_ptr<HEVCDecoderConfigurationRecord> ParseV2(ov::BitReader &reader)
+	{
+		auto record = std::make_shared<HEVCDecoderConfigurationRecord>();
+		if (record->ParseV2Internal(reader) == false)
+		{
+			return nullptr;
+		}
+		return record;
+	}
+
 	std::shared_ptr<const ov::Data> Serialize() override;
 
 	void AddNalUnit(H265NALUnitType nal_type, const std::shared_ptr<ov::Data> &nal_unit); // SPS, PPS, VPS, etc.
@@ -82,8 +92,11 @@ public:
 	// Helpers
 	int32_t GetWidth();
 	int32_t GetHeight();
+
 private:
-	
+	bool ParseV2Internal(ov::BitReader &reader);
+
+private:
 	// Used to serialize
 	uint8_t _version = 1;
 	uint8_t _general_profile_space = 0;
