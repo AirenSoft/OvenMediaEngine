@@ -78,7 +78,7 @@ namespace ov
 			*plain_data = data;
 		}
 
-		return true;
+		return (data != nullptr);
 	}
 
 	bool TlsClientData::Encrypt(const std::shared_ptr<const Data> &plain_data)
