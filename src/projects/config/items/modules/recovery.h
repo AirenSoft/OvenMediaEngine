@@ -20,14 +20,16 @@ namespace cfg
 			int _delete_lazy_stream_timeout = 0;
 
 		public:
+			// Experimental feature is disabled by default
+			Recovery(bool enable) : ModuleTemplate(enable)
+			{
+			}
+
 			CFG_DECLARE_CONST_REF_GETTER_OF(GetDeleteLazyStreamTimeout, _delete_lazy_stream_timeout)
 
 		protected:
 			void MakeList() override
 			{
-				// Experimental feature is disabled by default
-				SetEnable(false);
-								
 				ModuleTemplate::MakeList();
 
 				/**
@@ -47,9 +49,9 @@ namespace cfg
 								<DeleteLazyStreamTimeout>10000</DeleteLazyStreamTimeout>
 							</Recovery>
 						</Modules>
-				*/				
+				*/
 				Register<Optional>("DeleteLazyStreamTimeout", &_delete_lazy_stream_timeout);
 			}
 		};
-	}  // namespace recovery
+	}  // namespace modules
 }  // namespace cfg

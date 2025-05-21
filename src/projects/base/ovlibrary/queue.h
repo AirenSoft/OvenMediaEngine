@@ -150,11 +150,12 @@ namespace ov
 			if (_stop == false)
 			{
 				// If there is data in the queue, return immediately without condition wait
-				auto result = (_queue.empty() == false)?true:false;
-				if (!result)
+				auto result = (_queue.empty() == false) ? true : false;
+
+				if (result == false)
 				{
 					std::chrono::system_clock::time_point expire =
-					(timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
+						(timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
 
 					result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
 						return ((_queue.empty() == false) || _stop);
@@ -193,15 +194,23 @@ namespace ov
 			if (_stop == false)
 			{
 				// If there is data in the queue, return immediately without condition wait
-				auto result = (_queue.empty() == false)?true:false;
-				if (!result)
-				{
-					std::chrono::system_clock::time_point expire =
-					(timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
+				auto result = (_queue.empty() == false) ? true : false;
 
-					result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
-						return ((_queue.empty() == false) || _stop);
-					});
+				if (result == false)
+				{
+					if (timeout > 0)
+					{
+						std::chrono::system_clock::time_point expire =
+							(timeout == Infinite) ? std::chrono::system_clock::time_point::max() : std::chrono::system_clock::now() + std::chrono::milliseconds(timeout);
+
+						result = _condition.wait_until(unique_lock, expire, [this]() -> bool {
+							return ((_queue.empty() == false) || _stop);
+						});
+					}
+					else
+					{
+						// Do not wait if timeout is 0 or negative
+					}
 				}
 
 				if (result)
@@ -228,7 +237,7 @@ namespace ov
 				// Stop is requested
 			}
 
-			return {};
+			return std::nullopt;
 		}
 
 		bool IsEmpty() const

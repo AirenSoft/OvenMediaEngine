@@ -13,7 +13,7 @@
 namespace ov
 {
 	template <typename T>
-	inline std::underlying_type_t<T> ToUnderlyingType(T enum_value)
+	constexpr inline std::underlying_type_t<T> ToUnderlyingType(T enum_value)
 	{
 		return static_cast<std::underlying_type_t<T>>(enum_value);
 	}

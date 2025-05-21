@@ -317,6 +317,16 @@ namespace ov
 			return Write(data->GetData(), data->GetLength());
 		}
 
+		bool Write(const Data &data) noexcept
+		{
+			return Write(data.GetData(), data.GetLength());
+		}
+
+		bool Write(const Data *data) noexcept
+		{
+			return Write(data->GetData(), data->GetLength());
+		}
+
 		/// T 타입의 데이터를 현재 위치(offset)에 count개 만큼 기록함. 기록 후 현재 위치가 변경됨.
 		///
 		/// @tparam T 기록할 데이터 타입

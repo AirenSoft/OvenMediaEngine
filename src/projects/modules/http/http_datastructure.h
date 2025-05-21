@@ -21,8 +21,8 @@ namespace http
 	{
 		Unknown = 0,
 		Http10,
-		Http11, // Default over Non-TLS. It can be upgraded to Http2(h2c) or WebSocket
-		Http20, // Default over TLS (If the client supports h2). It can be upgraded to WebSocket
+		Http11,	 // Default over Non-TLS. It can be upgraded to Http2(h2c) or WebSocket
+		Http20,	 // Default over TLS (If the client supports h2). It can be upgraded to WebSocket
 		WebSocket
 	};
 
@@ -84,17 +84,33 @@ namespace http
 		All = Get | Head | Post | Put | Delete | Connect | Options | Trace | Patch
 	};
 
-	inline Method operator|(Method lhs, Method rhs)
+	constexpr inline Method operator|(Method lhs, Method rhs)
 	{
 		return static_cast<Method>(
 			ov::ToUnderlyingType(lhs) |
 			ov::ToUnderlyingType(rhs));
 	}
 
-	inline Method &operator|=(Method &lhs, Method rhs)
+	constexpr inline Method &operator|=(Method &lhs, Method rhs)
 	{
 		lhs = static_cast<Method>(
 			ov::ToUnderlyingType(lhs) |
+			ov::ToUnderlyingType(rhs));
+
+		return lhs;
+	}
+
+	constexpr inline Method operator&(Method lhs, Method rhs)
+	{
+		return static_cast<Method>(
+			ov::ToUnderlyingType(lhs) &
+			ov::ToUnderlyingType(rhs));
+	}
+
+	constexpr inline Method &operator&=(Method &lhs, Method rhs)
+	{
+		lhs = static_cast<Method>(
+			ov::ToUnderlyingType(lhs) &
 			ov::ToUnderlyingType(rhs));
 
 		return lhs;
@@ -197,10 +213,6 @@ namespace http
 		HTTPVersionNotSupported = 505
 	};
 
-#define HTTP_CASE_RETURN(condition, value) \
-	case condition:                        \
-		return value
-
 #define HTTP_IF_EXPR(condition, expr) \
 	do                                \
 	{                                 \
@@ -214,51 +226,51 @@ namespace http
 	{
 		switch (status_code)
 		{
-			HTTP_CASE_RETURN(StatusCode::Unknown, false);
-			HTTP_CASE_RETURN(StatusCode::Continue, true);
-			HTTP_CASE_RETURN(StatusCode::SwitchingProtocols, true);
-			HTTP_CASE_RETURN(StatusCode::OK, true);
-			HTTP_CASE_RETURN(StatusCode::Created, true);
-			HTTP_CASE_RETURN(StatusCode::Accepted, true);
-			HTTP_CASE_RETURN(StatusCode::NonAuthoritativeInformation, true);
-			HTTP_CASE_RETURN(StatusCode::NoContent, true);
-			HTTP_CASE_RETURN(StatusCode::ResetContent, true);
-			HTTP_CASE_RETURN(StatusCode::PartialContent, true);
-			HTTP_CASE_RETURN(StatusCode::MultiStatus, true);
-			HTTP_CASE_RETURN(StatusCode::MultipleChoices, true);
-			HTTP_CASE_RETURN(StatusCode::MovedPermanently, true);
-			HTTP_CASE_RETURN(StatusCode::Found, true);
-			HTTP_CASE_RETURN(StatusCode::SeeOther, true);
-			HTTP_CASE_RETURN(StatusCode::NotModified, true);
-			HTTP_CASE_RETURN(StatusCode::UseProxy, true);
-			HTTP_CASE_RETURN(StatusCode::TemporaryRedirect, true);
-			HTTP_CASE_RETURN(StatusCode::BadRequest, true);
-			HTTP_CASE_RETURN(StatusCode::Unauthorized, true);
-			HTTP_CASE_RETURN(StatusCode::PaymentRequired, true);
-			HTTP_CASE_RETURN(StatusCode::Forbidden, true);
-			HTTP_CASE_RETURN(StatusCode::NotFound, true);
-			HTTP_CASE_RETURN(StatusCode::MethodNotAllowed, true);
-			HTTP_CASE_RETURN(StatusCode::NotAcceptable, true);
-			HTTP_CASE_RETURN(StatusCode::ProxyAuthenticationRequired, true);
-			HTTP_CASE_RETURN(StatusCode::RequestTimeout, true);
-			HTTP_CASE_RETURN(StatusCode::Conflict, true);
-			HTTP_CASE_RETURN(StatusCode::Gone, true);
-			HTTP_CASE_RETURN(StatusCode::LengthRequired, true);
-			HTTP_CASE_RETURN(StatusCode::PreconditionFailed, true);
-			HTTP_CASE_RETURN(StatusCode::PayloadTooLarge, true);
-			HTTP_CASE_RETURN(StatusCode::URITooLong, true);
-			HTTP_CASE_RETURN(StatusCode::UnsupportedMediaType, true);
-			HTTP_CASE_RETURN(StatusCode::RangeNotSatisfiable, true);
-			HTTP_CASE_RETURN(StatusCode::ExpectationFailed, true);
-			HTTP_CASE_RETURN(StatusCode::Locked, true);
-			HTTP_CASE_RETURN(StatusCode::FailedDependency, true);
-			HTTP_CASE_RETURN(StatusCode::UpgradeRequired, true);
-			HTTP_CASE_RETURN(StatusCode::InternalServerError, true);
-			HTTP_CASE_RETURN(StatusCode::NotImplemented, true);
-			HTTP_CASE_RETURN(StatusCode::BadGateway, true);
-			HTTP_CASE_RETURN(StatusCode::ServiceUnavailable, true);
-			HTTP_CASE_RETURN(StatusCode::GatewayTimeout, true);
-			HTTP_CASE_RETURN(StatusCode::HTTPVersionNotSupported, true);
+			OV_CASE_RETURN(StatusCode::Unknown, false);
+			OV_CASE_RETURN(StatusCode::Continue, true);
+			OV_CASE_RETURN(StatusCode::SwitchingProtocols, true);
+			OV_CASE_RETURN(StatusCode::OK, true);
+			OV_CASE_RETURN(StatusCode::Created, true);
+			OV_CASE_RETURN(StatusCode::Accepted, true);
+			OV_CASE_RETURN(StatusCode::NonAuthoritativeInformation, true);
+			OV_CASE_RETURN(StatusCode::NoContent, true);
+			OV_CASE_RETURN(StatusCode::ResetContent, true);
+			OV_CASE_RETURN(StatusCode::PartialContent, true);
+			OV_CASE_RETURN(StatusCode::MultiStatus, true);
+			OV_CASE_RETURN(StatusCode::MultipleChoices, true);
+			OV_CASE_RETURN(StatusCode::MovedPermanently, true);
+			OV_CASE_RETURN(StatusCode::Found, true);
+			OV_CASE_RETURN(StatusCode::SeeOther, true);
+			OV_CASE_RETURN(StatusCode::NotModified, true);
+			OV_CASE_RETURN(StatusCode::UseProxy, true);
+			OV_CASE_RETURN(StatusCode::TemporaryRedirect, true);
+			OV_CASE_RETURN(StatusCode::BadRequest, true);
+			OV_CASE_RETURN(StatusCode::Unauthorized, true);
+			OV_CASE_RETURN(StatusCode::PaymentRequired, true);
+			OV_CASE_RETURN(StatusCode::Forbidden, true);
+			OV_CASE_RETURN(StatusCode::NotFound, true);
+			OV_CASE_RETURN(StatusCode::MethodNotAllowed, true);
+			OV_CASE_RETURN(StatusCode::NotAcceptable, true);
+			OV_CASE_RETURN(StatusCode::ProxyAuthenticationRequired, true);
+			OV_CASE_RETURN(StatusCode::RequestTimeout, true);
+			OV_CASE_RETURN(StatusCode::Conflict, true);
+			OV_CASE_RETURN(StatusCode::Gone, true);
+			OV_CASE_RETURN(StatusCode::LengthRequired, true);
+			OV_CASE_RETURN(StatusCode::PreconditionFailed, true);
+			OV_CASE_RETURN(StatusCode::PayloadTooLarge, true);
+			OV_CASE_RETURN(StatusCode::URITooLong, true);
+			OV_CASE_RETURN(StatusCode::UnsupportedMediaType, true);
+			OV_CASE_RETURN(StatusCode::RangeNotSatisfiable, true);
+			OV_CASE_RETURN(StatusCode::ExpectationFailed, true);
+			OV_CASE_RETURN(StatusCode::Locked, true);
+			OV_CASE_RETURN(StatusCode::FailedDependency, true);
+			OV_CASE_RETURN(StatusCode::UpgradeRequired, true);
+			OV_CASE_RETURN(StatusCode::InternalServerError, true);
+			OV_CASE_RETURN(StatusCode::NotImplemented, true);
+			OV_CASE_RETURN(StatusCode::BadGateway, true);
+			OV_CASE_RETURN(StatusCode::ServiceUnavailable, true);
+			OV_CASE_RETURN(StatusCode::GatewayTimeout, true);
+			OV_CASE_RETURN(StatusCode::HTTPVersionNotSupported, true);
 		}
 
 		return false;
@@ -268,51 +280,51 @@ namespace http
 	{
 		switch (status_code)
 		{
-			HTTP_CASE_RETURN(StatusCode::Unknown, "Unknown");
-			HTTP_CASE_RETURN(StatusCode::Continue, "Continue");
-			HTTP_CASE_RETURN(StatusCode::SwitchingProtocols, "Switching Protocols");
-			HTTP_CASE_RETURN(StatusCode::OK, "OK");
-			HTTP_CASE_RETURN(StatusCode::Created, "Created");
-			HTTP_CASE_RETURN(StatusCode::Accepted, "Accepted");
-			HTTP_CASE_RETURN(StatusCode::NonAuthoritativeInformation, "Non-Authoritative Information");
-			HTTP_CASE_RETURN(StatusCode::NoContent, "No Content");
-			HTTP_CASE_RETURN(StatusCode::ResetContent, "Reset Content");
-			HTTP_CASE_RETURN(StatusCode::PartialContent, "Partial Content");
-			HTTP_CASE_RETURN(StatusCode::MultiStatus, "Multi Status");
-			HTTP_CASE_RETURN(StatusCode::MultipleChoices, "Multiple Choices");
-			HTTP_CASE_RETURN(StatusCode::MovedPermanently, "Moved Permanently");
-			HTTP_CASE_RETURN(StatusCode::Found, "Found");
-			HTTP_CASE_RETURN(StatusCode::SeeOther, "See Other");
-			HTTP_CASE_RETURN(StatusCode::NotModified, "Not Modified");
-			HTTP_CASE_RETURN(StatusCode::UseProxy, "Use Proxy");
-			HTTP_CASE_RETURN(StatusCode::TemporaryRedirect, "Temporary Redirect");
-			HTTP_CASE_RETURN(StatusCode::BadRequest, "Bad Request");
-			HTTP_CASE_RETURN(StatusCode::Unauthorized, "Unauthorized");
-			HTTP_CASE_RETURN(StatusCode::PaymentRequired, "Payment Required");
-			HTTP_CASE_RETURN(StatusCode::Forbidden, "Forbidden");
-			HTTP_CASE_RETURN(StatusCode::NotFound, "Not Found");
-			HTTP_CASE_RETURN(StatusCode::MethodNotAllowed, "Method Not Allowed");
-			HTTP_CASE_RETURN(StatusCode::NotAcceptable, "Not Acceptable");
-			HTTP_CASE_RETURN(StatusCode::ProxyAuthenticationRequired, "Proxy Authentication Required");
-			HTTP_CASE_RETURN(StatusCode::RequestTimeout, "Request Timeout");
-			HTTP_CASE_RETURN(StatusCode::Conflict, "Conflict");
-			HTTP_CASE_RETURN(StatusCode::Gone, "Gone");
-			HTTP_CASE_RETURN(StatusCode::LengthRequired, "Length Required");
-			HTTP_CASE_RETURN(StatusCode::PreconditionFailed, "Precondition Failed");
-			HTTP_CASE_RETURN(StatusCode::PayloadTooLarge, "Payload Too Large");
-			HTTP_CASE_RETURN(StatusCode::URITooLong, "URI Too Long");
-			HTTP_CASE_RETURN(StatusCode::UnsupportedMediaType, "Unsupported Media Type");
-			HTTP_CASE_RETURN(StatusCode::RangeNotSatisfiable, "Range Not Satisfiable");
-			HTTP_CASE_RETURN(StatusCode::ExpectationFailed, "Expectation Failed");
-			HTTP_CASE_RETURN(StatusCode::Locked, "Locked");
-			HTTP_CASE_RETURN(StatusCode::FailedDependency, "Failed Dependency");
-			HTTP_CASE_RETURN(StatusCode::UpgradeRequired, "Upgrade Required");
-			HTTP_CASE_RETURN(StatusCode::InternalServerError, "Internal Server Error");
-			HTTP_CASE_RETURN(StatusCode::NotImplemented, "Not Implemented");
-			HTTP_CASE_RETURN(StatusCode::BadGateway, "Bad Gateway");
-			HTTP_CASE_RETURN(StatusCode::ServiceUnavailable, "Service Unavailable");
-			HTTP_CASE_RETURN(StatusCode::GatewayTimeout, "Gateway Timeout");
-			HTTP_CASE_RETURN(StatusCode::HTTPVersionNotSupported, "HTTP Version Not Supported");
+			OV_CASE_RETURN(StatusCode::Unknown, "Unknown");
+			OV_CASE_RETURN(StatusCode::Continue, "Continue");
+			OV_CASE_RETURN(StatusCode::SwitchingProtocols, "Switching Protocols");
+			OV_CASE_RETURN(StatusCode::OK, "OK");
+			OV_CASE_RETURN(StatusCode::Created, "Created");
+			OV_CASE_RETURN(StatusCode::Accepted, "Accepted");
+			OV_CASE_RETURN(StatusCode::NonAuthoritativeInformation, "Non-Authoritative Information");
+			OV_CASE_RETURN(StatusCode::NoContent, "No Content");
+			OV_CASE_RETURN(StatusCode::ResetContent, "Reset Content");
+			OV_CASE_RETURN(StatusCode::PartialContent, "Partial Content");
+			OV_CASE_RETURN(StatusCode::MultiStatus, "Multi Status");
+			OV_CASE_RETURN(StatusCode::MultipleChoices, "Multiple Choices");
+			OV_CASE_RETURN(StatusCode::MovedPermanently, "Moved Permanently");
+			OV_CASE_RETURN(StatusCode::Found, "Found");
+			OV_CASE_RETURN(StatusCode::SeeOther, "See Other");
+			OV_CASE_RETURN(StatusCode::NotModified, "Not Modified");
+			OV_CASE_RETURN(StatusCode::UseProxy, "Use Proxy");
+			OV_CASE_RETURN(StatusCode::TemporaryRedirect, "Temporary Redirect");
+			OV_CASE_RETURN(StatusCode::BadRequest, "Bad Request");
+			OV_CASE_RETURN(StatusCode::Unauthorized, "Unauthorized");
+			OV_CASE_RETURN(StatusCode::PaymentRequired, "Payment Required");
+			OV_CASE_RETURN(StatusCode::Forbidden, "Forbidden");
+			OV_CASE_RETURN(StatusCode::NotFound, "Not Found");
+			OV_CASE_RETURN(StatusCode::MethodNotAllowed, "Method Not Allowed");
+			OV_CASE_RETURN(StatusCode::NotAcceptable, "Not Acceptable");
+			OV_CASE_RETURN(StatusCode::ProxyAuthenticationRequired, "Proxy Authentication Required");
+			OV_CASE_RETURN(StatusCode::RequestTimeout, "Request Timeout");
+			OV_CASE_RETURN(StatusCode::Conflict, "Conflict");
+			OV_CASE_RETURN(StatusCode::Gone, "Gone");
+			OV_CASE_RETURN(StatusCode::LengthRequired, "Length Required");
+			OV_CASE_RETURN(StatusCode::PreconditionFailed, "Precondition Failed");
+			OV_CASE_RETURN(StatusCode::PayloadTooLarge, "Payload Too Large");
+			OV_CASE_RETURN(StatusCode::URITooLong, "URI Too Long");
+			OV_CASE_RETURN(StatusCode::UnsupportedMediaType, "Unsupported Media Type");
+			OV_CASE_RETURN(StatusCode::RangeNotSatisfiable, "Range Not Satisfiable");
+			OV_CASE_RETURN(StatusCode::ExpectationFailed, "Expectation Failed");
+			OV_CASE_RETURN(StatusCode::Locked, "Locked");
+			OV_CASE_RETURN(StatusCode::FailedDependency, "Failed Dependency");
+			OV_CASE_RETURN(StatusCode::UpgradeRequired, "Upgrade Required");
+			OV_CASE_RETURN(StatusCode::InternalServerError, "Internal Server Error");
+			OV_CASE_RETURN(StatusCode::NotImplemented, "Not Implemented");
+			OV_CASE_RETURN(StatusCode::BadGateway, "Bad Gateway");
+			OV_CASE_RETURN(StatusCode::ServiceUnavailable, "Service Unavailable");
+			OV_CASE_RETURN(StatusCode::GatewayTimeout, "Gateway Timeout");
+			OV_CASE_RETURN(StatusCode::HTTPVersionNotSupported, "HTTP Version Not Supported");
 		}
 
 		return "Unknown";
@@ -321,118 +333,108 @@ namespace http
 	// Since http::Method can contains multiple methods, the include_all_method flag is used to determine whether to return the value for the entire methods
 	inline ov::String StringFromMethod(Method method, bool include_all_methods = true)
 	{
-		auto method_value = ov::ToUnderlyingType(method);
-
 		if (include_all_methods)
 		{
 			std::vector<ov::String> method_list;
 
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Get)), method_list.push_back("GET"));
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Head)), method_list.push_back("HEAD"));
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Post)), method_list.push_back("POST"));
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Put)), method_list.push_back("PUT"));
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Delete)), method_list.push_back("DELETE"));
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Connect)), method_list.push_back("CONNECT"));
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Options)), method_list.push_back("OPTIONS"));
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Trace)), method_list.push_back("TRACE"));
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Patch)), method_list.push_back("PATCH"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method, Method::Get), method_list.push_back("GET"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method, Method::Head), method_list.push_back("HEAD"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method, Method::Post), method_list.push_back("POST"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method, Method::Put), method_list.push_back("PUT"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method, Method::Delete), method_list.push_back("DELETE"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method, Method::Connect), method_list.push_back("CONNECT"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method, Method::Options), method_list.push_back("OPTIONS"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method, Method::Trace), method_list.push_back("TRACE"));
+			HTTP_IF_EXPR(OV_CHECK_FLAG(method, Method::Patch), method_list.push_back("PATCH"));
 
 			return ov::String::Join(method_list, " | ");
 		}
 		else
 		{
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Get)), return "GET");
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Head)), return "HEAD");
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Post)), return "POST");
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Put)), return "PUT");
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Delete)), return "DELETE");
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Connect)), return "CONNECT");
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Options)), return "OPTIONS");
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Trace)), return "TRACE");
-			HTTP_IF_EXPR(OV_CHECK_FLAG(method_value, ov::ToUnderlyingType(Method::Patch)), return "PATCH");
+			OV_IF_RETURN(OV_CHECK_FLAG(method, Method::Get), "GET");
+			OV_IF_RETURN(OV_CHECK_FLAG(method, Method::Head), "HEAD");
+			OV_IF_RETURN(OV_CHECK_FLAG(method, Method::Post), "POST");
+			OV_IF_RETURN(OV_CHECK_FLAG(method, Method::Put), "PUT");
+			OV_IF_RETURN(OV_CHECK_FLAG(method, Method::Delete), "DELETE");
+			OV_IF_RETURN(OV_CHECK_FLAG(method, Method::Connect), "CONNECT");
+			OV_IF_RETURN(OV_CHECK_FLAG(method, Method::Options), "OPTIONS");
+			OV_IF_RETURN(OV_CHECK_FLAG(method, Method::Trace), "TRACE");
+			OV_IF_RETURN(OV_CHECK_FLAG(method, Method::Patch), "PATCH");
 		}
 
 		return "";
 	}
 
 	// Since http::Method can contains multiple methods, the include_all_method flag is used to determine whether to return the value for the entire methods
-	inline Method MethodFromString(ov::String method, bool include_all_methods = true)
+	constexpr inline Method MethodFromString(const char *method, bool include_all_methods = true)
 	{
-		Method method_enum = Method::Unknown;
+		auto method_enum = Method::Unknown;
 
 		if (include_all_methods)
 		{
-			HTTP_IF_EXPR(method.IndexOf("GET") >= 0, method_enum |= Method::Get);
-			HTTP_IF_EXPR(method.IndexOf("HEAD") >= 0, method_enum |= Method::Head);
-			HTTP_IF_EXPR(method.IndexOf("POST") >= 0, method_enum |= Method::Post);
-			HTTP_IF_EXPR(method.IndexOf("PUT") >= 0, method_enum |= Method::Put);
-			HTTP_IF_EXPR(method.IndexOf("DELETE") >= 0, method_enum |= Method::Delete);
-			HTTP_IF_EXPR(method.IndexOf("CONNECT") >= 0, method_enum |= Method::Connect);
-			HTTP_IF_EXPR(method.IndexOf("OPTIONS") >= 0, method_enum |= Method::Options);
-			HTTP_IF_EXPR(method.IndexOf("TRACE") >= 0, method_enum |= Method::Trace);
-			HTTP_IF_EXPR(method.IndexOf("PATCH") >= 0, method_enum |= Method::Patch);
+			HTTP_IF_EXPR(ov::cexpr::IndexOf(method, "GET") >= 0, method_enum |= Method::Get);
+			HTTP_IF_EXPR(ov::cexpr::IndexOf(method, "HEAD") >= 0, method_enum |= Method::Head);
+			HTTP_IF_EXPR(ov::cexpr::IndexOf(method, "POST") >= 0, method_enum |= Method::Post);
+			HTTP_IF_EXPR(ov::cexpr::IndexOf(method, "PUT") >= 0, method_enum |= Method::Put);
+			HTTP_IF_EXPR(ov::cexpr::IndexOf(method, "DELETE") >= 0, method_enum |= Method::Delete);
+			HTTP_IF_EXPR(ov::cexpr::IndexOf(method, "CONNECT") >= 0, method_enum |= Method::Connect);
+			HTTP_IF_EXPR(ov::cexpr::IndexOf(method, "OPTIONS") >= 0, method_enum |= Method::Options);
+			HTTP_IF_EXPR(ov::cexpr::IndexOf(method, "TRACE") >= 0, method_enum |= Method::Trace);
+			HTTP_IF_EXPR(ov::cexpr::IndexOf(method, "PATCH") >= 0, method_enum |= Method::Patch);
 		}
 		else
 		{
-			auto methods = method.Split(" ");
-
-			if (methods.size() >= 1)
+			if (method[0] != '\0')
 			{
-				auto first_method = methods.front();
+				auto position = ov::cexpr::IndexOf(method, ' ');
 
-				HTTP_IF_EXPR(first_method == "GET", return Method::Get);
-				HTTP_IF_EXPR(first_method == "HEAD", return Method::Head);
-				HTTP_IF_EXPR(first_method == "POST", return Method::Post);
-				HTTP_IF_EXPR(first_method == "PUT", return Method::Put);
-				HTTP_IF_EXPR(first_method == "DELETE", return Method::Delete);
-				HTTP_IF_EXPR(first_method == "CONNECT", return Method::Connect);
-				HTTP_IF_EXPR(first_method == "OPTIONS", return Method::Options);
-				HTTP_IF_EXPR(first_method == "TRACE", return Method::Trace);
-				HTTP_IF_EXPR(first_method == "PATCH", return Method::Patch);
-			}
-			else
-			{
-				// There is no method in the string
+				if (position < 0)
+				{
+					position = ov::cexpr::StrLen(method);
+				}
+
+				OV_IF_RETURN(ov::cexpr::StrNCmp(method, "GET", position) == 0, Method::Get);
+				OV_IF_RETURN(ov::cexpr::StrNCmp(method, "HEAD", position) == 0, Method::Head);
+				OV_IF_RETURN(ov::cexpr::StrNCmp(method, "POST", position) == 0, Method::Post);
+				OV_IF_RETURN(ov::cexpr::StrNCmp(method, "PUT", position) == 0, Method::Put);
+				OV_IF_RETURN(ov::cexpr::StrNCmp(method, "DELETE", position) == 0, Method::Delete);
+				OV_IF_RETURN(ov::cexpr::StrNCmp(method, "CONNECT", position) == 0, Method::Connect);
+				OV_IF_RETURN(ov::cexpr::StrNCmp(method, "OPTIONS", position) == 0, Method::Options);
+				OV_IF_RETURN(ov::cexpr::StrNCmp(method, "TRACE", position) == 0, Method::Trace);
+				OV_IF_RETURN(ov::cexpr::StrNCmp(method, "PATCH", position) == 0, Method::Patch);
 			}
 		}
 
 		return method_enum;
 	}
 
-	inline http::StatusCode StatusCodeFromCommonError(const CommonErrorCode &code)
+	constexpr inline http::StatusCode StatusCodeFromCommonError(const CommonErrorCode &code)
 	{
 		switch (code)
 		{
-			case CommonErrorCode::SUCCESS:
-				return http::StatusCode::OK;
-			case CommonErrorCode::DISABLED:
-				return http::StatusCode::Locked;
-			case CommonErrorCode::CREATED:
-				return http::StatusCode::Created;
+			OV_CASE_RETURN(CommonErrorCode::DISABLED, http::StatusCode::Locked);
+			OV_CASE_RETURN(CommonErrorCode::SUCCESS, http::StatusCode::OK);
+			OV_CASE_RETURN(CommonErrorCode::CREATED, http::StatusCode::Created);
 
-			case CommonErrorCode::ERROR:
-				return http::StatusCode::InternalServerError;
-			case CommonErrorCode::NOT_FOUND:
-				return http::StatusCode::NotFound;
-			case CommonErrorCode::ALREADY_EXISTS:
-				return http::StatusCode::Conflict;
-			case CommonErrorCode::INVALID_REQUEST:
-				return http::StatusCode::BadRequest;
-			case CommonErrorCode::UNAUTHORIZED:
-				return http::StatusCode::Unauthorized;
-			default :
-				break;
+			OV_CASE_RETURN(CommonErrorCode::ERROR, http::StatusCode::InternalServerError);
+			OV_CASE_RETURN(CommonErrorCode::NOT_FOUND, http::StatusCode::NotFound);
+			OV_CASE_RETURN(CommonErrorCode::ALREADY_EXISTS, http::StatusCode::Conflict);
+			OV_CASE_RETURN(CommonErrorCode::INVALID_REQUEST, http::StatusCode::BadRequest);
+			OV_CASE_RETURN(CommonErrorCode::UNAUTHORIZED, http::StatusCode::Unauthorized);
+			OV_CASE_RETURN(CommonErrorCode::INVALID_PARAMETER, http::StatusCode::InternalServerError);
+			OV_CASE_RETURN(CommonErrorCode::INVALID_STATE, http::StatusCode::InternalServerError);
 		}
 
 		return http::StatusCode::InternalServerError;
 	}
+
 	namespace svr
 	{
 		enum class InterceptorResult : char
 		{
 			Completed,
 			Error,
-			Moved		// Control is transferred to another thread so DO NOT close the connection
+			Moved  // Control is transferred to another thread so DO NOT close the connection
 		};
 	}  // namespace svr
 

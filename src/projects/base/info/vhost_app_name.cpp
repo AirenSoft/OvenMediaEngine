@@ -13,7 +13,7 @@
 namespace info
 {
 	VHostAppName::VHostAppName()
-		: _vhost_app_name("?InvalidApp?")
+		: _vhost_app_name("?Unknown?")
 	{
 	}
 

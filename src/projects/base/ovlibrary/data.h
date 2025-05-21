@@ -166,6 +166,12 @@ namespace ov
 		bool Append(const std::shared_ptr<Data> &data);
 		bool Append(const std::shared_ptr<const Data> &data);
 
+		template<typename T, typename = std::enable_if_t<std::is_fundamental_v<T>>>
+		bool Append(const T &data)
+		{
+			return Append(&data, sizeof(T));
+		}
+
 		bool Erase(off_t offset, size_t length);
 
 		/// this 데이터의 일부 영역만 참조하는 Data instance 생성

@@ -42,7 +42,7 @@ namespace pvd
 			PUSH
 		};
 
-		State GetState(){return _state;};
+		State GetState() const {return _state;};
 
 		void SetApplication(const std::shared_ptr<pvd::Application> &application)
 		{
