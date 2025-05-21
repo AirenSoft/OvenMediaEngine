@@ -232,8 +232,9 @@ bool HEVCDecoderConfigurationRecord::Parse(const std::shared_ptr<const ov::Data>
 			auto nal_unit = std::make_shared<ov::Data>(parser.CurrentPosition(), nal_unit_length);
 
 			// add nalUnit to _nal_units
-			auto &v = _nal_units[nal_unit_type];
-			v.push_back(nal_unit);
+			// auto &v = _nal_units[nal_unit_type];
+			// v.push_back(nal_unit);
+			AddNalUnit(static_cast<H265NALUnitType>(nal_unit_type), nal_unit);
 
 			// skip nalUnit
 			parser.SkipBytes(nal_unit_length);
