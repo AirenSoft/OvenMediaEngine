@@ -207,3 +207,23 @@ $(strip \
 	$(shell ldconfig -p | grep $(1) >/dev/null 2>&1; echo $$?) \
 )
 endef
+
+# Check if the library is referenced in the shared object
+# $(call chk_so_references,<SEARCH_PATHS>,<SO_FILENAME>,<LIBRARY_NAME>)
+define chk_so_references
+$(strip \
+  $(shell \
+    found=0; \
+    IFS=':'; \
+    for dir in $$(echo $(1)); do \
+      full_path="$$dir/$(2)"; \
+	  echo "Checking... $$full_path" >&2; \
+      if [ -f "$$full_path" ]; then \
+        readelf -d "$$full_path" 2>/dev/null | grep NEEDED | awk -F'[][]' '{print $$2}' | grep -q $(3); \
+        if [ $$? -eq 0 ]; then found=1; break; fi; \
+      fi; \
+    done; \
+    if [ $$found -eq 1 ]; then echo 0; else echo 1; fi \
+  ) \
+)
+endef

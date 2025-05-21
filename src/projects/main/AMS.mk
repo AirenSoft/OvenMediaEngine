@@ -88,7 +88,11 @@ $(call add_pkg_config,ffnvcodec)
 endif
 
 # Enable Xilinx Media SDK
-ifeq ($(call chk_pkg_exist,libxma2api),0)
+# If libavcodec references libxrm.so, then the XMA library is supported
+ifeq ($(and \
+  $(filter 0,$(call chk_pkg_exist,libxrm)), \
+  $(filter 0,$(call chk_so_references,$(CONFIG_LIBRARY_PATHS),libavcodec.so,libxrm.so)) \
+), 0)
 $(call add_pkg_config,libxma2api)
 $(call add_pkg_config,xvbm)
 $(call add_pkg_config,libxrm)
@@ -97,12 +101,13 @@ PROJECT_CXXFLAGS += -DHWACCELS_XMA_ENABLED
 endif
 
 # Enable NVidia Accelerator
-ifeq ($(call chk_lib_exist,libcuda.so), 0) 
-ifeq ($(call chk_lib_exist,libnvidia-ml.so), 0)
+ifeq ($(and \
+  $(filter 0,$(call chk_lib_exist,libcuda.so)), \
+  $(filter 0,$(call chk_lib_exist,libnvidia-ml.so)) \
+), 0)
 HWACCELS_NVIDIA_ENABLED := true
 LOCAL_LDFLAGS += -L/usr/local/cuda/lib64 -lcuda -lnvidia-ml
-PROJECT_CXXFLAGS += -I/usr/local/cuda/include -DHWACCELS_NVIDIA_ENABLED 
-endif
+PROJECT_CXXFLAGS += -I/usr/local/cuda/include -DHWACCELS_NVIDIA_ENABLED
 endif
 
 # Enable Netint Accelerator
