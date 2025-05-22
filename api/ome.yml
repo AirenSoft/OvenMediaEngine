@@ -19,6 +19,8 @@ servers:
         default: localhost
       tlsPort:
         default: '8082'
+security:
+  - basicAuth: []
 components:
   securitySchemes:
     basicAuth:
@@ -185,7 +187,6 @@ components:
           $ref: '#/components/schemas/HlsId3v2'
     EventGenerator:
       type: object
-      require: [event]
       properties:
         event:
           type: array
@@ -1110,7 +1111,7 @@ components:
   requestBodies:
     Admission:
       description: admission request
-      required:  
+      required: true
       content:
         application/json:
           schema:
@@ -1134,7 +1135,7 @@ components:
                 $ref: '#/components/schemas/AdmissionState'
     Transcodec:
       description: transcoding request
-      required:  
+      required: true
       content:
         application/json:
           schema:
@@ -1239,6 +1240,7 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Admitted'
+      security: []
   /transcodecs:
     post:
       operationId: TranscodecsPost
@@ -1249,6 +1251,7 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Transcoded'
+      security: []
   /vhosts:
     get:
       operationId: VHostsGet
@@ -1468,7 +1471,7 @@ paths:
     delete:
       operationId: VHostAppDelete
       tags: [api]
-      summary: Delete application info
+      summary: Delete application
       responses:
         '200':
           $ref: '#/components/responses/Status'
@@ -1586,7 +1589,7 @@ paths:
     get:
       operationId: VHostAppStreamsGet
       tags: [api]
-      summary: Get a list of streams for an application
+      summary: Get all stream names in the {vhost name}/{app name} application.
       responses:
         '200':
           $ref: '#/components/responses/Names'
@@ -1597,7 +1600,7 @@ paths:
     post:
       operationId: VHostAppStreamsPost
       tags: [api]
-      summary: Create a new stream in an application
+      summary: Create a stream by pulling an external URL. External URL protocols currently support RTSP and OVT.
       requestBody:
         required: true
         content:
@@ -1638,7 +1641,7 @@ paths:
         '502':
           $ref: '#/components/responses/Status'
         '500':
-          $ref: '#/components/responses/Status'        
+          $ref: '#/components/responses/Status'
   /vhosts/{vhost}/apps/{app}/streams/{stream}:
     parameters:
     - $ref: '#/components/parameters/vhostName'
