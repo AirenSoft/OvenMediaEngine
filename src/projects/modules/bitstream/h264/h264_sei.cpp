@@ -74,7 +74,7 @@ std::shared_ptr<ov::Data> H264SEI::Serialize()
 	return writer.GetDataObject();
 }
 
-std::shared_ptr<H264SEI> H264SEI::Parse(const std::shared_ptr<ov::Data> &data)
+std::shared_ptr<H264SEI> H264SEI::Parse(const std::shared_ptr<const ov::Data> &data)
 {
 	auto sei = std::make_shared<H264SEI>();
 

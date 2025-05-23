@@ -155,7 +155,7 @@ public:
 	~H264SEI() = default;
 
 	std::shared_ptr<ov::Data> Serialize();
-	static std::shared_ptr<H264SEI> Parse(const std::shared_ptr<ov::Data> &data);
+	static std::shared_ptr<H264SEI> Parse(const std::shared_ptr<const ov::Data> &data);
 
 	// Set payload type
 	void SetPayloadType(PayloadType payload_type)

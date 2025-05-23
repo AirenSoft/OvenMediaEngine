@@ -26,7 +26,7 @@ Scte35Event::Scte35Event(mpegts::SpliceCommandType splice_command_type, uint32_t
 	_auto_return = auto_return;
 }
 
-std::shared_ptr<Scte35Event> Scte35Event::Parse(const std::shared_ptr<ov::Data> &data)
+std::shared_ptr<Scte35Event> Scte35Event::Parse(const std::shared_ptr<const ov::Data> &data)
 {
 	if (data == nullptr)
 	{

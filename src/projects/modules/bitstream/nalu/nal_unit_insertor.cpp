@@ -9,7 +9,7 @@ const uint8_t START_CODE_3B[3] = {0x00, 0x00, 0x01};
 const uint8_t START_CODE_4B[4] = {0x00, 0x00, 0x00, 0x01};
 
 std::optional<std::tuple<std::shared_ptr<ov::Data>, std::shared_ptr<FragmentationHeader>>> NalUnitInsertor::Insert(
-	const std::shared_ptr<ov::Data> src_data,
+	const std::shared_ptr<const ov::Data> src_data,
 	const std::shared_ptr<ov::Data> new_nal,
 	const cmn::BitstreamFormat format)
 {
@@ -37,7 +37,7 @@ std::optional<std::tuple<std::shared_ptr<ov::Data>, std::shared_ptr<Fragmentatio
 }
 
 std::optional<std::tuple<std::shared_ptr<ov::Data>, std::shared_ptr<FragmentationHeader>>> NalUnitInsertor::Insert(
-	const std::shared_ptr<ov::Data> src_data,
+	const std::shared_ptr<const ov::Data> src_data,
 	const FragmentationHeader* src_fragment,
 	const std::shared_ptr<ov::Data> new_nal,
 	const cmn::BitstreamFormat format)
@@ -99,7 +99,7 @@ std::optional<std::tuple<std::shared_ptr<ov::Data>, std::shared_ptr<Fragmentatio
 		new_fragment->AddFragment(nal_offset, nal_length);
 
 		// NALU
-		new_data->Append(static_cast<const char*>(src_data->GetData()) + src_offset, nal_length);
+		new_data->Append(src_data->GetDataAs<char *>() + src_offset, nal_length);
 	}
 
 	if (new_nal != nullptr)

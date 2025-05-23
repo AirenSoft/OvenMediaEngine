@@ -13,7 +13,7 @@ std::shared_ptr<CueEvent> CueEvent::Create(CueType cue_type, uint32_t duration_s
 	return std::make_shared<CueEvent>(cue_type, duration_sec, elapsed_msec);
 }
 
-std::shared_ptr<CueEvent> CueEvent::Parse(const std::shared_ptr<ov::Data> &data)
+std::shared_ptr<CueEvent> CueEvent::Parse(const std::shared_ptr<const ov::Data> &data)
 {
 	if (data == nullptr)
 	{

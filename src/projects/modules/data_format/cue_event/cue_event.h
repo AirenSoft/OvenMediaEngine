@@ -30,7 +30,7 @@ public:
 	};
 
 	static std::shared_ptr<CueEvent> Create(CueType cue_type, uint32_t duration_msec = 0, uint32_t elapsed_msec = 0);
-	static std::shared_ptr<CueEvent> Parse(const std::shared_ptr<ov::Data> &data);
+	static std::shared_ptr<CueEvent> Parse(const std::shared_ptr<const ov::Data> &data);
 	static CueType GetCueTypeByName(ov::String type);
 	
 	CueEvent(CueType cue_type, uint32_t duration_sec, uint32_t elapsed_msec);
