@@ -87,6 +87,9 @@ namespace pvd
         
         int FindTrackIdByOriginId(int origin_id) const;
 
+		bool SetDurationToAllItems(const std::shared_ptr<Schedule::Program> &program);
+		int64_t GetFileItemDurationMS(const std::shared_ptr<Schedule::Item> &item) const;
+
         std::shared_ptr<Schedule> _schedule;
         mutable std::shared_mutex _schedule_mutex;
 

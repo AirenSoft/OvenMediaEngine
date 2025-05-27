@@ -229,8 +229,8 @@ namespace api
 
 						Json::Value item_json;
 						item_json["url"] = curr_item->url.CStr();
-						item_json["duration"] = curr_item->duration_ms;
-						item_json["start"] = curr_item->start_time_ms;
+						item_json["duration"] = curr_item->duration_ms_conf;
+						item_json["start"] = curr_item->start_time_ms_conf;
 
 						item_json["currentPosition"] = curr_item_pos;
 

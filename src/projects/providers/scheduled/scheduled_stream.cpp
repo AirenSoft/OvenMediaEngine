@@ -120,7 +120,6 @@ namespace pvd
             return true;
         }
 
-        // even if the pointer is changed, but the program is the same, it is not changed
         if (*_current_program == *GetSchedule()->GetCurrentProgram())
         {
             return false;
@@ -194,6 +193,52 @@ namespace pvd
         return false;
     }
 
+	bool ScheduledStream::SetDurationToAllItems(const std::shared_ptr<Schedule::Program> &program)
+	{
+		if (program == nullptr)
+		{
+			return false;
+		}
+
+		int64_t total_duration_ms = 0;
+		for (auto &item : program->items)
+		{
+			if (item == nullptr)
+			{
+				logtw("Scheduled Channel %s/%s: Item is null in program %s", GetApplicationName(), GetName().CStr(), program->name.CStr());
+				continue;
+			}
+
+			if (item->duration_ms > 0)
+			{
+				logti("Scheduled Channel %s/%s: Item %s duration is already set to %lld ms", GetApplicationName(), GetName().CStr(), item->url.CStr(), item->duration_ms);
+				// already set
+				total_duration_ms += item->duration_ms;
+				continue;
+			}
+
+			if (item->file == true)
+			{
+				item->duration_ms = GetFileItemDurationMS(item);
+				total_duration_ms += item->duration_ms;
+			}
+			else
+			{
+				// Live with no duration means it will be played until the end of the program
+				item->duration_ms = -1;
+				program->unlimited_duration = true;
+			}
+
+			logti("Scheduled Channel %s/%s: Item %s duration set to %lld ms", GetApplicationName(), GetName().CStr(), item->url.CStr(), item->duration_ms);
+		}
+
+		program->total_item_duration_ms = total_duration_ms;
+
+		logti("Total item duration ms : %lld ms", program->total_item_duration_ms);
+
+		return true;
+	}
+
     void ScheduledStream::WorkerThread()
     {
         while (_worker_thread_running)
@@ -224,11 +269,15 @@ namespace pvd
                 PlayFallbackOrWait();
                 continue;
             }
+			else
+			{
+				SetDurationToAllItems(_current_program);
+			}
 
             logti("Scheduled Channel %s/%s: Start %s program", GetApplicationName(), GetName().CStr(), _current_program->name.CStr());
 
             // Items
-            int err_count = 0;
+			bool first_item = true;
             while (_worker_thread_running)
             {
                 guard.lock();
@@ -242,31 +291,31 @@ namespace pvd
                 }
 
                 guard.lock();
-                _current_item = _current_program->GetNextItem();
+				if (first_item == true)
+				{
+					_current_item = _current_program->GetFirstItem();
+				}
+                else
+				{
+					_current_item = _current_program->GetNextItem();
+				}
                 guard.unlock();
+
                 if (_current_item == nullptr)
                 {
                     logti("Scheduled Channel %s/%s: Program ended", GetApplicationName(), GetName().CStr());
                     PlayFallbackOrWait();
                     break;
                 }
+				else
+				{
+					first_item = false;
+				}
                 
-                bool need_break = false;
-                do
+                while (_worker_thread_running)
                 {
                     auto result = PlayItem(_current_item);
-                    if (result == PlaybackResult::PLAY_NEXT_ITEM)
-                    {
-                        // PLAY_NEXT_ITEM
-                        err_count = 0;
-                    }
-                    else if (result == PlaybackResult::PLAY_NEXT_PROGRAM)
-                    {
-                        err_count = 0;
-                        need_break = true;
-                        break;
-                    }
-                    else if (result == PlaybackResult::ERROR)
+                    if (result == PlaybackResult::ERROR)
                     {
                         if (_current_item->fallback_on_err == true)
                         {
@@ -274,29 +323,10 @@ namespace pvd
                             {
                                 continue;
                             }
-
-							need_break = true;
-							break;
-                        }
-                        // Play next item
-                        else
-                        {
-                            _realtime_clock.Pause();
-
-                            // Too many errors
-                            err_count ++;
-                            if (err_count > 3)
-                            {
-                                logte("Scheduled Channel %s/%s: Too many errors. Sleep for %lld milliseconds", GetApplicationName(), GetName().CStr(), 1000);
-                                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-                            }
                         }
                     }
-                } while (0);
 
-                if (need_break == true)
-                {
-                    break;
+					break;
                 }
             }
         }
@@ -352,7 +382,22 @@ namespace pvd
             }
             else if (result == PlaybackResult::ERROR)
             {
-                logtw("Scheduled Channel %s/%s: Failed to play fallback program.", GetApplicationName(), GetName().CStr());
+				logte("Scheduled Channel %s/%s: Playback error in fallback program. Try to play next item", GetApplicationName(), GetName().CStr());
+
+				if (CheckCurrentItemAvailable() == true)
+                {
+                    return PlaybackResult::FAILBACK;
+                }
+
+                _realtime_clock.Pause();
+                _schedule_updated.Wait(1000);
+
+                continue;
+			}
+			else
+			{
+				logtc("Scheduled Channel %s/%s: Unknown playback result %d", GetApplicationName(), GetName().CStr(), static_cast<int>(result));
+				break;
             }
         }
 
@@ -687,6 +732,45 @@ namespace pvd
         return true;
     }
 
+	int64_t ScheduledStream::GetFileItemDurationMS(const std::shared_ptr<Schedule::Item> &item) const
+	{
+		if (item == nullptr || item->file == false || item->file_path.IsEmpty())
+		{
+			return 0;
+		}
+
+		AVFormatContext *format_context = nullptr;
+
+		int err = ::avformat_open_input(&format_context, item->file_path.CStr(), nullptr, nullptr);
+		if (err < 0)
+		{
+			char errbuf[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+
+			::av_strerror(err, errbuf, sizeof(errbuf));
+
+			logte("%s/%s: Failed to open %s item. error (%d, %s)", GetApplicationName(), GetName().CStr(), item->file_path.CStr(), err, errbuf);
+			return 0;
+		}
+
+		err = ::avformat_find_stream_info(format_context, nullptr);
+		if (err < 0)
+		{
+			char errbuf[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+
+			::av_strerror(err, errbuf, sizeof(errbuf));
+
+			logte("%s/%s: Failed to find stream info. Error (%d, %s)", GetApplicationName(), GetName().CStr(), item->file_path.CStr(), err, errbuf);
+			::avformat_close_input(&format_context);
+			return 0;
+		}
+
+		int64_t duration_ms = format_context->duration / AV_TIME_BASE * 1000;
+
+		::avformat_close_input(&format_context);
+
+		return duration_ms;
+	}
+
     AVFormatContext *ScheduledStream::PrepareFilePlayback(const std::shared_ptr<Schedule::Item> &item)
     {
         AVFormatContext *format_context = nullptr;
@@ -806,7 +890,7 @@ namespace pvd
         if (video_track_needed == true || audio_track_needed == true)
         {
             logte("%s/%s: Failed to find %s track(s) from file %s", GetApplicationName(), GetName().CStr(), 
-                video_track_needed&& audio_track_needed == true ? "video and audio" :
+                video_track_needed && audio_track_needed == true ? "video and audio" :
                 video_track_needed == true ? "video" : "audio", item->file_path.CStr());
             ::avformat_close_input(&format_context);
             return nullptr;
@@ -830,18 +914,21 @@ namespace pvd
         }
 
         // Seek to start position
-        if (item->start_time_ms > 0)
+        if (item->start_time_ms_conf > 0)
         {
-            int64_t seek_target = item->start_time_ms * 1000;
+            int64_t seek_target = item->start_time_ms_conf * 1000;
             int64_t seek_min = 0;
             int64_t seek_max = total_duration_ms * 1000;
 
             int seek_ret = ::avformat_seek_file(format_context, -1, seek_min, seek_target, seek_max, 0);
             if (seek_ret < 0)
             {
-                logte("%s/%s: Failed to seek to start position %d, err:%d", GetApplicationName(), GetName().CStr(), item->start_time_ms, seek_ret);
+                logte("%s/%s: Failed to seek to start position %d, err:%d", GetApplicationName(), GetName().CStr(), item->start_time_ms_conf, seek_ret);
             }
         }
+
+		logti("Scheduled Channel : %s/%s: File %s prepared. Start time %lld ms, Duration %lld ms",
+			GetApplicationName(), GetName().CStr(), item->file_path.CStr(), item->start_time_ms_conf, item->duration_ms);
 
         if (UpdateStream() == false)
         {

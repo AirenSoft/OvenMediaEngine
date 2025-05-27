@@ -8,9 +8,9 @@
 //==============================================================================
 
 #include "scheduled_application.h"
-#include "scheduled_provider_private.h"
 #include "scheduled_stream.h"
 #include "schedule.h"
+#include "schedule_private.h"
 
 #include <base/ovlibrary/files.h>
 

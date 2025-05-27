@@ -13,6 +13,95 @@
 
 namespace pvd
 {
+	std::shared_ptr<Schedule::Item> Schedule::Program::GetFirstItem()
+	{
+		// Search for the first item by now() - scheduled_time
+		if (items.empty() || (unlimited_duration == false && total_item_duration_ms <= 0))
+		{
+			logte("GetFirstItem: No items or total item duration is zero");
+			return nullptr;
+		}
+
+		auto now = std::chrono::system_clock::now();
+		auto time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - scheduled_time).count();
+		int64_t position = time_elapsed;
+
+		if (unlimited_duration == false)
+		{
+			// if position is less than 1 second, it is considered as processing time difference and not seeked
+			if (position < 1000)
+			{
+				position = 0;
+			}
+			else
+			{
+				position = time_elapsed % total_item_duration_ms;
+			}
+		} 
+
+
+		logti("GetFirstItem: Now: %lld ms, Scheduled: %lld ms, Elapsed: %lld ms, Position: %lld ms", 
+			std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count(),
+			std::chrono::duration_cast<std::chrono::milliseconds>(scheduled_time.time_since_epoch()).count(),
+			time_elapsed, position);
+
+		int64_t current_position = 0;
+		for (const auto &item : items)
+		{
+			current_item_index ++;
+
+			if (item->duration_ms <= 0 ||  // it means unlimited duration like live stream with no duration set
+				(current_position <= position && position < current_position + item->duration_ms))
+			{
+				// Copy item and set start_time_ms_conf
+				auto first_item = std::make_shared<Item>(*item);
+				first_item->start_time_ms_conf = position - current_position;
+				first_item->duration_ms = item->duration_ms - first_item->start_time_ms_conf;
+
+				logti("Item : %s - GetFirstItem: Found item at position: %lld ms, Item start time: %lld ms, Item duration: %lld ms", 
+					item->url.CStr(), position, first_item->start_time_ms_conf, first_item->duration_ms);
+
+				return first_item;
+			}
+
+			current_position += item->duration_ms;
+		}
+
+		return nullptr;
+	}
+
+	std::shared_ptr<Schedule::Item> Schedule::Program::GetNextItem()
+	{
+		if (items.empty())
+		{
+			return nullptr;
+		}
+
+		if (size_t(current_item_index) >= items.size())
+		{
+			if (repeat)
+			{
+				current_item_index = 0;
+			}
+			else
+			{
+				off_air = true;
+				return nullptr;
+			}
+		}
+
+		auto item = items[current_item_index];
+		current_item_index++;
+
+		return item;
+	}
+
+	bool Schedule::Program::IsOffAir() const
+	{
+		return off_air;
+	}
+
+
 	std::tuple<std::shared_ptr<Schedule>, ov::String> Schedule::CreateFromXMLFile(const ov::String &file_path, const ov::String &media_root_dir)
 	{
 		auto schedule = std::make_shared<Schedule>();
@@ -350,8 +439,8 @@ namespace pvd
 		for (uint32_t i=0; i<items_object.size(); i++)
 		{
 			ov::String url;
-			int64_t start_time_ms = 0;
-			int64_t duration_ms = -1;
+			int64_t start_time_ms_conf = 0;
+			int64_t duration_ms_conf = -1;
 			bool fallback_on_err = true;
 
 			auto item_object = items_object[i];
@@ -370,14 +459,14 @@ namespace pvd
 			auto start_object = item_object["start"];
 			if (start_object.isNull() == false || start_object.isInt() == true)
 			{
-				start_time_ms = start_object.asInt();
+				start_time_ms_conf = start_object.asInt();
 			}
 
 			// duration
 			auto duration_object = item_object["duration"];
 			if (duration_object.isNull() == false || duration_object.isInt() == true)
 			{
-				duration_ms = duration_object.asInt();
+				duration_ms_conf = duration_object.asInt();
 			}
 
 			// fallbackOnErr
@@ -387,7 +476,7 @@ namespace pvd
 				fallback_on_err = fallback_on_err_object.asBool();
 			}
 
-			auto item = MakeItem(url, start_time_ms, duration_ms, fallback_on_err);
+			auto item = MakeItem(url, start_time_ms_conf, duration_ms_conf, fallback_on_err);
 			if (item == nullptr)
 			{
 				return false;
@@ -636,8 +725,8 @@ namespace pvd
 		for (auto item_node = item_parent_node.child("Item"); item_node; item_node = item_node.next_sibling("Item"))
 		{
 			ov::String url;
-			int64_t start_time_ms = 0;
-			int64_t duration_ms = -1;
+			int64_t start_time_ms_conf = 0;
+			int64_t duration_ms_conf = -1;
 			bool fallback_on_err = true;
 
 			auto url_attribute = item_node.attribute("url");
@@ -652,13 +741,13 @@ namespace pvd
 			auto start_attribute = item_node.attribute("start");
 			if (start_attribute)
 			{
-				start_time_ms = start_attribute.as_llong();
+				start_time_ms_conf = start_attribute.as_llong();
 			}
 
 			auto duration_attribute = item_node.attribute("duration");
 			if (duration_attribute)
 			{
-				duration_ms = duration_attribute.as_llong();
+				duration_ms_conf = duration_attribute.as_llong();
 			}
 
 			auto fallback_on_err_attribute = item_node.attribute("fallbackOnErr");
@@ -667,7 +756,7 @@ namespace pvd
 				fallback_on_err = fallback_on_err_attribute.as_bool();
 			}
 
-			auto item = MakeItem(url, start_time_ms, duration_ms, fallback_on_err);
+			auto item = MakeItem(url, start_time_ms_conf, duration_ms_conf, fallback_on_err);
 			if (item == nullptr)
 			{
 				return false;
@@ -745,13 +834,15 @@ namespace pvd
 		return program;
 	}
 
-	std::shared_ptr<Schedule::Item> Schedule::MakeItem(const ov::String &url, int64_t start_time_ms, int64_t duration_ms, bool fallback_on_err) const
+	std::shared_ptr<Schedule::Item> Schedule::MakeItem(const ov::String &url, int64_t start_time_ms_conf, int64_t duration_ms_conf, bool fallback_on_err) const
 	{
 		auto item = std::make_shared<Schedule::Item>();
 
 		item->url = url;
-		item->start_time_ms = start_time_ms;
-		item->duration_ms = duration_ms;
+		item->start_time_ms_conf = start_time_ms_conf;
+		item->start_time_ms = start_time_ms_conf; // start_time_ms can be changed later
+		item->duration_ms_conf = duration_ms_conf;
+		item->duration_ms = duration_ms_conf; // duration_ms can be changed later
 		item->fallback_on_err = fallback_on_err;
 
 		// file_path
@@ -773,9 +864,10 @@ namespace pvd
 		}
 
 		// minimum duration is 1000ms
-		if (item->duration_ms >= 0 && item->duration_ms <= 1000)
+		if (item->duration_ms_conf >= 0 && item->duration_ms_conf <= 1000)
 		{
-			logtw("Item duration is too short, duration must be greater than 1000ms. url: %s, duration: %lld, it will be changed to 1000ms", item->url.CStr(), item->duration_ms);
+			logtw("Item duration is too short, duration must be greater than 1000ms. url: %s, duration: %lld, it will be changed to 1000ms", item->url.CStr(), item->duration_ms_conf);
+			item->duration_ms_conf = 1000;
 			item->duration_ms = 1000;
 		}
 
@@ -918,8 +1010,8 @@ namespace pvd
 		{
 			auto item_node = item_parent_node.append_child("Item");
 			item_node.append_attribute("url").set_value(item->url.CStr());
-			item_node.append_attribute("start").set_value(item->start_time_ms);
-			item_node.append_attribute("duration").set_value(item->duration_ms);
+			item_node.append_attribute("start").set_value(item->start_time_ms_conf);
+			item_node.append_attribute("duration").set_value(item->duration_ms_conf);
 		}
 
 		return true;
@@ -996,8 +1088,8 @@ namespace pvd
 			Json::Value item_object;
 
 			item_object["url"] = item->url.CStr();
-			item_object["start"] = item->start_time_ms;
-			item_object["duration"] = item->duration_ms;
+			item_object["start"] = item->start_time_ms_conf;
+			item_object["duration"] = item->duration_ms_conf;
 
 			item_parent_object.append(item_object);
 		}
