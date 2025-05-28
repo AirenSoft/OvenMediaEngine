@@ -99,7 +99,7 @@ std::optional<std::tuple<std::shared_ptr<ov::Data>, std::shared_ptr<Fragmentatio
 		new_fragment->AddFragment(nal_offset, nal_length);
 
 		// NALU
-		new_data->Append(src_data->GetDataAs<char *>() + src_offset, nal_length);
+		new_data->Append(src_data->GetDataAs<char>() + src_offset, nal_length);
 	}
 
 	if (new_nal != nullptr)
