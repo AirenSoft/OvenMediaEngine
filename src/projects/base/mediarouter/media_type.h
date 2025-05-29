@@ -133,14 +133,24 @@ namespace cmn
 
 	static bool IsVideoCodec(cmn::MediaCodecId codec_id)
 	{
-		if (codec_id == cmn::MediaCodecId::H264 ||
-			codec_id == cmn::MediaCodecId::H265 ||
-			codec_id == cmn::MediaCodecId::Vp8 ||
-			codec_id == cmn::MediaCodecId::Vp9 ||
-			codec_id == cmn::MediaCodecId::Flv ||
-			codec_id == cmn::MediaCodecId::Vp9)
+		switch(codec_id)
 		{
-			return true;
+			OV_CASE_RETURN(cmn::MediaCodecId::None, false);
+
+			OV_CASE_RETURN(cmn::MediaCodecId::H264, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::H265, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Vp8, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Vp9, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Av1, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Flv, true);
+
+			OV_CASE_RETURN(cmn::MediaCodecId::Aac, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Mp3, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Opus, false);
+
+			OV_CASE_RETURN( cmn::MediaCodecId::Jpeg, false);
+			OV_CASE_RETURN( cmn::MediaCodecId::Png, false);
+			OV_CASE_RETURN( cmn::MediaCodecId::Webp, false);
 		}
 
 		return false;
@@ -148,11 +158,24 @@ namespace cmn
 
 	static bool IsImageCodec(cmn::MediaCodecId codec_id)
 	{
-		if (codec_id == cmn::MediaCodecId::Jpeg ||
-			codec_id == cmn::MediaCodecId::Png ||
-			codec_id == cmn::MediaCodecId::Webp)
+		switch(codec_id)
 		{
-			return true;
+			OV_CASE_RETURN(cmn::MediaCodecId::None, false);
+
+			OV_CASE_RETURN(cmn::MediaCodecId::H264, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::H265, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Vp8, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Vp9, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Av1, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Flv, true);
+
+			OV_CASE_RETURN(cmn::MediaCodecId::Aac, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Mp3, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Opus, false);
+
+			OV_CASE_RETURN( cmn::MediaCodecId::Jpeg, true);
+			OV_CASE_RETURN( cmn::MediaCodecId::Png, true);
+			OV_CASE_RETURN( cmn::MediaCodecId::Webp, true);
 		}
 
 		return false;
@@ -160,11 +183,24 @@ namespace cmn
 
 	static bool IsAudioCodec(cmn::MediaCodecId codec_id)
 	{
-		if (codec_id == cmn::MediaCodecId::Aac ||
-			codec_id == cmn::MediaCodecId::Mp3 ||
-			codec_id == cmn::MediaCodecId::Opus)
+		switch(codec_id)
 		{
-			return true;
+			OV_CASE_RETURN(cmn::MediaCodecId::None, false);
+
+			OV_CASE_RETURN(cmn::MediaCodecId::H264, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::H265, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Vp8, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Vp9, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Av1, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Flv, false);
+
+			OV_CASE_RETURN(cmn::MediaCodecId::Aac, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Mp3, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Opus, true);
+
+			OV_CASE_RETURN( cmn::MediaCodecId::Jpeg, false);
+			OV_CASE_RETURN( cmn::MediaCodecId::Png, false);
+			OV_CASE_RETURN( cmn::MediaCodecId::Webp, false);
 		}
 
 		return false;
@@ -744,6 +780,42 @@ namespace cmn
 			LayoutOctagonal 		= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight | (uint32_t)Channel::BackCenter,
 		};
 
+		constexpr static const char *GetLayoutName(Layout layout)
+		{
+			switch (layout)
+			{
+				OV_CASE_RETURN(Layout::LayoutUnknown, "unknown");
+				OV_CASE_RETURN(Layout::LayoutMono, "mono");
+				OV_CASE_RETURN(Layout::LayoutStereo, "stereo");
+				OV_CASE_RETURN(Layout::Layout2Point1, "2.1");
+				OV_CASE_RETURN(Layout::Layout21, "3.0(back)");
+				OV_CASE_RETURN(Layout::LayoutSurround, "3.0");
+				OV_CASE_RETURN(Layout::Layout3Point1, "3.1");
+				OV_CASE_RETURN(Layout::Layout4Point0, "4.0");
+				OV_CASE_RETURN(Layout::Layout4Point1, "4.1");
+				OV_CASE_RETURN(Layout::Layout22, "quad(side)");
+				OV_CASE_RETURN(Layout::LayoutQuad, "quad");
+				OV_CASE_RETURN(Layout::Layout5Point0, "5.0(side)");
+				OV_CASE_RETURN(Layout::Layout5Point1, "5.1(side)");
+				OV_CASE_RETURN(Layout::Layout5Point0Back, "5.0");
+				OV_CASE_RETURN(Layout::Layout5Point1Back, "5.1");
+				OV_CASE_RETURN(Layout::Layout6Point0, "6.0");
+				OV_CASE_RETURN(Layout::Layout6Point0Front, "6.0(front)");
+				OV_CASE_RETURN(Layout::LayoutHexagonal, "hexagonal");
+				OV_CASE_RETURN(Layout::Layout6Point1, "6.1");
+				OV_CASE_RETURN(Layout::Layout6Point1Back, "6.1(back)");
+				OV_CASE_RETURN(Layout::Layout6Point1Front, "6.1(front)");
+				OV_CASE_RETURN(Layout::Layout7Point0, "7.0");
+				OV_CASE_RETURN(Layout::Layout7Point0Front, "7.0(front)");
+				OV_CASE_RETURN(Layout::Layout7Point1, "7.1");
+				OV_CASE_RETURN(Layout::Layout7Point1Wide, "7.1(wide-side)");
+				OV_CASE_RETURN(Layout::Layout7Point1WideBack, "7.1(wide)");
+				OV_CASE_RETURN(Layout::LayoutOctagonal, "octagonal");
+			}
+
+			return "unknown";
+		}
+
 	public:
 		AudioChannel() = default;
 		~AudioChannel() = default;
@@ -763,33 +835,33 @@ namespace cmn
 
 			switch (_layout)
 			{
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutUnknown, 			_count = 0, _name = "unknown");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutMono, 			_count = 1, _name = "mono");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutStereo, 			_count = 2, _name = "stereo");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout2Point1, 			_count = 3, _name = "2.1");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout21, 				_count = 3, _name = "3.0(back)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutSurround, 		_count = 3, _name = "3.0");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout3Point1, 			_count = 4, _name = "3.1");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout4Point0, 			_count = 4, _name = "4.0");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout4Point1, 			_count = 5, _name = "4.1");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout22, 				_count = 4, _name = "quad(side)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutQuad, 			_count = 4, _name = "quad");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point0, 			_count = 5, _name = "5.0(side)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point1, 			_count = 6, _name = "5.1(side)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point0Back, 		_count = 5, _name = "5.0");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point1Back, 		_count = 6, _name = "5.1");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point0, 			_count = 6, _name = "6.0");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point0Front, 	_count = 6, _name = "6.0(front)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutHexagonal, 		_count = 6, _name = "hexagonal");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point1, 			_count = 7, _name = "6.1");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point1Back, 		_count = 7, _name = "6.1(back)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point1Front, 	_count = 7, _name = "6.1(front)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point0, 			_count = 7, _name = "7.0");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point0Front, 	_count = 7, _name = "7.0(front)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point1, 			_count = 8, _name = "7.1");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point1Wide, 		_count = 8, _name = "7.1(wide-side)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point1WideBack, 	_count = 8, _name = "7.1(wide)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutOctagonal, 		_count = 8, _name = "octagonal");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutUnknown, 			_count = 0, _name = GetLayoutName(Layout::LayoutUnknown));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutMono, 			_count = 1, _name = GetLayoutName(Layout::LayoutMono));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutStereo, 			_count = 2, _name = GetLayoutName(Layout::LayoutStereo));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout2Point1, 			_count = 3, _name = GetLayoutName(Layout::Layout2Point1));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout21, 				_count = 3, _name = GetLayoutName(Layout::Layout21));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutSurround, 		_count = 3, _name = GetLayoutName(Layout::LayoutSurround));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout3Point1, 			_count = 4, _name = GetLayoutName(Layout::Layout3Point1));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout4Point0, 			_count = 4, _name = GetLayoutName(Layout::Layout4Point0));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout4Point1, 			_count = 5, _name = GetLayoutName(Layout::Layout4Point1));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout22, 				_count = 4, _name = GetLayoutName(Layout::Layout22));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutQuad, 			_count = 4, _name = GetLayoutName(Layout::LayoutQuad));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point0, 			_count = 5, _name = GetLayoutName(Layout::Layout5Point0));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point1, 			_count = 6, _name = GetLayoutName(Layout::Layout5Point1));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point0Back, 		_count = 5, _name = GetLayoutName(Layout::Layout5Point0Back));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point1Back, 		_count = 6, _name = GetLayoutName(Layout::Layout5Point1Back));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point0, 			_count = 6, _name = GetLayoutName(Layout::Layout6Point0));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point0Front, 	_count = 6, _name = GetLayoutName(Layout::Layout6Point0Front));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutHexagonal, 		_count = 6, _name = GetLayoutName(Layout::LayoutHexagonal));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point1, 			_count = 7, _name = GetLayoutName(Layout::Layout6Point1));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point1Back, 		_count = 7, _name = GetLayoutName(Layout::Layout6Point1Back));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point1Front, 	_count = 7, _name = GetLayoutName(Layout::Layout6Point1Front));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point0, 			_count = 7, _name = GetLayoutName(Layout::Layout7Point0));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point0Front, 	_count = 7, _name = GetLayoutName(Layout::Layout7Point0Front));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point1, 			_count = 8, _name = GetLayoutName(Layout::Layout7Point1));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point1Wide, 		_count = 8, _name = GetLayoutName(Layout::Layout7Point1Wide));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point1WideBack, 	_count = 8, _name = GetLayoutName(Layout::Layout7Point1WideBack));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutOctagonal, 		_count = 8, _name = GetLayoutName(Layout::LayoutOctagonal));
 			}
 		}
 

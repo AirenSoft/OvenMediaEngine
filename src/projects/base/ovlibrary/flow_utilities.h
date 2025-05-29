@@ -8,6 +8,22 @@
 //==============================================================================
 #pragma once
 
+/// Run `statement` if the `case_value` is matched
+///
+/// @param case_value The value to match
+/// @param statement The statement to execute if the case is matched
+///
+/// @example
+/// ```
+/// OV_CASE_BREAK(AudioChannel::FrontLeft, _channel = "FrontLeft")
+/// ```
+///
+/// This will return "FrontLeft" if the value is `AudioChannel::FrontLeft`
+#define OV_CASE_BREAK(case_value, statement) \
+	case case_value:                         \
+		statement;                           \
+		break
+
 /// Return `return_value` if the `case_value` is matched
 ///
 /// @param case_value The value to match

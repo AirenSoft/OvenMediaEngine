@@ -16,10 +16,16 @@
 #include "byte_ordering.h"
 #include "data.h"
 
-#define OV_DECLARE_READ_FUNCTION(type, name, func) \
-	inline type name() noexcept                    \
-	{                                              \
-		return func(*Read<type>());                \
+#define OV_DECLARE_READ_FUNCTION(type, name, func)  \
+	inline type name() noexcept                     \
+	{                                               \
+		return func(*Read<type>());                 \
+	}                                               \
+                                                    \
+	template <typename T>                           \
+	inline T name##As() noexcept                    \
+	{                                               \
+		return static_cast<T>(func(*Read<type>())); \
 	}
 
 #define OV_DECLARE_WRITE_FUNCTION(type, name, func) \
@@ -33,7 +39,6 @@ namespace ov
 	class ByteStream
 	{
 	public:
-
 		// Create Data itself
 		explicit ByteStream(size_t reserve_size = 0);
 
