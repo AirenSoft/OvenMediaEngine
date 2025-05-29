@@ -75,7 +75,7 @@ namespace pub
 
 	private:
 		void AddToDisconnect(const std::shared_ptr<ov::Socket> &remote);
-		
+
 		std::shared_ptr<StreamMap> GetStreamMap(int port);
 		std::shared_ptr<SrtSession> GetSession(const std::shared_ptr<ov::Socket> &remote);
 
@@ -94,7 +94,7 @@ namespace pub
 		// However, since the client immediately attempts to reconnect, the socket connection is now terminated with a slight delay
 		ov::DelayQueue _disconnect_timer{"SRTDiscnt"};
 		// To minimize the use of mutex, use atomic variables before using mutex
-		std::atomic<bool> _has_socket_list_to_disconnect;
+		std::atomic<bool> _has_socket_list_to_disconnect{false};
 		std::mutex _socket_list_to_disconnect_mutex;
 		std::vector<std::shared_ptr<ov::Socket>> _socket_list_to_disconnect;
 	};

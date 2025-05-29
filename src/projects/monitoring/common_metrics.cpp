@@ -19,7 +19,7 @@ namespace mon
 		_avg_throughtput_in = 0;
 		_max_throughtput_in = 0;
 		_last_throughtput_in = 0;
-		_last_total_bytes_out = 0;
+		_last_total_bytes_in = 0;
 
 		_avg_throughtput_out = 0;
 		_max_throughtput_out = 0;

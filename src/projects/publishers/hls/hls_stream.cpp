@@ -128,7 +128,7 @@ bool HlsStream::Start()
 		return false;
 	}
 
-	logti("HLS Stream has been created : %s/%u\nSegment Duration(%u) Segment Count(%u)", GetName().CStr(), GetId(),
+	logti("HLS Stream has been created : %s/%u\nSegment Duration(%.2f) Segment Count(%u)", GetName().CStr(), GetId(),
 		  _ts_config.GetSegmentDuration(), _ts_config.GetSegmentCount());
 
 	return Stream::Start();
