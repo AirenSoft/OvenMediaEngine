@@ -1381,7 +1381,7 @@ namespace pvd::rtmp
 				}
 
 				// Prevent negative track count when unexpected track is received
-				_waiting_audio_track_count = std::max(0, _waiting_audio_track_count);
+				_waiting_audio_track_count = std::max(0, _waiting_audio_track_count - 1);
 			}
 
 			if (rtmp_track->IsIgnored())
@@ -1539,7 +1539,7 @@ namespace pvd::rtmp
 				}
 
 				// Prevent negative track count when unexpected track is received
-				_waiting_video_track_count = std::max(0, _waiting_video_track_count);
+				_waiting_video_track_count = std::max(0, _waiting_video_track_count - 1);
 			}
 
 			if (rtmp_track->IsIgnored())
