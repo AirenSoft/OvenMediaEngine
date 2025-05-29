@@ -18,6 +18,7 @@
 #include "rtmp_application.h"
 #include "rtmp_provider_private.h"
 #include "rtmp_stream.h"
+#include "rtmp_stream_v2.h"
 
 namespace pvd
 {
@@ -140,6 +141,13 @@ namespace pvd
 			_physical_port_list.push_back(physical_port);
 		}
 
+		_is_ertmp_enabled = server.GetModules().GetERTMP().IsEnabled();
+
+		if (_is_ertmp_enabled)
+		{
+			logtw("E-RTMP is enabled, and this is an experimental feature");
+		}
+
 		logti("%s is listening on %s",
 			  GetProviderName(),
 			  ov::String::Join(rtmp_address_string_list, ", ").CStr());
@@ -186,12 +194,21 @@ namespace pvd
 		return PushProvider::OnDeleteProviderApplication(application);
 	}
 
+	template <typename T>
+	std::shared_ptr<pvd::PushStream> CreateStream(int channel_id, const std::shared_ptr<ov::Socket> &remote, const std::shared_ptr<pvd::PushProvider> &provider)
+	{
+		return T::Create(StreamSourceType::Rtmp, channel_id, remote, provider);
+	}
+
 	void RtmpProvider::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 	{
 		auto channel_id = remote->GetNativeHandle();
-		auto stream = RtmpStream::Create(StreamSourceType::Rtmp, channel_id, remote, GetSharedPtrAs<pvd::PushProvider>());
+		auto stream = _is_ertmp_enabled
+						  ? CreateStream<rtmp::RtmpStreamV2>(channel_id, remote, GetSharedPtrAs<pvd::PushProvider>())
+						  : CreateStream<RtmpStream>(channel_id, remote, GetSharedPtrAs<pvd::PushProvider>());
 
-		logti("A RTMP client has connected from %s", remote->ToString().CStr());
+		logti("A RTMP client has connected from %s%s", remote->ToString().CStr(),
+			  _is_ertmp_enabled ? " (E-RTMP)" : "");
 
 		PushProvider::OnChannelCreated(channel_id, stream);
 	}
