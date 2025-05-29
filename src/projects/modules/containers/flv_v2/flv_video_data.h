@@ -19,30 +19,32 @@ namespace modules
 	{
 		struct VideoData : public CommonData
 		{
-			VideoData(VideoFrameType video_frame_type)
-				: video_frame_type(video_frame_type)
+			VideoData(VideoFrameType video_frame_type, bool from_ex_header)
+				: CommonData(from_ex_header),
+				  video_frame_type(video_frame_type)
 			{
 			}
 
 			const VideoFrameType video_frame_type;
-			VideoCodecId video_codec_id;
-			VideoCommand video_command;
 
-			VideoPacketType video_packet_type;
-			uint24_t video_timestamp_nano_offset;
-			int24_t composition_time_offset;
+			// Available only when `_is_ex_header == false` (Legacy AVC)
+			std::optional<VideoCodecId> video_codec_id;
 
-			bool is_video_multitrack = false;
-			AvMultitrackType video_multitrack_type = AvMultitrackType::OneTrack;
+			// Available only when `_is_ex_header == true` (E-RTMP)
+			std::optional<VideoCommand> video_command;
+			std::optional<uint24_t> video_timestamp_nano_offset;
 			std::optional<VideoFourCc> video_fourcc;
-
 			std::optional<rtmp::AmfDocument> video_metadata;
-
 			std::shared_ptr<HEVCDecoderConfigurationRecord> hevc_header;
-			// This is used to store the data to re-parse `H265DecoderConfigurationRecord` when receiving `cmn::PacketType::SEQUENCE_HEADER`
+			// This is used to store the data to re-parse `H265DecoderConfigurationRecord`
+			// when receiving `cmn::PacketType::SEQUENCE_HEADER`
 			// in `MediaRouterNormalize::ProcessH265HVCCStream()`.
 			// It can be improved to use what is parsed here later.
 			std::shared_ptr<const ov::Data> hevc_header_data;
+
+			// Available both in legacy and E-RTMP
+			VideoPacketType video_packet_type;
+			int24_t composition_time_offset;
 
 			bool IsKeyFrame() const
 			{

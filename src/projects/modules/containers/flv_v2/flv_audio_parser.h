@@ -14,10 +14,17 @@ namespace modules
 {
 	namespace flv
 	{
-		class AudioParser : public ParserBase
+		class AudioParser : public ParserCommon
 		{
 		public:
+			AudioParser(int track_id_if_legacy)
+				: ParserCommon(track_id_if_legacy)
+			{
+			}
+
 			bool Parse(ov::BitReader &reader) override;
+
+			OV_DEFINE_CONST_GETTER(GetDataList, _data_list, noexcept);
 
 		protected:
 			// Parse legacy AudioTagHeader (AAC only)
@@ -25,7 +32,15 @@ namespace modules
 			bool ParseLegacyAAC(ov::BitReader &reader, const std::shared_ptr<AudioData> &data);
 
 			MAY_THROWS(BitReaderError)
-			bool ProcessExAudioTagHeader(ov::BitReader &reader, SoundFormat sound_format, bool *process_audio_body);
+			std::shared_ptr<AudioData> ProcessExAudioTagHeader(ov::BitReader &reader, SoundFormat sound_format, bool *process_audio_body);
+
+			MAY_THROWS(BitReaderError)
+			std::shared_ptr<AudioData> ProcessExAudioTagBody(ov::BitReader &reader, bool process_audio_body, std::shared_ptr<AudioData> audio_data);
+
+		protected:
+			AudioPacketType _audio_packet_type;
+
+			std::vector<std::shared_ptr<AudioData>> _data_list;
 		};
 	}  // namespace flv
 }  // namespace modules
