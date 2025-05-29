@@ -14,106 +14,104 @@
 
 #include "./amf_property_base.h"
 
-namespace modules
+namespace modules::rtmp
 {
-	namespace rtmp
+	class AmfEcmaArray;
+	class AmfStrictArray;
+	class AmfObject;
+
+	class AmfProperty : public AmfPropertyBase
 	{
-		class AmfEcmaArray;
-		class AmfStrictArray;
-		class AmfObject;
+	public:
+		// The same as AmfProperty::NullProperty()
+		AmfProperty();
+		AmfProperty(AmfTypeMarker type);
+		AmfProperty(double number);
+		AmfProperty(uint32_t number);
+		AmfProperty(bool boolean);
+		AmfProperty(const char *string);
+		AmfProperty(const AmfObject &object);
+		AmfProperty(const AmfEcmaArray &array);
+		AmfProperty(const AmfStrictArray &array);
 
-		class AmfProperty : public AmfPropertyBase
+		// copy ctor
+		AmfProperty(const AmfProperty &other);
+		// move ctor
+		AmfProperty(AmfProperty &&other) noexcept;
+
+		AmfProperty &operator=(const AmfProperty &other);
+		AmfProperty &operator=(AmfProperty &&other) noexcept;
+
+		~AmfProperty() override;
+
+		static AmfProperty NullProperty()
 		{
-		public:
-			// The same as AmfProperty::NullProperty()
-			AmfProperty();
-			AmfProperty(AmfTypeMarker type);
-			AmfProperty(double number);
-			AmfProperty(bool boolean);
-			AmfProperty(const char *string);
-			AmfProperty(const AmfObject &object);
-			AmfProperty(const AmfEcmaArray &array);
-			AmfProperty(const AmfStrictArray &array);
+			return AmfProperty(AmfTypeMarker::Null);
+		}
 
-			// copy ctor
-			AmfProperty(const AmfProperty &other);
-			// move ctor
-			AmfProperty(AmfProperty &&other) noexcept;
+		static AmfProperty UndefinedProperty()
+		{
+			return AmfProperty(AmfTypeMarker::Undefined);
+		}
 
-			AmfProperty &operator=(const AmfProperty &other);
-			AmfProperty &operator=(AmfProperty &&other) noexcept;
+		bool Encode(ov::ByteStream &byte_stream, bool encode_marker) const override;
+		bool Decode(ov::ByteStream &byte_stream, bool decode_marker) override;
 
-			~AmfProperty() override;
+		AmfTypeMarker GetType() const
+		{
+			return _amf_data_type;
+		}
 
-			static AmfProperty NullProperty()
-			{
-				return AmfProperty(AmfTypeMarker::Null);
-			}
+		double GetNumber() const
+		{
+			return _number;
+		}
 
-			static AmfProperty UndefinedProperty()
-			{
-				return AmfProperty(AmfTypeMarker::Undefined);
-			}
+		bool GetBoolean() const
+		{
+			return _boolean;
+		}
 
-			bool Encode(ov::ByteStream &byte_stream, bool encode_marker) const override;
-			bool Decode(ov::ByteStream &byte_stream, bool decode_marker) override;
+		ov::String GetString() const
+		{
+			return _string;
+		}
 
-			AmfTypeMarker GetType() const
-			{
-				return _amf_data_type;
-			}
+		const AmfObject *GetObject() const
+		{
+			return _object;
+		}
 
-			double GetNumber() const
-			{
-				return _number;
-			}
+		const AmfEcmaArray *GetEcmaArray() const
+		{
+			return _ecma_array;
+		}
 
-			bool GetBoolean() const
-			{
-				return _boolean;
-			}
+		const AmfStrictArray *GetStrictArray() const
+		{
+			return _strict_array;
+		}
 
-			ov::String GetString() const
-			{
-				return _string;
-			}
+		void ToString(ov::String &description, size_t indent = 0) const override;
+		ov::String ToString(size_t indent = 0) const override;
 
-			const AmfObject *GetObject() const
-			{
-				return _object;
-			}
+	protected:
+		bool EncodeNumber(ov::ByteStream &byte_stream) const;
+		bool EncodeBoolean(ov::ByteStream &byte_stream) const;
+		bool EncodeString(ov::ByteStream &byte_stream) const;
 
-			const AmfEcmaArray *GetEcmaArray() const
-			{
-				return _ecma_array;
-			}
+		bool DecodeNumber(ov::ByteStream &byte_stream);
+		bool DecodeBoolean(ov::ByteStream &byte_stream);
+		bool DecodeString(ov::ByteStream &byte_stream);
 
-			const AmfStrictArray *GetStrictArray() const
-			{
-				return _strict_array;
-			}
+		void Release();
 
-			void ToString(ov::String &description, size_t indent = 0) const override;
-			ov::String ToString(size_t indent = 0) const override;
-
-		protected:
-			bool EncodeNumber(ov::ByteStream &byte_stream) const;
-			bool EncodeBoolean(ov::ByteStream &byte_stream) const;
-			bool EncodeString(ov::ByteStream &byte_stream) const;
-
-			bool DecodeNumber(ov::ByteStream &byte_stream);
-			bool DecodeBoolean(ov::ByteStream &byte_stream);
-			bool DecodeString(ov::ByteStream &byte_stream);
-
-			void Release();
-
-		protected:
-			double _number = 0.0;
-			bool _boolean = false;
-			ov::String _string;
-			AmfObject *_object = nullptr;
-			AmfEcmaArray *_ecma_array = nullptr;
-			AmfStrictArray *_strict_array = nullptr;
-		};
-	}  // namespace rtmp
-}  // namespace modules
+	protected:
+		double _number = 0.0;
+		bool _boolean = false;
+		ov::String _string;
+		AmfObject *_object = nullptr;
+		AmfEcmaArray *_ecma_array = nullptr;
+		AmfStrictArray *_strict_array = nullptr;
+	};
+}  // namespace modules::rtmp
