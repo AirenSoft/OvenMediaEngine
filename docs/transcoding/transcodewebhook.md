@@ -240,11 +240,11 @@ The "outputProfiles" in the JSON is identical to the configuration in Server.xml
                         "webRtcAutoAbr": true,
                         "hlsChunklistPathDepth": -1
                     },
-                    "rendition/renditions": [
+                    "renditions": [
                         {
-                            "name/name": "bypass",
-                            "video/video": "bypass_video",
-                            "audio/audio": "bypass_audio"
+                            "name": "bypass",
+                            "video": "bypass_video",
+                            "audio": "bypass_audio"
                         }
                     ]
                 }
