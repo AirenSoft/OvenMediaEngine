@@ -59,8 +59,8 @@ To run OvenMediaEngine as Edge, you need to add Origins elements to the configur
                 <Pass>
                     <Scheme>ovt</Scheme>
                     <Urls><Url>origin.com:9000/app/stream_720p</Url></Urls>
+                    <ForwardQueryParams>true</ForwardQueryParams>
                 </Pass>
-                <ForwardQueryParams>true</ForwardQueryParams>
             </Origin>
             <Origin>
                 <Location>/app/</Location>
