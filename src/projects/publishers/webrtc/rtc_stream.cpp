@@ -170,7 +170,7 @@ bool RtcStream::Start()
 
 		if (IsSupportedCodec(track->GetCodecId()) == false)
 		{
-			logti("RtcStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), StringFromMediaCodecId(track->GetCodecId()).CStr());
+			logti("RtcStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), cmn::GetCodecIdString(track->GetCodecId()));
 			continue;
 		}
 
@@ -636,8 +636,8 @@ std::shared_ptr<PayloadAttr> RtcStream::MakePayloadAttr(const std::shared_ptr<co
 			break;
 		default:
 			logti("Unsupported codec(%s/%s) is being input from media track",
-					::StringFromMediaType(track->GetMediaType()).CStr(),
-					::StringFromMediaCodecId(track->GetCodecId()).CStr());
+					cmn::GetMediaTypeString(track->GetMediaType()),
+					cmn::GetCodecIdString(track->GetCodecId()));
 			return nullptr;
 	}
 

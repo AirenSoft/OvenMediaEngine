@@ -202,7 +202,7 @@ bool HlsStream::CreateDefaultPlaylist()
 		}
 		else
 		{
-			logti("LLHlsStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), StringFromMediaCodecId(track->GetCodecId()).CStr());
+			logti("LLHlsStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), cmn::GetCodecIdString(track->GetCodecId()));
 			continue;
 		}
 	}

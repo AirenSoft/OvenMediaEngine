@@ -20,7 +20,7 @@
 #include <modules/rtsp/rtsp_demuxer.h>
 #include <modules/rtsp/rtsp_message.h>
 #include <modules/sdp/session_description.h>
-#include <modules/ffmpeg/ffmpeg_conv.h>
+#include <modules/ffmpeg/compat.h>
 
 namespace pvd
 {

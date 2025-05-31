@@ -62,7 +62,7 @@ namespace mpegts
 			auto stream_type = GetElementaryStreamTypeByCodecId(media_track->GetCodecId());
 			if (stream_type == WellKnownStreamTypes::None)
 			{
-				logte("%s codec is not supported", cmn::GetCodecIdToString(media_track->GetCodecId()));
+				logte("%s codec is not supported", cmn::GetCodecIdString(media_track->GetCodecId()));
 				return false;
 			}
 		}
@@ -149,7 +149,7 @@ namespace mpegts
             _first_video_frame_received = true;
         }
 
-        // logtd("AppendFrame track_id %u, media_type %s, pts %lld, dts %lld", media_packet->GetTrackId(), StringFromMediaType(media_packet->GetMediaType()).CStr(), media_packet->GetPts(), media_packet->GetDts());
+        // logtd("AppendFrame track_id %u, media_type %s, pts %lld, dts %lld", media_packet->GetTrackId(), cmn::GetMediaTypeString(media_packet->GetMediaType()), media_packet->GetPts(), media_packet->GetDts());
 
         auto track = GetMediaTrack(media_packet->GetTrackId());
         if (track == nullptr)

@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include <modules/ffmpeg/ffmpeg_conv.h>
+#include <modules/ffmpeg/compat.h>
 #include <orchestrator/orchestrator.h>
 #include <mediarouter/mediarouter_stream_tap.h>
 #include <base/provider/stream.h>

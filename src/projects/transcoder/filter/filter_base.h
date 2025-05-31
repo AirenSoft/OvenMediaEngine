@@ -22,7 +22,7 @@
 #include <base/info/media_track.h>
 #include <base/mediarouter/media_buffer.h>
 #include <base/mediarouter/media_type.h>
-#include <modules/ffmpeg/ffmpeg_conv.h>
+#include <modules/ffmpeg/compat.h>
 #include <modules/managed_queue/managed_queue.h>
 
 class FilterBase

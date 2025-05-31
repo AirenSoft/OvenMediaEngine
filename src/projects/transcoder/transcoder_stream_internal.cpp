@@ -8,8 +8,10 @@
 //==============================================================================
 
 #include "transcoder_stream_internal.h"
+#include <modules/ffmpeg/compat.h>
 
 #include "transcoder_private.h"
+
 
 TranscoderStreamInternal::TranscoderStreamInternal()
 {
@@ -223,11 +225,11 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(
 		{
 			if(output_track->GetCodecModules().IsEmpty() == false)
 			{
-				output_track->SetCodecModules(ov::String::FormatString("%s,%s", cmn::GetStringFromCodecModuleId(module_id), output_track->GetCodecModules()));
+				output_track->SetCodecModules(ov::String::FormatString("%s,%s", cmn::GetCodecModuleIdString(module_id), output_track->GetCodecModules()));
 			}
 			else
 			{
-				output_track->SetCodecModules(cmn::GetStringFromCodecModuleId(module_id));
+				output_track->SetCodecModules(cmn::GetCodecModuleIdString(module_id));
 			}
 		}
 	}
@@ -654,7 +656,7 @@ void TranscoderStreamInternal::UpdateOutputTrackPassthrough(const std::shared_pt
 	{
 		output_track->SetWidth(buffer->GetWidth());
 		output_track->SetHeight(buffer->GetHeight());
-		output_track->SetColorspace(buffer->GetFormat());
+		output_track->SetColorspace(buffer->GetFormat<cmn::VideoPixelFormatId>());
 	}
 	else if (output_track->GetMediaType() == cmn::MediaType::Audio)
 	{

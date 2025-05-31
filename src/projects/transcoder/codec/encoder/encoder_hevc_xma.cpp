@@ -18,8 +18,8 @@ bool EncoderHEVCxXMA::SetCodecParams()
 	_codec_context->bit_rate = _codec_context->rc_min_rate = _codec_context->rc_max_rate = GetRefTrack()->GetBitrate();
 	_codec_context->sample_aspect_ratio = ::av_make_q(1, 1);
 	_codec_context->ticks_per_frame = 2;
-	_codec_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetRefTrack()->GetTimeBase());
-	_codec_context->pix_fmt = (AVPixelFormat)GetSupportedFormat();
+	_codec_context->time_base = ffmpeg::compat::TimebaseToAVRational(GetRefTrack()->GetTimeBase());
+	_codec_context->pix_fmt = ffmpeg::compat::ToAVPixelFormat(GetSupportVideoFormat());
 	_codec_context->width = GetRefTrack()->GetWidth();
 	_codec_context->height = GetRefTrack()->GetHeight();
 
@@ -93,30 +93,29 @@ bool EncoderHEVCxXMA::SetCodecParams()
 
 bool EncoderHEVCxXMA::InitCodec()
 {
-	ov::String codec_name = "mpsoc_vcu_hevc";
-	const AVCodec *codec = ::avcodec_find_encoder_by_name(codec_name.CStr());
+	const AVCodec *codec = ::avcodec_find_encoder_by_name("mpsoc_vcu_hevc");
 	if (codec == nullptr)
 	{
-		logte("Could not find encoder: %s", codec_name.CStr());
+		logte("Could not find encoder: %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
 	_codec_context = ::avcodec_alloc_context3(codec);
 	if (_codec_context == nullptr)
 	{
-		logte("Could not allocate codec context for %s", codec_name.CStr());
+		logte("Could not allocate codec context for %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
 	if (SetCodecParams() == false)
 	{
-		logte("Could not set codec parameters for %s", codec_name.CStr());
+		logte("Could not set codec parameters for %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
-	if (::avcodec_open2(_codec_context, codec, nullptr) < 0)
+	if (::avcodec_open2(_codec_context, nullptr, nullptr) < 0)
 	{
-		logte("Could not open codec: %s", codec_name.CStr());
+		logte("Could not open codec: %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
@@ -135,7 +134,7 @@ bool EncoderHEVCxXMA::Configure(std::shared_ptr<MediaTrack> context)
 		_kill_flag = false;
 
 		_codec_thread = std::thread(&EncoderHEVCxXMA::CodecThread, this);
-		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("ENC-%sxa-t%d", avcodec_get_name(GetCodecID()), _track->GetId()).CStr());
+		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("ENC-%sxa-t%d", cmn::GetCodecIdString(GetCodecID()), _track->GetId()).CStr());
 		
 		// Initialize the codec and wait for completion.
 		if(_codec_init_event.Get() == false)

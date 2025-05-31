@@ -413,58 +413,6 @@ static ov::String StringFromPublisherType(const PublisherType &type)
 	return "Unknown";
 }
 
-static ov::String StringFromMediaCodecId(const cmn::MediaCodecId &type)
-{
-	switch (type)
-	{
-		case cmn::MediaCodecId::H264:
-			return "H264";
-		case cmn::MediaCodecId::H265:
-			return "H265";
-		case cmn::MediaCodecId::Vp8:
-			return "VP8";
-		case cmn::MediaCodecId::Vp9:
-			return "VP9";
-		case cmn::MediaCodecId::Flv:
-			return "FLV";
-		case cmn::MediaCodecId::Aac:
-			return "AAC";
-		case cmn::MediaCodecId::Mp3:
-			return "MP3";
-		case cmn::MediaCodecId::Opus:
-			return "OPUS";
-		case cmn::MediaCodecId::Jpeg:
-			return "JPEG";
-		case cmn::MediaCodecId::Png:
-			return "PNG";
-		case cmn::MediaCodecId::Webp:
-			return "WEBP";			
-		case cmn::MediaCodecId::None:
-		default:
-			return "Unknown";
-	}
-}
-
-static ov::String StringFromMediaType(const cmn::MediaType &type)
-{
-	switch (type)
-	{
-		case cmn::MediaType::Video:
-			return "Video";
-		case cmn::MediaType::Audio:
-			return "Audio";
-		case cmn::MediaType::Data:
-			return "Data";
-		case cmn::MediaType::Subtitle:
-			return "Subtitle";
-		case cmn::MediaType::Attachment:
-			return "Attachment";
-		case cmn::MediaType::Unknown:
-		default:
-			return "Unknown";
-	}
-}
-
 static ProviderType ProviderTypeFromSourceType(const StreamSourceType &type)
 {
 	ProviderType provider_type = ProviderType::Unknown;

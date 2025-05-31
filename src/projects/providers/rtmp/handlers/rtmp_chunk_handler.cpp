@@ -292,7 +292,7 @@ namespace pvd::rtmp
 			"Audio: %s (%d, raw: %s), layout: %s (%d), bits: %d, samplerate: %d, sampleindex: %d, bitrate: %d\n"
 			"Video: %s (%d, raw: %s), width: %d, height: %d, framerate: %.2f, bitrate: %d",
 			// Audio information
-			audio_codec_id.has_value() ? GetCodecIdToString(audio_codec_id.value()) : "-",
+			audio_codec_id.has_value() ? cmn::GetCodecIdString(audio_codec_id.value()) : "-",
 			audio_codec_id.has_value() ? static_cast<int>(audio_codec_id.value()) : 0,
 			audio_codec_raw.CStr(),
 			audio_channel_layout.has_value() ? cmn::AudioChannel::GetLayoutName(audio_channel_layout.value()) : "-",
@@ -302,7 +302,7 @@ namespace pvd::rtmp
 			audio_sampleindex,
 			audio_bitrate,
 			// Video information
-			video_codec_id.has_value() ? GetCodecIdToString(video_codec_id.value()) : "-",
+			video_codec_id.has_value() ? cmn::GetCodecIdString(video_codec_id.value()) : "-",
 			video_codec_id.has_value() ? static_cast<int>(video_codec_id.value()) : 0,
 			video_codec_raw.CStr(),
 			video_width,
@@ -774,7 +774,7 @@ namespace pvd::rtmp
 				if (IsSupportedCodecForERTMP(value) == false)
 				{
 					logae("Not supported audio codec: %s(%d) (raw: %s)",
-						  GetCodecIdToString(value), value,
+						  cmn::GetCodecIdString(value), value,
 						  _media_info.audio_codec_raw.CStr());
 					_media_info.audio_codec_id = cmn::MediaCodecId::None;
 				}
@@ -799,7 +799,7 @@ namespace pvd::rtmp
 				auto value = _media_info.video_codec_id.value();
 				if (IsSupportedCodecForERTMP(value) == false)
 				{
-					logae("Not supported video codec: %s(%d) (raw: %s)", GetCodecIdToString(value), value, _media_info.video_codec_raw.CStr());
+					logae("Not supported video codec: %s(%d) (raw: %s)", cmn::GetCodecIdString(value), value, _media_info.video_codec_raw.CStr());
 					_media_info.video_codec_id = cmn::MediaCodecId::None;
 				}
 			}
@@ -1345,7 +1345,7 @@ namespace pvd::rtmp
 				if (is_supported_codec == false)
 				{
 					logaw("Not supported audio codec in track: %s(%d) - %u",
-						  GetCodecIdToString(media_codec_id),
+						  cmn::GetCodecIdString(media_codec_id),
 						  ov::ToUnderlyingType(media_codec_id),
 						  track_id);
 				}
@@ -1506,7 +1506,7 @@ namespace pvd::rtmp
 				if (is_supported_codec == false)
 				{
 					logaw("Not supported video codec in track: %s(%d) - %u",
-						  GetCodecIdToString(media_codec_id),
+						  cmn::GetCodecIdString(media_codec_id),
 						  ov::ToUnderlyingType(media_codec_id),
 						  track_id);
 				}

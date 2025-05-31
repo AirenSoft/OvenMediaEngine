@@ -108,6 +108,9 @@ namespace cmn
 		Webp
 	};
 
+	// DeviceId is used to identify a hwardware accelerator device.
+	typedef int32_t DeviceId;
+
 	enum class MediaCodecModuleId : uint8_t
 	{
 		None = 0,
@@ -122,6 +125,53 @@ namespace cmn
 		LIBVPX,		// SW
 		FDKAAC,		// SW
 		LIBOPUS,	// SW
+		NB
+	};
+
+	enum class VideoPixelFormatId : int32_t
+	{
+		None = 0,
+		YUVJ444P,
+		YUVJ422P,
+		YUVJ420P,
+		YUVA420P,
+		YUV444P9,
+		YUV444P16,
+		YUV444P12,
+		YUV444P10,
+		YUV444P,
+		YUV440P12,
+		YUV440P10,
+		YUV440P,
+		YUV422P12,
+		YUV422P10,
+		YUV422P,
+		YUV420P9,
+		YUV420P12,
+		YUV420P10,
+		YUV420P,
+		RGB24,
+		P016,
+		P010,
+		NV21,
+		NV20,
+		NV16,
+		NV12,
+		GRAY8,
+		GRAY10,
+		GBRP16,
+		GBRP12,
+		GBRP10,
+		GBRP,
+		BGR24,
+		BGR0,
+		ARGB,
+		RGBA,
+		ABGR,
+		BGRA,
+		CUDA,
+		XVBM_8,
+		XVBM_10,
 		NB
 	};
 
@@ -325,7 +375,7 @@ namespace cmn
 		return cmn::MediaCodecModuleId::None;
 	}
 
-	constexpr const char *GetStringFromCodecModuleId(MediaCodecModuleId id)
+	constexpr const char *GetCodecModuleIdString(MediaCodecModuleId id)
 	{
 		switch (id)
 		{
@@ -365,7 +415,7 @@ namespace cmn
 		return false;
 	}
 
-	constexpr const char *GetCodecIdToString(cmn::MediaCodecId id)
+	constexpr const char *GetCodecIdString(cmn::MediaCodecId id)
 	{
 		switch (id)
 		{

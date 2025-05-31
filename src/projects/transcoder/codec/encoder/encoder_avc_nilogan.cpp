@@ -24,8 +24,8 @@ bool EncoderAVCxNILOGAN::SetCodecParams()
 	_codec_context->sample_aspect_ratio = (AVRational){1, 1};
 	_codec_context->ticks_per_frame = 2;
 	_codec_context->framerate = ::av_d2q((GetRefTrack()->GetFrameRateByConfig() > 0) ? GetRefTrack()->GetFrameRateByConfig() : GetRefTrack()->GetFrameRateByMeasured(), AV_TIME_BASE);
-	_codec_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetRefTrack()->GetTimeBase());
-	_codec_context->pix_fmt = (AVPixelFormat)GetSupportedFormat();
+	_codec_context->time_base = ffmpeg::compat::TimebaseToAVRational(GetRefTrack()->GetTimeBase());
+	_codec_context->pix_fmt = ffmpeg::compat::ToAVPixelFormat(GetSupportVideoFormat());
 	_codec_context->width = GetRefTrack()->GetWidth();
 	_codec_context->height = GetRefTrack()->GetHeight();
 
@@ -105,36 +105,34 @@ bool EncoderAVCxNILOGAN::SetCodecParams()
 //
 bool EncoderAVCxNILOGAN::InitCodec()
 {
-	auto codec_id = GetCodecID();
-
 	const AVCodec *codec = ::avcodec_find_encoder_by_name("h264_ni_logan_enc");
 	if (codec == nullptr)
 	{
-		logte("Could not find encoder: %d (%s)", codec_id, ::avcodec_get_name(codec_id));
+		logte("Could not find encoder: %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
 	_codec_context = ::avcodec_alloc_context3(codec);
 	if (_codec_context == nullptr)
 	{
-		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		logte("Could not allocate codec context for %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 	
 	_codec_context->hw_device_ctx = ::av_buffer_ref(TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NILOGAN, _track->GetCodecDeviceId()));
 	if(_codec_context->hw_device_ctx == nullptr)
 	{
-		logte("Could not allocate hw device context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		logte("Could not allocate hw device context for %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
 	if (SetCodecParams() == false)
 	{
-		logte("Could not set codec parameters for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		logte("Could not set codec parameters for %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
-	if (::avcodec_open2(_codec_context, codec, nullptr) < 0)
+	if (::avcodec_open2(_codec_context, nullptr, nullptr) < 0)
 	{
 		logte("Could not open codec: %s (%d)", codec->name, codec->id);
 		return false;
@@ -155,7 +153,7 @@ bool EncoderAVCxNILOGAN::Configure(std::shared_ptr<MediaTrack> context)
 		_kill_flag = false;
 
 		_codec_thread = std::thread(&EncoderAVCxNILOGAN::CodecThread, this);
-		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("ENC-%sni-t%d", avcodec_get_name(GetCodecID()), _track->GetId()).CStr());
+		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("ENC-%sni-t%d", cmn::GetCodecIdString(GetCodecID()), _track->GetId()).CStr());
 
 		// Initialize the codec and wait for completion.
 		if(_codec_init_event.Get() == false)

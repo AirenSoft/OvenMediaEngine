@@ -31,7 +31,7 @@ namespace serdes
 
 		if (track->IsBypass() == false)
 		{
-			SetString(object, "codec", ::StringFromMediaCodecId(track->GetCodecId()), Optional::False);
+			SetString(object, "codec", cmn::GetCodecIdString(track->GetCodecId()), Optional::False);
 			SetInt(object, "width", track->GetWidth());
 			SetInt(object, "height", track->GetHeight());
 			SetString(object, "bitrate", ov::Converter::ToString(track->GetBitrate()), Optional::False);
@@ -68,7 +68,7 @@ namespace serdes
 
 		if (track->IsBypass() == false)
 		{
-			SetString(object, "codec", ::StringFromMediaCodecId(track->GetCodecId()), Optional::False);
+			SetString(object, "codec", cmn::GetCodecIdString(track->GetCodecId()), Optional::False);
 			SetInt(object, "samplerate", track->GetSampleRate());
 			// SetAudioChannel(object, "channel", track->GetChannel(), Optional::False);
 			SetInt(object, "channel", track->GetChannel().GetCounts());
@@ -86,7 +86,7 @@ namespace serdes
 
 		SetInt(object, "id", track->GetId());
 		SetString(object, "name", track->GetVariantName(), Optional::False);
-		SetString(object, "type", ::StringFromMediaType(track->GetMediaType()), Optional::False);
+		SetString(object, "type", cmn::GetMediaTypeString(track->GetMediaType()), Optional::False);
 
 		switch (track->GetMediaType())
 		{

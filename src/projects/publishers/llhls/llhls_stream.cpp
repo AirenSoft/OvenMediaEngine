@@ -142,7 +142,7 @@ bool LLHlsStream::Start()
 				continue;
 			}
 
-			logti("LLHlsStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), StringFromMediaCodecId(track->GetCodecId()).CStr());
+			logti("LLHlsStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), cmn::GetCodecIdString(track->GetCodecId()));
 			continue;
 		}
 	}
@@ -1370,7 +1370,7 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 		{
 			cenc_property.scheme = bmff::CencProtectScheme::None;
 			// Not yet support for other codec
-			logte("LLHlsStream::AddPackager() - CENC is not supported for this codec(%s), this track will be excluded from CENC protection", StringFromMediaCodecId(media_track->GetCodecId()).CStr());
+			logte("LLHlsStream::AddPackager() - CENC is not supported for this codec(%s), this track will be excluded from CENC protection", cmn::GetCodecIdString(media_track->GetCodecId()));
 			_cenc_property.scheme = bmff::CencProtectScheme::None;
 		}
 	}
@@ -1478,7 +1478,7 @@ ov::String LLHlsStream::GetChunklistName(const int32_t &track_id) const
 	// chunklist_<track id>_<media type>_<stream key>_llhls.m3u8
 	return ov::String::FormatString("chunklist_%d_%s_%s_llhls.m3u8",
 									track_id,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
+									ov::String(cmn::GetMediaTypeString(GetTrack(track_id)->GetMediaType())).LowerCaseString().CStr(),
 									_stream_key.CStr());
 }
 
@@ -1487,7 +1487,7 @@ ov::String LLHlsStream::GetInitializationSegmentName(const int32_t &track_id) co
 	// init_<track id>_<media type>_<random str>_llhls.m4s
 	return ov::String::FormatString("init_%d_%s_%s_llhls.m4s",
 									track_id,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
+									ov::String(cmn::GetMediaTypeString(GetTrack(track_id)->GetMediaType())).LowerCaseString().CStr(),
 									_stream_key.CStr());
 }
 
@@ -1497,7 +1497,7 @@ ov::String LLHlsStream::GetSegmentName(const int32_t &track_id, const int64_t &s
 	return ov::String::FormatString("seg_%d_%lld_%s_%s_llhls.m4s",
 									track_id,
 									segment_number,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
+									ov::String(cmn::GetMediaTypeString(GetTrack(track_id)->GetMediaType())).LowerCaseString().CStr(),
 									_stream_key.CStr());
 }
 
@@ -1508,7 +1508,7 @@ ov::String LLHlsStream::GetPartialSegmentName(const int32_t &track_id, const int
 									track_id,
 									segment_number,
 									partial_number,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
+									ov::String(cmn::GetMediaTypeString(GetTrack(track_id)->GetMediaType())).LowerCaseString().CStr(),
 									_stream_key.CStr());
 }
 
@@ -1533,7 +1533,7 @@ ov::String LLHlsStream::GetNextPartialSegmentName(const int32_t &track_id, const
 									track_id,
 									next_segment_number,
 									next_partial_number,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
+									ov::String(cmn::GetMediaTypeString(GetTrack(track_id)->GetMediaType())).LowerCaseString().CStr(),
 									_stream_key.CStr());
 }
 

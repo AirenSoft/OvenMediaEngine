@@ -7,8 +7,8 @@
 #include <base/publisher/application.h>
 #include <base/publisher/stream.h>
 #include <config/config.h>
-#include <modules/ffmpeg/ffmpeg_conv.h>
-#include <modules/ffmpeg/ffmpeg_writer.h>
+#include <modules/ffmpeg/compat.h>
+#include <modules/ffmpeg/writer.h>
 
 #include <regex>
 
@@ -105,7 +105,7 @@ namespace pub
 
 		// Get extension and container format
 		ov::String output_extension = ov::PathManager::ExtractExtension(record->GetOutputFilePath());
-		ov::String output_format = ffmpeg::Conv::GetFormatByExtension(output_extension, "mpegts");
+		ov::String output_format = ffmpeg::compat::GetFormatByExtension(output_extension, "mpegts");
 
 		// Create directory for temporary file
 		ov::String tmp_directory = ov::PathManager::ExtractPath(record->GetTmpPath());
@@ -156,9 +156,9 @@ namespace pub
 				continue;
 			}
 
-			if (ffmpeg::Conv::IsSupportCodec(output_format, track->GetCodecId()) == false)
+			if (ffmpeg::compat::IsSupportCodec(output_format, track->GetCodecId()) == false)
 			{
-				logtd("%s format does not support the codec(%s)", output_format.CStr(), cmn::GetCodecIdToString(track->GetCodecId()));
+				logtd("%s format does not support the codec(%s)", output_format.CStr(), cmn::GetCodecIdString(track->GetCodecId()));
 				continue;
 			}
 

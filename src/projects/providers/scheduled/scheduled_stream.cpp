@@ -547,12 +547,12 @@ namespace pvd
                     packet_type = cmn::PacketType::RAW;
                     break;
 				default:
-                    logtw("Scheduled Channel : %s/%s: Unsupported codec %s", GetApplicationName(), GetName().CStr(), StringFromMediaCodecId(track->GetCodecId()).CStr());
+                    logtw("Scheduled Channel : %s/%s: Unsupported codec %s", GetApplicationName(), GetName().CStr(), cmn::GetCodecIdString(track->GetCodecId()));
 					::av_packet_unref(&packet);
 					continue;
 			}
 
-			auto media_packet = ffmpeg::Conv::ToMediaPacket(GetMsid(), track->GetId(), &packet, track->GetMediaType(), bitstream_format, packet_type);
+			auto media_packet = ffmpeg::compat::ToMediaPacket(GetMsid(), track->GetId(), &packet, track->GetMediaType(), bitstream_format, packet_type);
 
             // Convert to fixed time base
             auto origin_tb = context->streams[packet.stream_index]->time_base;
@@ -702,12 +702,12 @@ namespace pvd
                 continue;
             }
 
-            if (ffmpeg::Conv::ToMediaType(stream->codecpar->codec_type) == cmn::MediaType::Video &&
+            if (ffmpeg::compat::ToMediaType(stream->codecpar->codec_type) == cmn::MediaType::Video &&
                 video_track_needed == true)
             {
                 video_track_needed = false;
             }
-            else if (ffmpeg::Conv::ToMediaType(stream->codecpar->codec_type) == cmn::MediaType::Audio &&
+            else if (ffmpeg::compat::ToMediaType(stream->codecpar->codec_type) == cmn::MediaType::Audio &&
                 audio_track_needed == true)
             {
                 audio_track_needed = false;
@@ -818,10 +818,10 @@ namespace pvd
                 continue;
             }
 
-            if (ffmpeg::Conv::ToMediaType(stream->codecpar->codec_type) == cmn::MediaType::Video &&
+            if (ffmpeg::compat::ToMediaType(stream->codecpar->codec_type) == cmn::MediaType::Video &&
                 video_track_needed == true)
             {
-                auto new_track = ffmpeg::Conv::CreateMediaTrack(stream);
+                auto new_track = ffmpeg::compat::CreateMediaTrack(stream);
                 if (new_track == nullptr)
                 {
                     continue;
@@ -846,10 +846,10 @@ namespace pvd
 
                 video_track_needed = false;
             }
-            else if (ffmpeg::Conv::ToMediaType(stream->codecpar->codec_type) == cmn::MediaType::Audio &&
+            else if (ffmpeg::compat::ToMediaType(stream->codecpar->codec_type) == cmn::MediaType::Audio &&
                 audio_track_needed == true)
             {
-                auto new_track = ffmpeg::Conv::CreateMediaTrack(stream);
+                auto new_track = ffmpeg::compat::CreateMediaTrack(stream);
                 if (new_track == nullptr)
                 {
                     continue;

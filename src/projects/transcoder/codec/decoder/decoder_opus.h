@@ -18,9 +18,9 @@ public:
 	{
 	}
 
-	AVCodecID GetCodecID() const noexcept override
+	cmn::MediaCodecId GetCodecID() const noexcept override
 	{
-		return AV_CODEC_ID_OPUS;
+		return cmn::MediaCodecId::Opus;
 	}
 
 	std::shared_ptr<const MediaPacket> _cur_pkt = nullptr;

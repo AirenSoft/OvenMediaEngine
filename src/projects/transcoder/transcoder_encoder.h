@@ -28,13 +28,14 @@ public:
 	std::shared_ptr<MediaTrack> &GetRefTrack();
 	cmn::Timebase GetTimebase() const;
 
-	virtual int GetSupportedFormat() const noexcept = 0;
+	virtual cmn::AudioSample::Format GetSupportAudioFormat() const noexcept = 0;
+	virtual cmn::VideoPixelFormatId GetSupportVideoFormat() const noexcept = 0;
 	virtual cmn::BitstreamFormat GetBitstreamFormat() const noexcept = 0;
 
 	bool InitCodecInteral();
 	virtual bool InitCodec() = 0;
 	virtual void DeinitCodec();
-	virtual bool SetCodecParams() = 0;	
+	virtual bool SetCodecParams() = 0;
 	virtual void CodecThread();
 
 	virtual void Stop();
@@ -48,20 +49,13 @@ public:
 	void SendBuffer(std::shared_ptr<const MediaFrame> media_frame) override;
 
 protected:
-	int32_t _encoder_id;
+	int32_t _encoder_id = -1;
 
 	info::Stream _stream_info;
 	std::shared_ptr<MediaTrack> _track = nullptr;
 
-	AVCodecContext *_codec_context = nullptr;
-	AVCodecParameters *_codec_par = nullptr;
-
 	ov::Future _codec_init_event;
 
-	bool _change_format = false;
-
-	AVPacket *_packet = nullptr;
-	AVFrame *_frame = nullptr;
 	cmn::BitstreamFormat _bitstream_format = cmn::BitstreamFormat::Unknown;
 	cmn::PacketType _packet_type = cmn::PacketType::Unknown;
 
@@ -70,11 +64,14 @@ protected:
 
 	CompleteHandler _complete_handler;
 
+	// Force Keyframce
 	ov::PreciseTimer _force_keyframe_timer;
-
 	// 0: no force keyframe,  > 0: force keyframe by sum of duration
 	int64_t _force_keyframe_by_time_interval;
-
 	// -1: force keyframe
 	int64_t _accumulate_frame_duration;
+
+	AVCodecContext *_codec_context = nullptr;
+	AVPacket *_packet = nullptr;
+	AVFrame *_frame = nullptr;
 };

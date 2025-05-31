@@ -65,7 +65,7 @@ namespace bmff
 		}
 		else
 		{
-			logtw("FMP4Packager::Initialize() - Unsupported codec id(%s)", StringFromMediaCodecId(track->GetCodecId()).CStr());
+			logtw("FMP4Packager::Initialize() - Unsupported codec id(%s)", cmn::GetCodecIdString(track->GetCodecId()));
 			return false;
 		}
 

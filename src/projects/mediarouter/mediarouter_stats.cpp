@@ -68,8 +68,8 @@ void MediaRouterStats::Update(
 			int64_t scaled_acc_duration = (int64_t)((double)(_stat_recv_pkt_adur[track_id] * 1000) * track->GetTimeBase().GetExpr());
 
 			auto codec_name = ov::String::FormatString("%s(%s)",
-													   ::StringFromMediaCodecId(track->GetCodecId()).CStr(),
-													   track->IsBypass() ? "PT" : GetStringFromCodecModuleId(track->GetCodecModuleId()));
+													   cmn::GetCodecIdString(track->GetCodecId()),
+													   track->IsBypass() ? "PT" : cmn::GetCodecModuleIdString(track->GetCodecModuleId()));
 
 			auto timebase = ov::String::FormatString("%d/%d", track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen());
 

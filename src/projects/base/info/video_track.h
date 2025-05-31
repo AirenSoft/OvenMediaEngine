@@ -49,8 +49,8 @@ public:
 	void SetHasBframes(bool has_bframe);
 	bool HasBframes() const;
 
-	void SetColorspace(int colorspace);
-	int GetColorspace() const;	
+	void SetColorspace(cmn::VideoPixelFormatId colorspace);
+	cmn::VideoPixelFormatId GetColorspace() const;	
 
 	void SetPreset(ov::String preset);
 	ov::String GetPreset() const;
@@ -134,7 +134,7 @@ protected:
 
 	// Colorspace of video
 	// This variable is temporarily used in the Pixel Format defined by FFMPEG.
-	int _colorspace;	
+	cmn::VideoPixelFormatId _colorspace;	
 
 	// Preset for encoder (set by user)
 	ov::String _preset;

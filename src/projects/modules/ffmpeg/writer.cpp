@@ -1,9 +1,9 @@
-#include "ffmpeg_writer.h"
+#include "writer.h"
 
 #include <modules/bitstream/aac/aac_converter.h>
 #include <modules/bitstream/nalu/nal_stream_converter.h>
 #include <modules/bitstream/opus/opus_specific_config.h>
-#include <modules/ffmpeg/ffmpeg_conv.h>
+#include <modules/ffmpeg/compat.h>
 
 #define OV_LOG_TAG "FFmpegWriter"
 
@@ -88,7 +88,7 @@ namespace ffmpeg
 		int error = avformat_alloc_output_context2(&av_format, nullptr, (_format != nullptr) ? _format.CStr() : nullptr, _url.CStr());
 		if (error < 0)
 		{
-			logte("Could not create output context. error(%s), url(%s)", ffmpeg::Conv::AVErrorToString(error).CStr(), _url.CStr());
+			logte("Could not create output context. error(%s), url(%s)", ffmpeg::compat::AVErrorToString(error).CStr(), _url.CStr());
 
 			return false;
 		}
@@ -139,7 +139,7 @@ namespace ffmpeg
 		}
 
 		// Convert MediaTrack to AVStream
-		if (ffmpeg::Conv::ToAVStream(media_track, av_stream) == false)
+		if (ffmpeg::compat::ToAVStream(media_track, av_stream) == false)
 		{
 			logte("Could not convert track info to AVStream");
 
@@ -175,7 +175,7 @@ namespace ffmpeg
 		// Set Interrupt Callback
 		_interrupt_cb = {InterruptCallback, this};
 
-		// The codec_tag value added in the ffmpeg::Conv::ToAVStream function is removed when using the RTMP (FLV) format
+		// The codec_tag value added in the ffmpeg::compat::ToAVStream function is removed when using the RTMP (FLV) format
 		// Related log. "Tag avc1 incompatible with output codec id '27'"
 		for (uint32_t i = 0; i < av_format->nb_streams; i++)
 		{
@@ -193,7 +193,7 @@ namespace ffmpeg
 			{
 				SetState(WriterStateError);
 				
-				logte("Error opening file. error(%s), url(%s)", ffmpeg::Conv::AVErrorToString(error).CStr(), av_format->url);
+				logte("Error opening file. error(%s), url(%s)", ffmpeg::compat::AVErrorToString(error).CStr(), av_format->url);
 
 				return false;
 			}
@@ -405,7 +405,7 @@ namespace ffmpeg
 		{
 			SetState(WriterStateError);
 
-			logte("Send packet error(%s)", ffmpeg::Conv::AVErrorToString(error).CStr());
+			logte("Send packet error(%s)", ffmpeg::compat::AVErrorToString(error).CStr());
 
 			return false;
 		}

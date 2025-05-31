@@ -255,7 +255,7 @@ void FilterResampler::WorkerThread()
 
 		auto media_frame = std::move(obj.value());
 
-		auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Video, media_frame);
+		auto av_frame = ffmpeg::compat::ToAVFrame(cmn::MediaType::Video, media_frame);
 		if (!av_frame)
 		{
 			logte("Could not allocate the frame data");
@@ -303,7 +303,7 @@ void FilterResampler::WorkerThread()
 			else
 			{
 				// logti("Resampled out frame. pts: %lld, linesize: %d, samples : %d", _frame->pts, _frame->linesize[0], _frame->nb_samples);
-				auto output_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Audio, _frame);
+				auto output_frame = ffmpeg::compat::ToMediaFrame(cmn::MediaType::Audio, _frame);
 				::av_frame_unref(_frame);
 				if (output_frame == nullptr)
 				{

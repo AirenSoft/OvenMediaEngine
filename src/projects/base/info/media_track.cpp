@@ -189,12 +189,12 @@ cmn::MediaCodecModuleId MediaTrack::GetCodecModuleId() const
 	return _codec_module_id;
 }
 
-void MediaTrack::SetCodecDeviceId(int32_t id)
+void MediaTrack::SetCodecDeviceId(cmn::DeviceId id)
 {
 	_codec_device_id = id;
 }
 
-int32_t MediaTrack::GetCodecDeviceId() const
+cmn::DeviceId MediaTrack::GetCodecDeviceId() const
 {
 	return _codec_device_id;
 }
@@ -336,7 +336,7 @@ ov::String MediaTrack::GetInfoString()
 				"BFrames(%d) ",
 				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
 				ov::Converter::BitToString(GetBitrate()).CStr(),
-				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecModuleId(GetCodecModuleId()), GetCodecDeviceId(),
+				GetCodecId(), cmn::GetCodecIdString(GetCodecId()), IsBypass()?"Passthrough":cmn::GetCodecModuleIdString(GetCodecModuleId()), GetCodecDeviceId(),
 				GetBitstreamFormatString(GetOriginBitstream()),
 				GetWidth(), GetHeight(),
 				GetFrameRate(),
@@ -355,15 +355,15 @@ ov::String MediaTrack::GetInfoString()
 				"Codec(%d,%s,%s) "
 				"BSF(%s) "
 				"Samplerate(%s) "
-				"Format(%s, %d) "
-				"Channel(%s, %d) ",
+				"Format(%s) "
+				"Channel(%s) ",
 				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
 				ov::Converter::BitToString(GetBitrate()).CStr(),
-				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecModuleId(GetCodecModuleId()),
+				GetCodecId(), cmn::GetCodecIdString(GetCodecId()), IsBypass()?"Passthrough":cmn::GetCodecModuleIdString(GetCodecModuleId()),
 				GetBitstreamFormatString(GetOriginBitstream()),
 				ov::Converter::ToSiString(GetSampleRate(), 1).CStr(),
-				GetSample().GetName(), GetSample().GetSampleSize() * 8,
-				GetChannel().GetName(), GetChannel().GetCounts());
+				GetSample().GetName(),
+				GetChannel().GetName());
 			break;
 		case MediaType::Data:
 			out_str.AppendFormat(
@@ -373,7 +373,7 @@ ov::String MediaTrack::GetInfoString()
 				"Codec(%d,%s,%s) "
 				"BSF(%s) ",
 				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
-				GetCodecId(), ::StringFromMediaCodecId(GetCodecId()).CStr(), IsBypass()?"Passthrough":GetStringFromCodecModuleId(GetCodecModuleId()),
+				GetCodecId(), cmn::GetCodecIdString(GetCodecId()), IsBypass()?"Passthrough":cmn::GetCodecModuleIdString(GetCodecModuleId()),
 				GetBitstreamFormatString(GetOriginBitstream()));
 			break;
 

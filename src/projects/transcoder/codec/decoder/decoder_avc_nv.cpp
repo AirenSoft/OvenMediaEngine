@@ -14,46 +14,46 @@
 
 bool DecoderAVCxNV::InitCodec()
 {
-	const AVCodec *_codec = ::avcodec_find_decoder_by_name("h264_cuvid");
-	if (_codec == nullptr)
+	const AVCodec *codec = ::avcodec_find_decoder_by_name("h264_cuvid");
+	if (codec == nullptr)
 	{
-		logte("Codec not found: %s", ffmpeg::Conv::GetCodecName(GetCodecID()).CStr());
+		logte("Codec not found: %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
-	_context = ::avcodec_alloc_context3(_codec);
-	if (_context == nullptr)
+	_codec_context = ::avcodec_alloc_context3(codec);
+	if (_codec_context == nullptr)
 	{
-		logte("Could not allocate codec context for %s", ffmpeg::Conv::GetCodecName(GetCodecID()).CStr());
+		logte("Could not allocate codec context for %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
-	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
-	_context->pkt_timebase = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
-	_context->flags |= AV_CODEC_FLAG_LOW_DELAY;
+	_codec_context->time_base = ffmpeg::compat::TimebaseToAVRational(GetTimebase());
+	_codec_context->pkt_timebase = ffmpeg::compat::TimebaseToAVRational(GetTimebase());
+	_codec_context->flags |= AV_CODEC_FLAG_LOW_DELAY;
 
 	// Get hardware device context
 	auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NVENC, GetRefTrack()->GetCodecDeviceId());
 	if (hw_device_ctx == nullptr)
 	{
-		logte("Could not get hw device context for %s", ffmpeg::Conv::GetCodecName(GetCodecID()).CStr());
+		logte("Could not get hw device context for %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
 	// Assign HW device context to decoder
-	if (ffmpeg::Conv::SetHwDeviceCtxOfAVCodecContext(_context, hw_device_ctx) == false)
+	if (ffmpeg::compat::SetHwDeviceCtxOfAVCodecContext(_codec_context, hw_device_ctx) == false)
 	{
-		logte("Could not set hw device context for %s", ffmpeg::Conv::GetCodecName(GetCodecID()).CStr());
+		logte("Could not set hw device context for %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
-	if (::avcodec_open2(_context, _codec, nullptr) < 0)
+	if (::avcodec_open2(_codec_context, nullptr, nullptr) < 0)
 	{
-		logte("Could not open codec: %s", ffmpeg::Conv::GetCodecName(GetCodecID()).CStr());
+		logte("Could not open codec: %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
-	_parser = ::av_parser_init(GetCodecID());
+	_parser = ::av_parser_init(ffmpeg::compat::ToAVCodecId(GetCodecID()));
 	if (_parser == nullptr)
 	{
 		logte("Parser not found");
@@ -68,11 +68,11 @@ bool DecoderAVCxNV::InitCodec()
 
 void DecoderAVCxNV::UninitCodec()
 {
-	if (_context != nullptr)
+	if (_codec_context != nullptr)
 	{
-		::avcodec_free_context(&_context);
+		::avcodec_free_context(&_codec_context);
 	}
-	_context = nullptr;
+	_codec_context = nullptr;
 
 	if (_parser != nullptr)
 	{
@@ -85,9 +85,9 @@ bool DecoderAVCxNV::ReinitCodecIfNeed()
 {
 	// NVIDIA H.264 decoder does not support dynamic resolution streams. (e.g. WebRTC)
 	// So, when a resolution change is detected, the codec is reset and recreated.
-	if (_context->width != 0 && _context->height != 0 && (_parser->width != _context->width || _parser->height != _context->height))
+	if (_codec_context->width != 0 && _codec_context->height != 0 && (_parser->width != _codec_context->width || _parser->height != _codec_context->height))
 	{
-		logti("Changed input resolution of %u track. (%dx%d -> %dx%d)", GetRefTrack()->GetId(), _context->width, _context->height, _parser->width, _parser->height);
+		logti("Changed input resolution of %u track. (%dx%d -> %dx%d)", GetRefTrack()->GetId(), _codec_context->width, _codec_context->height, _parser->width, _parser->height);
 
 		UninitCodec();
 
@@ -132,7 +132,7 @@ void DecoderAVCxNV::CodecThread()
 		{
 			::av_packet_unref(_pkt);
 
-			int parsed_size = ::av_parser_parse2(_parser, _context, &_pkt->data, &_pkt->size, data + offset, static_cast<int>(remained), pts, dts, 0);
+			int parsed_size = ::av_parser_parse2(_parser, _codec_context, &_pkt->data, &_pkt->size, data + offset, static_cast<int>(remained), pts, dts, 0);
 			if (parsed_size < 0)
 			{
 				logte("An error occurred while parsing: %d", parsed_size);
@@ -171,38 +171,14 @@ void DecoderAVCxNV::CodecThread()
 					}
 				}
 
-				int ret = ::avcodec_send_packet(_context, _pkt);
+				int ret = ::avcodec_send_packet(_codec_context, _pkt);
 				if (ret == AVERROR(EAGAIN))
 				{
-					// Need more data
-				}
-				else if (ret == AVERROR_EOF)
-				{
-					logte("An error occurred while sending a packet for decoding: End of file (%d)", ret);
-					break;
-				}
-				else if (ret == AVERROR(EINVAL))
-				{
-					logte("An error occurred while sending a packet for decoding: Invalid argument (%d)", ret);
-					break;
-				}
-				else if (ret == AVERROR(ENOMEM))
-				{
-					logte("An error occurred while sending a packet for decoding: No memory (%d)", ret);
-					break;
-				}
-				else if (ret == AVERROR_INVALIDDATA)
-				{
-					// If only SPS/PPS Nalunit is entered in the decoder, an invalid data error occurs.
-					// There is no particular problem.
-					logtd("Invalid data found when processing input (%d)", ret);
-					break;
+					// Nothing to do here, just continue
 				}
 				else if (ret < 0)
 				{
-					char err_msg[1024];
-					::av_strerror(ret, err_msg, sizeof(err_msg));
-					logte("An error occurred while sending a packet for decoding: Unhandled error (%d:%s) ", ret, err_msg);
+					logte("Error error occurred while sending a packet for decoding. reason(%s)", ffmpeg::compat::AVErrorToString(ret).CStr());
 					break;
 				}
 			}
@@ -219,64 +195,42 @@ void DecoderAVCxNV::CodecThread()
 		while (!_kill_flag)
 		{
 			// Check the decoded frame is available
-			int ret = ::avcodec_receive_frame(_context, _frame);
-
+			int ret = ::avcodec_receive_frame(_codec_context, _frame);
 			if (ret == AVERROR(EAGAIN))
 			{
 				break;
 			}
-			else if (ret == AVERROR_EOF)
-			{
-				logtw("Error receiving a packet for decoding : AVERROR_EOF");
-				break;
-			}
 			else if (ret < 0)
 			{
-				logte("Error receiving a packet for decoding : %d", ret);
-
-				break;
+				logte("Error receiving a packet for decoding. reason(%s)", ffmpeg::compat::AVErrorToString(ret).CStr());
+				continue;
 			}
 			else
 			{
-				bool need_to_change_notify = false;
-
 				// Update codec information if needed
 				if (_change_format == false)
 				{
-					ret = ::avcodec_parameters_from_context(_codec_par, _context);
-					if (ret == 0)
-					{
-						auto codec_info = ffmpeg::Conv::CodecInfoToString(_context, _codec_par);
+					auto codec_info = ffmpeg::compat::CodecInfoToString(_codec_context);
 
-						logti("[%s/%s(%u)] input stream information: %s",
-							  _stream_info.GetApplicationInfo().GetVHostAppName().CStr(), _stream_info.GetName().CStr(), _stream_info.GetId(), codec_info.CStr());
-
-						_change_format = true;
-
-						// If the format is changed, notify to another module
-						need_to_change_notify = true;
-					}
-					else
-					{
-						logte("Could not obtain codec parameters from context %p", _context);
-					}
+					logti("[%s/%s(%u)] input track information: %s",
+						  _stream_info.GetApplicationInfo().GetVHostAppName().CStr(), _stream_info.GetName().CStr(), _stream_info.GetId(), codec_info.CStr());
 				}
 
 				// If there is no duration, the duration is calculated by framerate and timebase.
-				if (_frame->pkt_duration <= 0LL && _context->framerate.num > 0 && _context->framerate.den > 0)
+				if (_frame->pkt_duration <= 0LL && _codec_context->framerate.num > 0 && _codec_context->framerate.den > 0)
 				{
-					_frame->pkt_duration = (int64_t)(((double)_context->framerate.den / (double)_context->framerate.num) / (double)GetRefTrack()->GetTimeBase().GetExpr());
+					_frame->pkt_duration = (int64_t)(((double)_codec_context->framerate.den / (double)_codec_context->framerate.num) / (double)GetRefTrack()->GetTimeBase().GetExpr());
 				}
 
-				auto decoded_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
+				auto decoded_frame = ffmpeg::compat::ToMediaFrame(cmn::MediaType::Video, _frame);
+				::av_frame_unref(_frame);
 				if (decoded_frame == nullptr)
 				{
 					continue;
 				}
 
-				::av_frame_unref(_frame);
-
-				Complete(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
+				Complete(!_change_format ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(decoded_frame));
+				_change_format = true;
 			}
 		}
 	}

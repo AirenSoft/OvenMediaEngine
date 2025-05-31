@@ -43,7 +43,7 @@ extern "C"
 
 namespace ffmpeg
 {
-	class Conv
+	class compat
 	{
 	public:
 		static cmn::MediaType ToMediaType(enum AVMediaType codec_type)
@@ -142,88 +142,64 @@ namespace ffmpeg
 
 		static cmn::AudioSample::Format ToAudioSampleFormat(int format)
 		{
-			cmn::AudioSample::Format sample_fmt;
 			switch (format)
 			{
 				case AV_SAMPLE_FMT_U8:
-					sample_fmt = cmn::AudioSample::Format::U8;
-					break;
+					return cmn::AudioSample::Format::U8;
 				case AV_SAMPLE_FMT_S16:
-					sample_fmt = cmn::AudioSample::Format::S16;
-					break;
+					return cmn::AudioSample::Format::S16;
 				case AV_SAMPLE_FMT_S32:
-					sample_fmt = cmn::AudioSample::Format::S32;
-					break;
+					return cmn::AudioSample::Format::S32;
 				case AV_SAMPLE_FMT_FLT:
-					sample_fmt = cmn::AudioSample::Format::Flt;
-					break;
+					return cmn::AudioSample::Format::Flt;
 				case AV_SAMPLE_FMT_DBL:
-					sample_fmt = cmn::AudioSample::Format::Dbl;
-					break;
+					return cmn::AudioSample::Format::Dbl;
 				case AV_SAMPLE_FMT_U8P:
-					sample_fmt = cmn::AudioSample::Format::U8P;
-					break;
+					return cmn::AudioSample::Format::U8P;
 				case AV_SAMPLE_FMT_S16P:
-					sample_fmt = cmn::AudioSample::Format::S16P;
-					break;
+					return cmn::AudioSample::Format::S16P;
 				case AV_SAMPLE_FMT_S32P:
-					sample_fmt = cmn::AudioSample::Format::S32P;
-					break;
+					return cmn::AudioSample::Format::S32P;
 				case AV_SAMPLE_FMT_FLTP:
-					sample_fmt = cmn::AudioSample::Format::FltP;
-					break;
+					return cmn::AudioSample::Format::FltP;
 				case AV_SAMPLE_FMT_DBLP:
-					sample_fmt = cmn::AudioSample::Format::DblP;
-					break;
+					return cmn::AudioSample::Format::DblP;
 				default:
-					sample_fmt = cmn::AudioSample::Format::None;
 					break;
 			}
 
-			return sample_fmt;
+			return cmn::AudioSample::Format::None;
 		}
 
 		static int ToAvSampleFormat(cmn::AudioSample::Format format)
 		{
-			int sample_fmt;
 			switch (format)
 			{
 				case cmn::AudioSample::Format::U8:
-					sample_fmt = AV_SAMPLE_FMT_U8;
-					break;
+					return AV_SAMPLE_FMT_U8;
 				case cmn::AudioSample::Format::S16:
-					sample_fmt = AV_SAMPLE_FMT_S16;
-					break;
+					return AV_SAMPLE_FMT_S16;
 				case cmn::AudioSample::Format::S32:
-					sample_fmt = AV_SAMPLE_FMT_S32;
-					break;
+					return AV_SAMPLE_FMT_S32;
 				case cmn::AudioSample::Format::Flt:
-					sample_fmt = AV_SAMPLE_FMT_FLT;
-					break;
+					return AV_SAMPLE_FMT_FLT;
 				case cmn::AudioSample::Format::Dbl:
-					sample_fmt = AV_SAMPLE_FMT_DBL;
-					break;
+					return AV_SAMPLE_FMT_DBL;
 				case cmn::AudioSample::Format::U8P:
-					sample_fmt = AV_SAMPLE_FMT_U8P;
-					break;
+					return AV_SAMPLE_FMT_U8P;
 				case cmn::AudioSample::Format::S16P:
-					sample_fmt = AV_SAMPLE_FMT_S16P;
-					break;
+					return AV_SAMPLE_FMT_S16P;
 				case cmn::AudioSample::Format::S32P:
-					sample_fmt = AV_SAMPLE_FMT_S32P;
-					break;
+					return AV_SAMPLE_FMT_S32P;
 				case cmn::AudioSample::Format::FltP:
-					sample_fmt = AV_SAMPLE_FMT_FLTP;
-					break;
+					return AV_SAMPLE_FMT_FLTP;
 				case cmn::AudioSample::Format::DblP:
-					sample_fmt = AV_SAMPLE_FMT_DBLP;
-					break;
+					return AV_SAMPLE_FMT_DBLP;
 				default:
-					sample_fmt = AV_SAMPLE_FMT_NONE;
 					break;
 			}
 
-			return sample_fmt;
+			return AV_SAMPLE_FMT_NONE;
 		}
 
 		static int ToAVChannelLayout(cmn::AudioChannel::Layout channel_layout)
@@ -338,6 +314,196 @@ namespace ffmpeg
 			return cmn::AudioChannel::Layout::LayoutUnknown;
 		}
 
+		static AVPixelFormat ToAVPixelFormat(cmn::VideoPixelFormatId pixel_format)
+		{
+			switch (pixel_format)
+			{
+				case cmn::VideoPixelFormatId::YUVJ444P:
+					return AV_PIX_FMT_YUVJ444P;
+				case cmn::VideoPixelFormatId::YUVJ422P:
+					return AV_PIX_FMT_YUVJ422P;
+				case cmn::VideoPixelFormatId::YUVJ420P:
+					return AV_PIX_FMT_YUVJ420P;
+				case cmn::VideoPixelFormatId::YUVA420P:
+					return AV_PIX_FMT_YUVA420P;
+				case cmn::VideoPixelFormatId::YUV444P9:
+					return AV_PIX_FMT_YUV444P9;
+				case cmn::VideoPixelFormatId::YUV444P16:
+					return AV_PIX_FMT_YUV444P16;
+				case cmn::VideoPixelFormatId::YUV444P12:
+					return AV_PIX_FMT_YUV444P12;
+				case cmn::VideoPixelFormatId::YUV444P10:
+					return AV_PIX_FMT_YUV444P10;
+				case cmn::VideoPixelFormatId::YUV444P:
+					return AV_PIX_FMT_YUV444P;
+				case cmn::VideoPixelFormatId::YUV440P12:
+					return AV_PIX_FMT_YUV440P12;
+				case cmn::VideoPixelFormatId::YUV440P10:
+					return AV_PIX_FMT_YUV440P10;
+				case cmn::VideoPixelFormatId::YUV440P:
+					return AV_PIX_FMT_YUV440P;
+				case cmn::VideoPixelFormatId::YUV422P12:
+					return AV_PIX_FMT_YUV422P12;
+				case cmn::VideoPixelFormatId::YUV422P10:
+					return AV_PIX_FMT_YUV422P10;
+				case cmn::VideoPixelFormatId::YUV422P:
+					return AV_PIX_FMT_YUV422P;
+				case cmn::VideoPixelFormatId::YUV420P9:
+					return AV_PIX_FMT_YUV420P9;
+				case cmn::VideoPixelFormatId::YUV420P12:
+					return AV_PIX_FMT_YUV420P12;
+				case cmn::VideoPixelFormatId::YUV420P10:
+					return AV_PIX_FMT_YUV420P10;
+				case cmn::VideoPixelFormatId::YUV420P:
+					return AV_PIX_FMT_YUV420P;
+				case cmn::VideoPixelFormatId::RGB24:
+					return AV_PIX_FMT_RGB24;
+				case cmn::VideoPixelFormatId::P016:
+					return AV_PIX_FMT_P016;
+				case cmn::VideoPixelFormatId::P010:
+					return AV_PIX_FMT_P010;
+				case cmn::VideoPixelFormatId::NV21:	
+					return AV_PIX_FMT_NV21;
+				case cmn::VideoPixelFormatId::NV20:
+					return AV_PIX_FMT_NV20;
+				case cmn::VideoPixelFormatId::NV16:
+					return AV_PIX_FMT_NV16;
+				case cmn::VideoPixelFormatId::NV12:
+					return AV_PIX_FMT_NV12;
+				case cmn::VideoPixelFormatId::GRAY8:
+					return AV_PIX_FMT_GRAY8;
+				case cmn::VideoPixelFormatId::GRAY10:
+					return AV_PIX_FMT_GRAY10;
+				case cmn::VideoPixelFormatId::GBRP16:
+					return AV_PIX_FMT_GBRP16;
+				case cmn::VideoPixelFormatId::GBRP12:
+					return AV_PIX_FMT_GBRP12;
+				case cmn::VideoPixelFormatId::GBRP10:
+					return AV_PIX_FMT_GBRP10;
+				case cmn::VideoPixelFormatId::GBRP:
+					return AV_PIX_FMT_GBRP;	
+				case cmn::VideoPixelFormatId::BGR24:
+					return AV_PIX_FMT_BGR24;
+				case cmn::VideoPixelFormatId::BGR0:
+					return AV_PIX_FMT_BGR0;
+				case cmn::VideoPixelFormatId::ARGB:
+					return AV_PIX_FMT_ARGB;
+				case cmn::VideoPixelFormatId::RGBA:
+					return AV_PIX_FMT_RGBA;	
+				case cmn::VideoPixelFormatId::ABGR:
+					return AV_PIX_FMT_ABGR;
+				case cmn::VideoPixelFormatId::BGRA:
+					return AV_PIX_FMT_BGRA;
+				case cmn::VideoPixelFormatId::CUDA:
+					return AV_PIX_FMT_CUDA;
+#ifdef HWACCELS_XMA_ENABLED					
+				case cmn::VideoPixelFormat::XVBM_8:
+					return AV_PIX_FMT_XVBM_8;
+				case cmn::VideoPixelFormat::XVBM_10:
+					return AV_PIX_FMT_XVBM_10;
+#endif					
+				default:
+					break;
+			}
+
+			return AV_PIX_FMT_NONE;
+		}
+
+		static cmn::VideoPixelFormatId ToVideoPixelFormat(int32_t pixel_format)
+		{
+			switch (pixel_format)
+			{
+				case AV_PIX_FMT_YUVJ444P:
+					return cmn::VideoPixelFormatId::YUVJ444P;
+				case AV_PIX_FMT_YUVJ422P:
+					return cmn::VideoPixelFormatId::YUVJ422P;
+				case AV_PIX_FMT_YUVJ420P:
+					return cmn::VideoPixelFormatId::YUVJ420P;
+				case AV_PIX_FMT_YUVA420P:
+					return cmn::VideoPixelFormatId::YUVA420P;
+				case AV_PIX_FMT_YUV444P9:
+					return cmn::VideoPixelFormatId::YUV444P9;
+				case AV_PIX_FMT_YUV444P16:
+					return cmn::VideoPixelFormatId::YUV444P16;
+				case AV_PIX_FMT_YUV444P12:
+					return cmn::VideoPixelFormatId::YUV444P12;
+				case AV_PIX_FMT_YUV444P10:
+					return cmn::VideoPixelFormatId::YUV444P10;
+				case AV_PIX_FMT_YUV444P:
+					return cmn::VideoPixelFormatId::YUV444P;
+				case AV_PIX_FMT_YUV440P12:
+					return cmn::VideoPixelFormatId::YUV440P12;
+				case AV_PIX_FMT_YUV440P10:
+					return cmn::VideoPixelFormatId::YUV440P10;
+				case AV_PIX_FMT_YUV440P:
+					return cmn::VideoPixelFormatId::YUV440P;
+				case AV_PIX_FMT_YUV422P12:
+					return cmn::VideoPixelFormatId::YUV422P12;
+				case AV_PIX_FMT_YUV422P10:
+					return cmn::VideoPixelFormatId::YUV422P10;
+				case AV_PIX_FMT_YUV422P:
+					return cmn::VideoPixelFormatId::YUV422P;
+				case AV_PIX_FMT_YUV420P9:
+					return cmn::VideoPixelFormatId::YUV420P9;
+				case AV_PIX_FMT_YUV420P12:
+					return cmn::VideoPixelFormatId::YUV420P12;
+				case AV_PIX_FMT_YUV420P10:
+					return cmn::VideoPixelFormatId::YUV420P10;
+				case AV_PIX_FMT_YUV420P:
+					return cmn::VideoPixelFormatId::YUV420P;
+				case AV_PIX_FMT_RGB24:
+					return cmn::VideoPixelFormatId::RGB24;
+				case AV_PIX_FMT_P016:
+					return cmn::VideoPixelFormatId::P016;
+				case AV_PIX_FMT_P010:
+					return cmn::VideoPixelFormatId::P010;
+				case AV_PIX_FMT_NV21:
+					return cmn::VideoPixelFormatId::NV21;
+				case AV_PIX_FMT_NV20:
+					return cmn::VideoPixelFormatId::NV20;
+				case AV_PIX_FMT_NV16:
+					return cmn::VideoPixelFormatId::NV16;
+				case AV_PIX_FMT_NV12:
+					return cmn::VideoPixelFormatId::NV12;
+				case AV_PIX_FMT_GRAY8:
+					return cmn::VideoPixelFormatId::GRAY8;
+				case AV_PIX_FMT_GRAY10:
+					return cmn::VideoPixelFormatId::GRAY10;
+				case AV_PIX_FMT_GBRP16:
+					return cmn::VideoPixelFormatId::GBRP16;
+				case AV_PIX_FMT_GBRP12:
+					return cmn::VideoPixelFormatId::GBRP12;
+				case AV_PIX_FMT_GBRP10:
+					return cmn::VideoPixelFormatId::GBRP10;
+				case AV_PIX_FMT_GBRP:
+					return cmn::VideoPixelFormatId::GBRP;
+				case AV_PIX_FMT_BGR24:
+					return cmn::VideoPixelFormatId::BGR24;	
+				case AV_PIX_FMT_BGR0:
+					return cmn::VideoPixelFormatId::BGR0;
+				case AV_PIX_FMT_ARGB:
+					return cmn::VideoPixelFormatId::ARGB;
+				case AV_PIX_FMT_RGBA:
+					return cmn::VideoPixelFormatId::RGBA;
+				case AV_PIX_FMT_ABGR:
+					return cmn::VideoPixelFormatId::ABGR;
+				case AV_PIX_FMT_BGRA:
+					return cmn::VideoPixelFormatId::BGRA;
+				case AV_PIX_FMT_CUDA:
+					return cmn::VideoPixelFormatId::CUDA;
+#ifdef HWACCELS_XMA_ENABLED
+				case AV_PIX_FMT_XVBM_8:
+					return cmn::VideoPixelFormat::XVBM_8;
+				case AV_PIX_FMT_XVBM_10:
+					return cmn::VideoPixelFormat::XVBM_10;
+#endif
+				default:
+					break;
+			}
+
+			return cmn::VideoPixelFormatId::None;
+		}
+
 		static std::shared_ptr<MediaTrack> CreateMediaTrack(AVStream *stream)
 		{
 			auto media_track = std::make_shared<MediaTrack>();
@@ -352,8 +518,8 @@ namespace ffmpeg
 		static bool ToMediaTrack(AVStream* stream, std::shared_ptr<MediaTrack> media_track)
 		{
 			media_track->SetId(stream->index);
-			media_track->SetMediaType(ffmpeg::Conv::ToMediaType(stream->codecpar->codec_type));
-			media_track->SetCodecId(ffmpeg::Conv::ToCodecId(stream->codecpar->codec_id));
+			media_track->SetMediaType(ffmpeg::compat::ToMediaType(stream->codecpar->codec_type));
+			media_track->SetCodecId(ffmpeg::compat::ToCodecId(stream->codecpar->codec_id));
 			media_track->SetTimeBase(stream->time_base.num, stream->time_base.den);
 			media_track->SetBitrateByConfig(stream->codecpar->bit_rate);
 			media_track->SetStartFrameTime(0);
@@ -373,8 +539,8 @@ namespace ffmpeg
 					break;
 				case cmn::MediaType::Audio:
 					media_track->SetSampleRate(stream->codecpar->sample_rate);
-					media_track->GetSample().SetFormat(ffmpeg::Conv::ToAudioSampleFormat(stream->codecpar->format));
-					media_track->GetChannel().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(stream->codecpar->ch_layout.u.mask));
+					media_track->GetSample().SetFormat(ffmpeg::compat::ToAudioSampleFormat(stream->codecpar->format));
+					media_track->GetChannel().SetLayout(ffmpeg::compat::ToAudioChannelLayout(stream->codecpar->ch_layout.u.mask));
 					break;
 				default:
 					break;
@@ -477,7 +643,7 @@ namespace ffmpeg
 					media_frame->SetMediaType(media_type);
 					media_frame->SetWidth(frame->width);
 					media_frame->SetHeight(frame->height);
-					media_frame->SetFormat(frame->format);
+					media_frame->SetFormat((int32_t)ffmpeg::compat::ToVideoPixelFormat(frame->format));
 					media_frame->SetPts((frame->pts == AV_NOPTS_VALUE) ? -1LL : frame->pts);
 					media_frame->SetDuration(frame->pkt_duration);
 
@@ -494,7 +660,55 @@ namespace ffmpeg
 					media_frame->SetMediaType(media_type);
 					media_frame->SetBytesPerSample(::av_get_bytes_per_sample(static_cast<AVSampleFormat>(frame->format)));
 					media_frame->SetNbSamples(frame->nb_samples);
-					media_frame->GetChannels().SetLayout(ffmpeg::Conv::ToAudioChannelLayout(frame->ch_layout.u.mask));
+					media_frame->GetChannels().SetLayout(ffmpeg::compat::ToAudioChannelLayout(frame->ch_layout.u.mask));
+					media_frame->SetSampleRate(frame->sample_rate);
+					media_frame->SetFormat(frame->format);
+					media_frame->SetDuration(frame->pkt_duration);
+					media_frame->SetPts((frame->pts == AV_NOPTS_VALUE) ? -1LL : frame->pts);
+
+					AVFrame* moved_frame = av_frame_alloc();
+					av_frame_move_ref(moved_frame, frame);
+					media_frame->SetPrivData(moved_frame);
+
+					return media_frame;
+				}
+				break;
+				default:
+					return nullptr;
+					break;
+			}
+
+			return nullptr;
+		}
+
+		static inline std::shared_ptr<MediaFrame> ToMediaFrameV2(cmn::MediaType media_type, AVFrame* frame)
+		{
+			switch (media_type)
+			{
+				case cmn::MediaType::Video: {
+					auto media_frame = std::make_shared<MediaFrame>();
+
+					media_frame->SetMediaType(media_type);
+					media_frame->SetWidth(frame->width);
+					media_frame->SetHeight(frame->height);
+					media_frame->SetFormat((int32_t)ffmpeg::compat::ToVideoPixelFormat(frame->format));
+					media_frame->SetPts((frame->pts == AV_NOPTS_VALUE) ? -1LL : frame->pts);
+					media_frame->SetDuration(frame->pkt_duration);
+
+					AVFrame* moved_frame = av_frame_alloc();
+					av_frame_move_ref(moved_frame, frame);
+					media_frame->SetPrivData(moved_frame);
+
+					return media_frame;
+				}
+				break;
+				case cmn::MediaType::Audio: {
+					auto media_frame = std::make_shared<MediaFrame>();
+
+					media_frame->SetMediaType(media_type);
+					media_frame->SetBytesPerSample(::av_get_bytes_per_sample(static_cast<AVSampleFormat>(frame->format)));
+					media_frame->SetNbSamples(frame->nb_samples);
+					media_frame->GetChannels().SetLayout(ffmpeg::compat::ToAudioChannelLayout(frame->ch_layout.u.mask));
 					media_frame->SetSampleRate(frame->sample_rate);
 					media_frame->SetFormat(frame->format);
 					media_frame->SetDuration(frame->pkt_duration);
@@ -539,31 +753,6 @@ namespace ffmpeg
 			}
 
 			return 0LL;
-		}
-
-		static bool IsPlanar(AVSampleFormat format)
-		{
-			switch (format)
-			{
-				case AV_SAMPLE_FMT_U8:
-				case AV_SAMPLE_FMT_S16:
-				case AV_SAMPLE_FMT_S32:
-				case AV_SAMPLE_FMT_FLT:
-				case AV_SAMPLE_FMT_DBL:
-				case AV_SAMPLE_FMT_S64:
-					return false;
-
-				case AV_SAMPLE_FMT_U8P:
-				case AV_SAMPLE_FMT_S16P:
-				case AV_SAMPLE_FMT_S32P:
-				case AV_SAMPLE_FMT_FLTP:
-				case AV_SAMPLE_FMT_DBLP:
-				case AV_SAMPLE_FMT_S64P:
-					return true;
-
-				default:
-					return false;
-			}
 		}
 
 		static AVFrame* ToAVFrame(cmn::MediaType media_type, std::shared_ptr<const MediaFrame> src)
@@ -631,13 +820,13 @@ namespace ffmpeg
 				.den = timebase.GetDen()};
 		}
 
-		static ov::String CodecInfoToString(const AVCodecContext* context, const AVCodecParameters* parameters)
+		static ov::String CodecInfoToString(const AVCodecContext* context)
 		{
 			ov::String message;
 
-			message.AppendFormat("[%s] ", ::av_get_media_type_string(parameters->codec_type));
+			message.AppendFormat("[%s] ", ::av_get_media_type_string(context->codec_type));
 
-			switch (parameters->codec_type)
+			switch (context->codec_type)
 			{
 				case AVMEDIA_TYPE_UNKNOWN:
 					message = "Unknown media type";
@@ -646,39 +835,39 @@ namespace ffmpeg
 				case AVMEDIA_TYPE_VIDEO:
 				case AVMEDIA_TYPE_AUDIO:
 					// H.264 (Baseline
-					message.AppendFormat("%s (%s", ::avcodec_get_name(parameters->codec_id), ::avcodec_profile_name(parameters->codec_id, parameters->profile));
+					message.AppendFormat("%s (%s", ::avcodec_get_name(context->codec_id), ::avcodec_profile_name(context->codec_id, context->profile));
 
-					if (parameters->level >= 0)
+					if (context->level >= 0)
 					{
 						// lv: 5.2
-						message.AppendFormat(" %.1f", parameters->level / 10.0f);
+						message.AppendFormat(" %.1f", context->level / 10.0f);
 					}
 					message.Append(')');
 
-					if (parameters->codec_tag != 0)
+					if (context->codec_tag != 0)
 					{
 						char tag[AV_FOURCC_MAX_STRING_SIZE]{};
-						::av_fourcc_make_string(tag, parameters->codec_tag);
+						::av_fourcc_make_string(tag, context->codec_tag);
 
 						// (avc1 / 0x31637661
-						message.AppendFormat(", (%s / 0x%08X", tag, parameters->codec_tag);
+						message.AppendFormat(", (%s / 0x%08X", tag, context->codec_tag);
 
-						if (parameters->extradata_size != 0)
+						if (context->extradata_size != 0)
 						{
 							// extra: 1234
-							message.AppendFormat(", extra: %d", parameters->extradata_size);
+							message.AppendFormat(", extra: %d", context->extradata_size);
 						}
 						// frame_size: 1234
-						message.AppendFormat(", frame_size: %d", parameters->frame_size);
+						message.AppendFormat(", frame_size: %d", context->frame_size);
 
 						message.Append(')');
 					}
 
 					message.Append(", ");
 
-					if (parameters->codec_type == AVMEDIA_TYPE_VIDEO)
+					if (context->codec_type == AVMEDIA_TYPE_VIDEO)
 					{
-						int gcd = ::av_gcd(parameters->width, parameters->height);
+						int gcd = ::av_gcd(context->width, context->height);
 
 						if (gcd == 0)
 						{
@@ -695,21 +884,21 @@ namespace ffmpeg
 
 						// yuv420p, 1920x1080 [SAR 1:1 DAR 16:9], 24 fps
 						message.AppendFormat("%s, %dx%d [SAR %d:%d DAR %d:%d], %.*f fps, ",
-											 ::av_get_pix_fmt_name(static_cast<AVPixelFormat>(parameters->format)),
-											 parameters->width, parameters->height,
-											 parameters->sample_aspect_ratio.num, parameters->sample_aspect_ratio.den,
-											 parameters->width / gcd, parameters->height / gcd,
+											 ::av_get_pix_fmt_name(static_cast<AVPixelFormat>(context->pix_fmt)),
+											 context->width, context->height,
+											 context->sample_aspect_ratio.num, context->sample_aspect_ratio.den,
+											 context->width / gcd, context->height / gcd,
 											 digit, ::av_q2d(context->framerate));
 					}
 					else
 					{
 						char channel_layout[16]{};
-						av_channel_layout_describe(&parameters->ch_layout, channel_layout, OV_COUNTOF(channel_layout));
+						av_channel_layout_describe(&context->ch_layout, channel_layout, OV_COUNTOF(channel_layout));
 						// 48000 Hz, stereo, fltp,
-						message.AppendFormat("%d Hz, %s, %s, ", parameters->sample_rate, channel_layout, ::av_get_sample_fmt_name(static_cast<AVSampleFormat>(parameters->format)));
+						message.AppendFormat("%d Hz, %s, %s, ", context->sample_rate, channel_layout, ::av_get_sample_fmt_name(static_cast<AVSampleFormat>(context->sample_fmt)));
 					}
 
-					message.AppendFormat("%d kbps, ", (parameters->bit_rate / 1024));
+					message.AppendFormat("%d kbps, ", (context->bit_rate / 1024));
 					
 					// timebase: 1/48000
 					message.AppendFormat("timebase: %d/%d", context->time_base.num, context->time_base.den);
@@ -907,37 +1096,36 @@ namespace ffmpeg
 		{
 			AVBufferRef* hw_frames_ref;
 			int err = 0;
-			if (!(hw_frames_ref = ::av_hwframe_ctx_alloc(context->hw_device_ctx)))
+			hw_frames_ref = ::av_hwframe_ctx_alloc(context->hw_device_ctx);
+			if (!hw_frames_ref)
 			{
 				return false;
 			}
 
 			auto constraints = ::av_hwdevice_get_hwframe_constraints(context->hw_device_ctx, nullptr);
-			if(constraints == nullptr)
+			if (constraints == nullptr)
 			{
+				::av_buffer_unref(&hw_frames_ref);
 				return false;
 			}
 
 			AVHWFramesContext* frames_ctx = nullptr;
 			frames_ctx = (AVHWFramesContext*)(hw_frames_ref->data);
 			frames_ctx->format = *(constraints->valid_hw_formats);
-			frames_ctx->sw_format = *(constraints->valid_sw_formats);;
+			frames_ctx->sw_format = *(constraints->valid_sw_formats);
 			frames_ctx->width = context->width;
 			frames_ctx->height = context->height;
 			frames_ctx->initial_pool_size = 2;
-			
+
+			::av_hwframe_constraints_free(&constraints);
+
 			if ((err = ::av_hwframe_ctx_init(hw_frames_ref)) < 0)
 			{
 				::av_buffer_unref(&hw_frames_ref);
 				return false;
 			}
 
-			context->hw_frames_ctx = ::av_buffer_ref(hw_frames_ref);
-			
-			if (!context->hw_frames_ctx)
-				err = AVERROR(ENOMEM);
-			
-			::av_buffer_unref(&hw_frames_ref);
+			context->hw_frames_ctx = hw_frames_ref;
 
 			return true;
 		}
@@ -963,7 +1151,12 @@ namespace ffmpeg
 			}
 
 			auto constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx, nullptr);
-
+			if (constraints == nullptr)
+			{
+				av_buffer_unref(&hw_frames_ref);
+				return false;
+			}
+			
 			frames_ctx = (AVHWFramesContext*)(hw_frames_ref->data);
 			frames_ctx->format = *(constraints->valid_hw_formats);
 			frames_ctx->sw_format = *(constraints->valid_sw_formats);
@@ -971,27 +1164,19 @@ namespace ffmpeg
 			frames_ctx->height = height;
 			frames_ctx->initial_pool_size = 2;
 
+			::av_hwframe_constraints_free(&constraints);
+
 			if (av_hwframe_ctx_init(hw_frames_ref) < 0)
 			{
 				av_buffer_unref(&hw_frames_ref);
 				return false;
 			}
 
-			context->hw_frames_ctx = av_buffer_ref(hw_frames_ref);
-
-			av_buffer_unref(&hw_frames_ref);
+			context->hw_frames_ctx = hw_frames_ref;
 
 			return true; 
 		}
 
-		static ov::String ErrorToString(int av_errno)
-		{
-			char errbuf[1024];
-			::av_make_error_string(errbuf, sizeof(errbuf), av_errno);
-
-			ov::String error_message = errbuf;
-			return error_message;
-		}
 	};
 
 }  // namespace ffmpeg

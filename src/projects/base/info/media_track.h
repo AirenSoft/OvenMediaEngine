@@ -40,8 +40,8 @@ public:
 
 	// When using multiple hardware acceleration devices, 
 	// this is the value to determine the device. (Used for transcoder)
-	void SetCodecDeviceId(int32_t id);
-	int32_t GetCodecDeviceId() const;
+	void SetCodecDeviceId(cmn::DeviceId id);
+	cmn::DeviceId GetCodecDeviceId() const;
 
 	// This is a candidate list of decoder/encoder modules. (Used for transcoder)
 	// It is set from 
@@ -144,7 +144,7 @@ protected:
 	// Codec
 	cmn::MediaCodecId _codec_id;
 	cmn::MediaCodecModuleId _codec_module_id;
-	int32_t _codec_device_id;
+	cmn::DeviceId _codec_device_id;
 	ov::String _codec_modules;
 
 	// Variant Name : Original encoder profile that made this track 

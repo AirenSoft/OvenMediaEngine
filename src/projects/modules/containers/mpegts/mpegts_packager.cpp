@@ -96,7 +96,7 @@ namespace mpegts
         {   
             if (track->GetMediaType() != cmn::MediaType::Video && track->GetMediaType() != cmn::MediaType::Audio && track->GetMediaType() != cmn::MediaType::Data)
             {
-                logte("Unsupported media type (%s) in Mpeg-2 TS Packager", StringFromMediaType(track->GetMediaType()).CStr());
+                logte("Unsupported media type (%s) in Mpeg-2 TS Packager", cmn::GetMediaTypeString(track->GetMediaType()));
                 continue;
             }
 

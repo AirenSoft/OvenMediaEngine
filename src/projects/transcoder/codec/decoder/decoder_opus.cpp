@@ -13,36 +13,39 @@
 
 bool DecoderOPUS::InitCodec()
 {
-	const AVCodec *_codec = ::avcodec_find_decoder(GetCodecID());
-	if (_codec == nullptr)
+	const AVCodec *codec = ::avcodec_find_decoder(ffmpeg::compat::ToAVCodecId(GetCodecID()));
+	if (codec == nullptr)
 	{
-		logte("Codec not found: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+		logte("Codec not found: %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
-	_context = ::avcodec_alloc_context3(_codec);
-	if (_context == nullptr)
+	_codec_context = ::avcodec_alloc_context3(codec);
+	if (_codec_context == nullptr)
 	{
-		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+		logte("Could not allocate codec context for %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
-	_context->time_base = ffmpeg::Conv::TimebaseToAVRational(GetTimebase());
+	_codec_context->time_base = ffmpeg::compat::TimebaseToAVRational(GetTimebase());
 
-	if (::avcodec_open2(_context, _codec, nullptr) < 0)
+	if (::avcodec_open2(_codec_context, nullptr, nullptr) < 0)
 	{
-		logte("Could not open codec: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+		logte("Could not open codec: %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
-	_parser = ::av_parser_init(GetCodecID());
+	_parser = ::av_parser_init(ffmpeg::compat::ToAVCodecId(GetCodecID()));
 	if (_parser == nullptr)
 	{
 		logte("Parser not found");
 		return false;
 	}
+	
 	_parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
 
+	_change_format = false;
+	
 	return true;
 }
 
@@ -91,7 +94,7 @@ void DecoderOPUS::CodecThread()
 
 				int32_t parsed_size = ::av_parser_parse2(
 					_parser,
-					_context,
+					_codec_context,
 					&_pkt->data, &_pkt->size,
 					_cur_data->GetDataAs<uint8_t>() + _pkt_offset,
 					static_cast<int32_t>(_cur_data->GetLength() - _pkt_offset),
@@ -124,20 +127,15 @@ void DecoderOPUS::CodecThread()
 						_pkt->duration = 0;
 					}
 
-					int ret = ::avcodec_send_packet(_context, _pkt);
+					int ret = ::avcodec_send_packet(_codec_context, _pkt);
 					if (ret == AVERROR(EAGAIN))
 					{
-					}
-					else if (ret == AVERROR_EOF)
-					{
-						logte("Error sending a packet for decoding : AVERROR_EOF");
+						// Nothing to do here, just continue
 					}
 					else if (ret < 0)
 					{
 						_cur_data = nullptr;
-						char err_msg[1024];
-						av_strerror(ret, err_msg, sizeof(err_msg));
-						logte("An error occurred while sending a packet for decoding. %s ", err_msg);
+						logte("Error error occurred while sending a packet for decoding. reason(%s)", ffmpeg::compat::AVErrorToString(ret).CStr());
 					}
 
 					// Save first pakcet's PTS
@@ -160,51 +158,30 @@ void DecoderOPUS::CodecThread()
 		// Receive a frame from decoder
 		/////////////////////////////////////////////////////////////////////
 		// Check the decoded frame is available
-		int ret = ::avcodec_receive_frame(_context, _frame);
+		int ret = ::avcodec_receive_frame(_codec_context, _frame);
 		if (ret == AVERROR(EAGAIN))
 		{
 			no_data_to_encode = true;
 			continue;
 		}
-		else if (ret == AVERROR_EOF)
-		{
-			logte("Error receiving a packet for decoding : AVERROR_EOF");
-			continue;
-		}
 		else if (ret < 0)
 		{
-			logte("Error receiving a packet for decoding : %d", ret);
+			logte("Error receiving a packet for decoding. reason(%s)", ffmpeg::compat::AVErrorToString(ret).CStr());
 			continue;
 		}
 		else
 		{
-			bool need_to_change_notify = false;
-
 			// Update codec informations if needed
 			if (_change_format == false)
 			{
-				ret = ::avcodec_parameters_from_context(_codec_par, _context);
+				auto codec_info = ffmpeg::compat::CodecInfoToString(_codec_context);
 
-				if (ret == 0)
-				{
-					auto codec_info = ffmpeg::Conv::CodecInfoToString(_context, _codec_par);
-
-					logti("[%s/%s(%u)] input track information: %s",
-						  _stream_info.GetApplicationInfo().GetVHostAppName().CStr(), _stream_info.GetName().CStr(), _stream_info.GetId(), codec_info.CStr());
-
-					_change_format = true;
-
-					// If the format is changed, notify to another module
-					need_to_change_notify = true;
-				}
-				else
-				{
-					logte("Could not obtain codec parameters from context %p", _context);
-				}
+				logti("[%s/%s(%u)] input track information: %s",
+						_stream_info.GetApplicationInfo().GetVHostAppName().CStr(), _stream_info.GetName().CStr(), _stream_info.GetId(), codec_info.CStr());
 			}
 
 			// The actual duration is calculated based on the number of samples in the decoded frame.
-			_frame->pkt_duration = ffmpeg::Conv::GetDurationPerFrame(cmn::MediaType::Audio, GetRefTrack(), _frame);
+			_frame->pkt_duration = ffmpeg::compat::GetDurationPerFrame(cmn::MediaType::Audio, GetRefTrack(), _frame);
 
 			// If the decoded audio frame has no PTS, add the frame duration to the previous frame's PTS.
 			if (_frame->pts == AV_NOPTS_VALUE)
@@ -220,7 +197,7 @@ void DecoderOPUS::CodecThread()
 				}
 			}
 
-			auto output_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Audio, _frame);
+			auto output_frame = ffmpeg::compat::ToMediaFrame(cmn::MediaType::Audio, _frame);
 			::av_frame_unref(_frame);
 			if (output_frame == nullptr)
 			{
@@ -230,7 +207,8 @@ void DecoderOPUS::CodecThread()
 			_last_pkt_pts = output_frame->GetPts();
 			_last_pkt_duration = output_frame->GetDuration();
 
-			Complete(need_to_change_notify ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(output_frame));
+			Complete(!_change_format ? TranscodeResult::FormatChanged : TranscodeResult::DataReady, std::move(output_frame));
+			_change_format = true;
 		}
 	}
 }

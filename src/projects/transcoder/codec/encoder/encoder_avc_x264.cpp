@@ -33,7 +33,7 @@ bool EncoderAVCx264::SetCodecParams()
 	// This often, but not always is the inverse of the frame rate or field rate for video. 1/time_base is not the average frame rate if the frame rate is not constant.
 	_codec_context->time_base = (AVRational){GetRefTrack()->GetTimeBase().GetNum(), GetRefTrack()->GetTimeBase().GetDen()};
 	_codec_context->max_b_frames = GetRefTrack()->GetBFrames();
-	_codec_context->pix_fmt = (AVPixelFormat)GetSupportedFormat();
+	_codec_context->pix_fmt = ffmpeg::compat::ToAVPixelFormat(GetSupportVideoFormat());
 	_codec_context->width = GetRefTrack()->GetWidth();
 	_codec_context->height = GetRefTrack()->GetHeight();
 
@@ -140,31 +140,29 @@ bool EncoderAVCx264::SetCodecParams()
 //
 bool EncoderAVCx264::InitCodec()
 {
-	auto codec_id = GetCodecID();
-
 	const AVCodec *codec = ::avcodec_find_encoder_by_name("libx264");
 	if (codec == nullptr)
 	{
-		logte("Could not find encoder: %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		logte("Could not find encoder: %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
 	_codec_context = ::avcodec_alloc_context3(codec);
 	if (_codec_context == nullptr)
 	{
-		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+		logte("Could not allocate codec context for %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
 	if (SetCodecParams() == false)
 	{
-		logte("Could not set codec parameters for %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+		logte("Could not set codec parameters for %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
-	if (::avcodec_open2(_codec_context, _codec_context->codec, nullptr) < 0)
+	if (::avcodec_open2(_codec_context, nullptr, nullptr) < 0)
 	{
-		logte("Could not open codec: %s (%d)", ::avcodec_get_name(GetCodecID()), GetCodecID());
+		logte("Could not open codec: %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
@@ -183,7 +181,7 @@ bool EncoderAVCx264::Configure(std::shared_ptr<MediaTrack> context)
 		_kill_flag = false;
 
 		_codec_thread = std::thread(&EncoderAVCx264::CodecThread, this);
-		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("ENC-%s-t%d", avcodec_get_name(GetCodecID()), _track->GetId()).CStr());
+		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("ENC-%s-t%d", cmn::GetCodecIdString(GetCodecID()), _track->GetId()).CStr());
 		
 		// Initialize the codec and wait for completion.
 		if(_codec_init_event.Get() == false)
