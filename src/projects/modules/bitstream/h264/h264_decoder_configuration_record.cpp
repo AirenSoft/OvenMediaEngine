@@ -410,6 +410,9 @@ std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> AVCDecoderConfigurati
 		auto pps = GetPPSData(i);
 		frag_header.fragmentation_offset.push_back(offset);
 		frag_header.fragmentation_length.push_back(pps->GetLength());
+
+		offset += pps->GetLength();
+
 		data->Append(pps);
 	}
 
