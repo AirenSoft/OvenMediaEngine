@@ -119,6 +119,11 @@ public:
 	bool HasQualityMeasured();
 
 	std::shared_ptr<DecoderConfigurationRecord> GetDecoderConfigurationRecord() const;
+	template <typename T, typename = typename std::enable_if<std::is_base_of<DecoderConfigurationRecord, T>::value>::type>
+	std::shared_ptr<T> GetDecoderConfigurationRecordAs() const
+	{
+		return std::dynamic_pointer_cast<T>(_decoder_configuration_record);
+	}
 	void SetDecoderConfigurationRecord(const std::shared_ptr<DecoderConfigurationRecord> &dcr);
 	
 	ov::String GetCodecsParameter() const;
