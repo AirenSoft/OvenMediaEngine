@@ -347,6 +347,11 @@ namespace ov
 		return (data != nullptr) ? Insert(data->GetData(), offset, data->GetLength()) : false;
 	}
 
+	bool Data::Insert(const std::shared_ptr<const Data> &data, off_t offset)
+	{
+		return Insert(data.get(), offset);
+	}
+
 	bool Data::Append(const void *data, size_t length)
 	{
 		return Insert(data, GetLength(), length);

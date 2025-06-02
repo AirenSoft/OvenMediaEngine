@@ -160,6 +160,7 @@ namespace ov
 
 		bool Insert(const void *data, off_t offset, size_t length);
 		bool Insert(const Data *data, off_t offset);
+		bool Insert(const std::shared_ptr<const Data> &data, off_t offset);
 
 		bool Append(const void *data, size_t length);
 		bool Append(const Data *data);
