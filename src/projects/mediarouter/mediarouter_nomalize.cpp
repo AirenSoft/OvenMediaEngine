@@ -13,25 +13,45 @@
 #include <modules/bitstream/aac/aac_adts.h>
 #include <modules/bitstream/aac/aac_converter.h>
 #include <modules/bitstream/aac/audio_specific_config.h>
-
-#include <modules/bitstream/nalu/nal_stream_converter.h>
-#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 #include <modules/bitstream/h264/h264_common.h>
+#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 #include <modules/bitstream/h264/h264_parser.h>
-
 #include <modules/bitstream/h265/h265_decoder_configuration_record.h>
 #include <modules/bitstream/h265/h265_parser.h>
+#include <modules/bitstream/mp3/mp3_parser.h>
+#include <modules/bitstream/nalu/nal_stream_converter.h>
 #include <modules/bitstream/nalu/nal_unit_fragment_header.h>
 #include <modules/bitstream/opus/opus.h>
 #include <modules/bitstream/vp8/vp8.h>
-#include <modules/bitstream/mp3/mp3_parser.h>
 
 #include "mediarouter_private.h"
 
 using namespace cmn;
 
+size_t GetStartCodeSize(const uint8_t *data, size_t length)
+{
+	if (length < 3)
+	{
+		return 0;
+	}
+
+	if ((data[0] == 0x00) && (data[1] == 0x00))
+	{
+		if (data[2] == 0x01)
+		{
+			return 3;
+		}
+		else if ((length > 3) && (data[2] == 0x00) && (data[3] == 0x01))
+		{
+			return 4;
+		}
+	}
+
+	return 0;
+}
+
 // H264 : AVCC -> AnnexB, Add SPS/PPS in front of IDR frame
-// H265 : 
+// H265 :
 // AAC : Raw -> ADTS
 bool MediaRouterNormalize::NormalizeMediaPacket(const std::shared_ptr<info::Stream> &stream_info, std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
 {
@@ -48,10 +68,10 @@ bool MediaRouterNormalize::NormalizeMediaPacket(const std::shared_ptr<info::Stre
 			result = media_packet->GetData() != nullptr && ProcessH264AnnexBStream(stream_info, media_track, media_packet);
 			break;
 		case cmn::BitstreamFormat::H264_AVCC:
-			result = media_packet->GetData() != nullptr && ProcessH264AVCCStream(stream_info,  media_track, media_packet);
+			result = media_packet->GetData() != nullptr && ProcessH264AVCCStream(stream_info, media_track, media_packet);
 			break;
 		case cmn::BitstreamFormat::H265_ANNEXB:
-			result = media_packet->GetData() != nullptr && ProcessH265AnnexBStream(stream_info,media_track, media_packet);
+			result = media_packet->GetData() != nullptr && ProcessH265AnnexBStream(stream_info, media_track, media_packet);
 			break;
 		case cmn::BitstreamFormat::HVCC:
 			result = media_packet->GetData() != nullptr && ProcessH265HVCCStream(stream_info, media_track, media_packet);
@@ -69,7 +89,7 @@ bool MediaRouterNormalize::NormalizeMediaPacket(const std::shared_ptr<info::Stre
 			result = media_packet->GetData() != nullptr && ProcessOPUSStream(stream_info, media_track, media_packet);
 			break;
 		case cmn::BitstreamFormat::MP3:
-			result = media_packet->GetData() != nullptr && ProcessMP3Stream(stream_info, media_track, media_packet); 
+			result = media_packet->GetData() != nullptr && ProcessMP3Stream(stream_info, media_track, media_packet);
 			break;
 		// Data Format
 		case cmn::BitstreamFormat::ID3v2:
@@ -93,7 +113,6 @@ bool MediaRouterNormalize::NormalizeMediaPacket(const std::shared_ptr<info::Stre
 
 	return result;
 }
-
 
 #include <base/ovcrypto/base_64.h>
 bool MediaRouterNormalize::ProcessH264AVCCStream(const std::shared_ptr<info::Stream> &stream_info, std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
@@ -121,10 +140,10 @@ bool MediaRouterNormalize::ProcessH264AVCCStream(const std::shared_ptr<info::Str
 		media_track->SetHeight(avc_config->GetHeight());
 
 		media_track->SetDecoderConfigurationRecord(avc_config);
-		
+
 		return false;
 	}
-	
+
 	// Convert to AnnexB and Insert SPS/PPS if there are no SPS/PPS nal units.
 	else if (media_packet->GetPacketType() == cmn::PacketType::NALU)
 	{
@@ -198,7 +217,7 @@ bool MediaRouterNormalize::ProcessH264AVCCStream(const std::shared_ptr<info::Str
 					if (pps_nalu == nullptr)
 					{
 						pps_nalu = std::make_shared<ov::Data>(nalu->GetDataAs<uint8_t>(), nalu->GetLength());
-					}					
+					}
 				}
 				else if (nal_header.GetNalUnitType() == H264NalUnitType::Aud)
 				{
@@ -209,6 +228,11 @@ bool MediaRouterNormalize::ProcessH264AVCCStream(const std::shared_ptr<info::Str
 					// no need to maintain filler data
 					continue;
 				}
+			}
+			else
+			{
+				logte("Could not parse H264 Nal unit header");
+				return false;
 			}
 
 			converted_data->Append(START_CODE, sizeof(START_CODE));
@@ -226,7 +250,7 @@ bool MediaRouterNormalize::ProcessH264AVCCStream(const std::shared_ptr<info::Str
 		media_packet->SetPacketType(cmn::PacketType::NALU);
 
 		// Update DecoderConfigurationRecord
-		if(sps_nalu != nullptr && pps_nalu != nullptr)
+		if (sps_nalu != nullptr && pps_nalu != nullptr)
 		{
 			auto new_avc_config = std::make_shared<AVCDecoderConfigurationRecord>();
 
@@ -244,7 +268,7 @@ bool MediaRouterNormalize::ProcessH264AVCCStream(const std::shared_ptr<info::Str
 					media_track->SetDecoderConfigurationRecord(new_avc_config);
 				}
 			}
-			else 
+			else
 			{
 				logtw("Failed to make AVCDecoderConfigurationRecord of %s/%s/%s track", stream_info->GetApplicationName(), stream_info->GetName().CStr(), media_track->GetVariantName().CStr());
 			}
@@ -318,7 +342,7 @@ bool MediaRouterNormalize::ProcessH264AnnexBStream(const std::shared_ptr<info::S
 			logte("Could not parse H264 Nal unit header");
 			return false;
 		}
-		
+
 		// if (nal_header.GetNalUnitType() == H264NalUnitType::Sps || nal_header.GetNalUnitType() == H264NalUnitType::Pps)
 		// {
 		// 	logtd("NALU Type : %s", NalUnitTypeToStr(nal_header.GetNalUnitType()).CStr());
@@ -327,7 +351,7 @@ bool MediaRouterNormalize::ProcessH264AnnexBStream(const std::shared_ptr<info::S
 		if (nal_header.GetNalUnitType() == H264NalUnitType::Sps)
 		{
 			has_sps = true;
-			
+
 			if (sps_nalu == nullptr)
 			{
 				sps_nalu = std::make_shared<ov::Data>(bitstream + offset, offset_length);
@@ -503,7 +527,6 @@ bool MediaRouterNormalize::InsertH264AudAnnexB(const std::shared_ptr<info::Strea
 	media_packet->SetData(processed_data);
 
 	return true;
-
 }
 
 bool MediaRouterNormalize::ProcessAACRawStream(const std::shared_ptr<info::Stream> &stream_info, std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
@@ -525,7 +548,7 @@ bool MediaRouterNormalize::ProcessAACRawStream(const std::shared_ptr<info::Strea
 
 			media_track->SetSampleRate(audio_config->Samplerate());
 			media_track->GetChannel().SetLayout(audio_config->Channel() == 1 ? AudioChannel::Layout::LayoutMono : AudioChannel::Layout::LayoutStereo);
-			
+
 			media_track->SetDecoderConfigurationRecord(audio_config);
 		}
 
@@ -647,29 +670,22 @@ bool MediaRouterNormalize::ProcessH265AnnexBStream(const std::shared_ptr<info::S
 		}
 
 		// Key Frame
-		if (header.GetNalUnitType() == H265NALUnitType::BLA_W_LP ||
-			header.GetNalUnitType() == H265NALUnitType::BLA_W_RADL ||
-			header.GetNalUnitType() == H265NALUnitType::BLA_N_LP ||
-			header.GetNalUnitType() == H265NALUnitType::IDR_W_RADL ||
-			header.GetNalUnitType() == H265NALUnitType::IDR_N_LP ||
-			header.GetNalUnitType() == H265NALUnitType::CRA_NUT ||
-			header.GetNalUnitType() == H265NALUnitType::IRAP_VCL22 ||
-			header.GetNalUnitType() == H265NALUnitType::IRAP_VCL23)
+		if (IsH265KeyFrame(header.GetNalUnitType()))
 		{
 			media_packet->SetFlag(MediaPacketFlag::Key);
 
 			has_idr = true;
 		}
 		// VPS/SPS/PPS
-		else if(header.GetNalUnitType() == H265NALUnitType::VPS)
+		else if (header.GetNalUnitType() == H265NALUnitType::VPS)
 		{
 			has_vps = true;
 		}
-		else if(header.GetNalUnitType() == H265NALUnitType::SPS)
+		else if (header.GetNalUnitType() == H265NALUnitType::SPS)
 		{
 			has_sps = true;
 		}
-		else if(header.GetNalUnitType() == H265NALUnitType::PPS)
+		else if (header.GetNalUnitType() == H265NALUnitType::PPS)
 		{
 			has_pps = true;
 		}
@@ -702,7 +718,7 @@ bool MediaRouterNormalize::ProcessH265AnnexBStream(const std::shared_ptr<info::S
 	media_packet->SetFragHeader(&fragment_header);
 
 	// Update DecoderConfigurationRecord
-	if(hevc_config && hevc_config->IsValid())
+	if (hevc_config && hevc_config->IsValid())
 	{
 		auto old_hevc_config = std::static_pointer_cast<HEVCDecoderConfigurationRecord>(media_track->GetDecoderConfigurationRecord());
 
@@ -715,66 +731,33 @@ bool MediaRouterNormalize::ProcessH265AnnexBStream(const std::shared_ptr<info::S
 	}
 
 	// Insert VPS/SPS/PPS if there are no VPS/SPS/PPS nal units before IDR frame.
-	if(media_track->IsValid() == true && has_idr == true && (has_vps == false || has_sps == false || has_pps == false))
+	if (media_track->IsValid() && has_idr && ((has_vps == false) || (has_sps == false) || (has_pps == false)))
 	{
-		if (InsertH265VPSSPSPPSAnnexB(stream_info, media_track, media_packet) == false)
+		hevc_config = std::static_pointer_cast<HEVCDecoderConfigurationRecord>(media_track->GetDecoderConfigurationRecord());
+
+		if (hevc_config != nullptr)
 		{
-			logtw("Failed to insert VPS/SPS/PPS before IDR frame in %s/%s/%s track", stream_info->GetApplicationName(), stream_info->GetName().CStr(), media_track->GetVariantName().CStr());
+			auto current_data = media_packet->GetData();
+			auto new_data = std::make_shared<ov::Data>(current_data->GetLength() + 1024);
+			FragmentationHeader new_fragment_header;
+
+			if (hevc_config->AddVpsSpsPpsAnnexB(new_data, &new_fragment_header) == false)
+			{
+				logtw("Failed to insert VPS/SPS/PPS before IDR frame in %s/%s/%s track", stream_info->GetApplicationName(), stream_info->GetName().CStr(), media_track->GetVariantName().CStr());
+			}
+
+			new_data->Append(current_data);
+			media_packet->SetData(new_data);
+
+			new_fragment_header.AddFragments(media_packet->GetFragHeader());
+			media_packet->SetFragHeader(&new_fragment_header);
+		}
+		else
+		{
+			logte("[%s/%s/%s] HEVCDecoderConfigurationRecord is not set",
+				  stream_info->GetApplicationName(), stream_info->GetName().CStr(), media_track->GetVariantName().CStr());
 		}
 	}
-
-	return true;
-}
-
-bool MediaRouterNormalize::InsertH265VPSSPSPPSAnnexB(const std::shared_ptr<info::Stream> &stream_info, std::shared_ptr<MediaTrack> &media_track, std::shared_ptr<MediaPacket> &media_packet)
-{
-	if (media_track->IsValid() == false)
-	{
-		return false;
-	}
-
-	// Get AVC Decoder Configuration Record
-	auto hevc_config = std::static_pointer_cast<HEVCDecoderConfigurationRecord>(media_track->GetDecoderConfigurationRecord());
-	if (hevc_config == nullptr)
-	{
-		return false;
-	}
-
-	auto data = media_packet->GetData();
-
-	const uint8_t START_CODE[4] = {0x00, 0x00, 0x00, 0x01};
-	const size_t START_CODE_LEN = sizeof(START_CODE);
-
-	auto vps_list = hevc_config->GetNalUnits(H265NALUnitType::VPS);
-	auto sps_list = hevc_config->GetNalUnits(H265NALUnitType::SPS);
-	auto pps_list = hevc_config->GetNalUnits(H265NALUnitType::PPS);
-
-	// new media packet
-	auto processed_data = std::make_shared<ov::Data>(data->GetLength() + 1024);
-
-	// copy sps/pps first
-	if(vps_list.size() > 0)
-	{
-		processed_data->Append(START_CODE, START_CODE_LEN);
-		processed_data->Append(vps_list[0]);
-	}
-	if(sps_list.size() > 0)
-	{
-		processed_data->Append(START_CODE, START_CODE_LEN);
-		processed_data->Append(sps_list[0]);
-	}
-	if(pps_list.size() > 0)
-	{
-		processed_data->Append(START_CODE, START_CODE_LEN);
-		processed_data->Append(pps_list[0]);
-	}
-
-	// and then copy original data
-	processed_data->Append(data);
-
-	// TODO : Update fragment header
-	
-	media_packet->SetData(processed_data);
 
 	return true;
 }
@@ -804,21 +787,206 @@ bool MediaRouterNormalize::ProcessH265HVCCStream(const std::shared_ptr<info::Str
 
 		return false;
 	}
+
+	// Convert to AnnexB and Insert SPS/PPS if there are no SPS/PPS nal units.
 	else if (media_packet->GetPacketType() == cmn::PacketType::NALU)
 	{
-		auto converted_data = NalStreamConverter::ConvertXvccToAnnexb(media_packet->GetData());
+		FragmentationHeader fragment_header;
+		size_t nalu_offset = 0;
 
-		if (converted_data == nullptr)
+		std::shared_ptr<ov::Data> vps_nalu = nullptr;
+		std::shared_ptr<ov::Data> sps_nalu = nullptr;
+		std::shared_ptr<ov::Data> pps_nalu = nullptr;
+
+		bool has_idr = false;
+		bool has_aud = false;
+
+		ov::ByteStream read_stream(media_packet->GetData());
+
+		media_packet->SetBitstreamFormat(cmn::BitstreamFormat::H265_ANNEXB);
+
+		// To minimize data copying, we store the data separately and aggregate it later
+		std::vector<std::shared_ptr<const ov::Data>> nalu_list;
+		size_t nalu_data_size = 0;
+
+		while (read_stream.Remained() > 0)
 		{
-			logte("Failed to convert HVCC to AnnexB");
-			return false;
+			if (read_stream.IsRemained(4) == false)
+			{
+				logte("Not enough data to parse NAL");
+				return false;
+			}
+
+			size_t nal_length = read_stream.ReadBE32();
+			if (read_stream.IsRemained(nal_length) == false)
+			{
+				logte("NAL length (%d) is greater than buffer length (%d)", nal_length, read_stream.Remained());
+				return false;
+			}
+
+			auto nalu = read_stream.GetRemainData(nal_length);
+
+			// Exception handling for encoder that transmits HVCC in non-standard format ([Size][Start Code][NalU])
+			{
+				auto start_code_size = GetStartCodeSize(nalu->GetDataAs<uint8_t>(), nalu->GetLength());
+				if (start_code_size > 0)
+				{
+					read_stream.Skip(start_code_size);
+					nal_length -= start_code_size;
+					nalu = nalu->Subdata(start_code_size, nal_length);
+				}
+			}
+
+			[[maybe_unused]] auto skipped = read_stream.Skip(nal_length);
+			OV_ASSERT2(skipped == nal_length);
+
+			H265NalUnitHeader nal_header;
+			if (H265Parser::ParseNalUnitHeader(nalu, nal_header))
+			{
+				const auto nalu_type = nal_header.GetNalUnitType();
+
+				has_idr = IsH265KeyFrame(nalu_type);
+
+				if (has_idr)
+				{
+					media_packet->SetFlag(MediaPacketFlag::Key);
+				}
+				else if (nalu_type == H265NALUnitType::VPS)
+				{
+					vps_nalu = (vps_nalu != nullptr) ? vps_nalu : nalu->Clone();
+				}
+				else if (nalu_type == H265NALUnitType::SPS)
+				{
+					sps_nalu = (sps_nalu != nullptr) ? sps_nalu : nalu->Clone();
+				}
+				else if (nalu_type == H265NALUnitType::PPS)
+				{
+					pps_nalu = (pps_nalu != nullptr) ? pps_nalu : nalu->Clone();
+				}
+				else if (nalu_type == H265NALUnitType::AUD)
+				{
+					has_aud = true;
+				}
+			}
+			else
+			{
+				logte("Could not parse H265 Nal unit header");
+				OV_ASSERT2(false);
+				return false;
+			}
+
+			nalu_offset += H26X_START_CODE_PREFIX_LEN;
+			fragment_header.AddFragment(nalu_offset, nal_length);
+
+			nalu_offset += nal_length;
+
+			nalu_list.push_back(nalu);
+			nalu_data_size += nal_length;
 		}
 
-		media_packet->SetData(converted_data);
-		media_packet->SetBitstreamFormat(cmn::BitstreamFormat::H265_ANNEXB);
-		media_packet->SetPacketType(cmn::PacketType::NALU);
+		// Update DecoderConfigurationRecord
+		if ((vps_nalu != nullptr) && (sps_nalu != nullptr) && (pps_nalu != nullptr))
+		{
+			auto new_hevc_config = std::make_shared<HEVCDecoderConfigurationRecord>();
 
-		// Because AVC is used in webrtc, there is a function to insert it if sps/pps is not present in the keyframe NAL, but HEVC is omitted because it is not used in webrtc. It will be added in the future if needed.
+			new_hevc_config->AddNalUnit(H265NALUnitType::VPS, vps_nalu);
+			new_hevc_config->AddNalUnit(H265NALUnitType::SPS, sps_nalu);
+			new_hevc_config->AddNalUnit(H265NALUnitType::PPS, pps_nalu);
+
+			if (new_hevc_config->IsValid())
+			{
+				auto old_hevc_config = media_track->GetDecoderConfigurationRecordAs<HEVCDecoderConfigurationRecord>();
+
+				if ((media_track->IsValid() == false) || (new_hevc_config->Equals(old_hevc_config) == false))
+				{
+					media_track->SetWidth(new_hevc_config->GetWidth());
+					media_track->SetHeight(new_hevc_config->GetHeight());
+					media_track->SetDecoderConfigurationRecord(new_hevc_config);
+				}
+			}
+			else
+			{
+				logtw("[%s/%s/%s] Failed to make HEVCDecoderConfigurationRecord",
+					  stream_info->GetApplicationName(), stream_info->GetName().CStr(), media_track->GetVariantName().CStr());
+			}
+		}
+
+		const bool need_to_add_aud = (has_aud == false);
+		const bool need_to_add_vps_sps_pps = has_idr && ((vps_nalu == nullptr) || (sps_nalu == nullptr) || (pps_nalu == nullptr));
+
+		std::shared_ptr<ov::Data> additional_data = nullptr;
+
+		if (media_track->IsValid() && (need_to_add_aud || need_to_add_vps_sps_pps))
+		{
+			auto hevc_config = media_track->GetDecoderConfigurationRecordAs<HEVCDecoderConfigurationRecord>();
+
+			if (hevc_config != nullptr)
+			{
+				FragmentationHeader additional_fragment_header;
+				additional_data = std::make_shared<ov::Data>(1024);
+
+				// Insert AUD if there is no AUD nal unit
+				if (need_to_add_aud)
+				{
+					if (hevc_config->AddAudAnnexB(additional_data, &additional_fragment_header) == false)
+					{
+						logtw("[%s/%s/%s] Failed to insert AUD before frame",
+							  stream_info->GetApplicationName(), stream_info->GetName().CStr(), media_track->GetVariantName().CStr());
+					}
+				}
+
+				// Insert VPS/SPS/PPS if there are no VPS/SPS/PPS nal units before IDR frame
+				if (need_to_add_vps_sps_pps)
+				{
+					if (hevc_config->AddVpsSpsPpsAnnexB(additional_data, &additional_fragment_header) == false)
+					{
+						logtw("[%s/%s/%s] Failed to insert VPS/SPS/PPS before IDR frame",
+							  stream_info->GetApplicationName(), stream_info->GetName().CStr(), media_track->GetVariantName().CStr());
+					}
+				}
+
+				fragment_header.InsertFragments(&additional_fragment_header);
+			}
+			else
+			{
+				logte("[%s/%s/%s] HEVCDecoderConfigurationRecord is not set",
+					  stream_info->GetApplicationName(), stream_info->GetName().CStr(), media_track->GetVariantName().CStr());
+			}
+		}
+
+		// Copy `additional_data` to `converted_data` if it exists, otherwise create a new one
+		size_t expected_size =
+			// Size of start code prefix for each NALU
+			(H26X_START_CODE_PREFIX_LEN * nalu_list.size()) +
+			// Total NALU data size
+			nalu_data_size;
+		std::shared_ptr<ov::Data> annexb_data;
+
+		if (additional_data != nullptr)
+		{
+			expected_size += additional_data->GetLength();
+			// Since `additional_data` is newly created above, we can use it directly without `Clone()`
+			annexb_data = additional_data;
+			annexb_data->Reserve(expected_size);
+		}
+		else
+		{
+			annexb_data = std::make_shared<ov::Data>(expected_size);
+		}
+
+		// Append NALUs with start code prefix to `annexb_data`
+		for (const auto &nalu : nalu_list)
+		{
+			// Append start code prefix
+			annexb_data->Append(H26X_START_CODE_PREFIX, H26X_START_CODE_PREFIX_LEN);
+			// Append NALU data
+			annexb_data->Append(nalu);
+		}
+
+		OV_ASSERT(annexb_data->GetLength() == expected_size, "AnnexB data size mismatch: expected %zu, got %zu", expected_size, annexb_data->GetLength());
+
+		media_packet->SetFragHeader(&fragment_header);
+		media_packet->SetData(annexb_data);
 	}
 
 	return true;
@@ -897,4 +1065,3 @@ bool MediaRouterNormalize::ProcessMP3Stream(const std::shared_ptr<info::Stream> 
 
 	return true;
 }
-
