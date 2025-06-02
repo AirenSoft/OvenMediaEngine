@@ -154,10 +154,102 @@ public:
 	// Currently only used for RTSP Provider only
 	bool last_fragment_complete = false;
 
+	void AdjustOffset(size_t offset)
+	{
+		for (auto &offset : fragmentation_offset)
+		{
+			offset += offset;
+		}
+	}
+
+	size_t CalculateNextOffset() const
+	{
+		if (fragmentation_offset.empty())
+		{
+			return 0;
+		}
+
+		return fragmentation_offset.back() + fragmentation_length.back();
+	}
+
+	void InsertFragment(size_t offset, size_t length)
+	{
+		fragmentation_offset.insert(fragmentation_offset.begin(), offset);
+		fragmentation_length.insert(fragmentation_length.begin(), length);
+
+		AdjustOffset(length);
+	}
+
+	bool InsertFragments(const FragmentationHeader *other)
+	{
+		if (other == nullptr)
+		{
+			return false;
+		}
+
+		// Calculate the next offset based on the `other`'s items
+		auto next_offset = other->CalculateNextOffset();
+
+		// Adjust the offsets of the current header
+		AdjustOffset(next_offset);
+
+		// Insert the `other`'s offsets and lengths at the beginning
+		fragmentation_offset.insert(fragmentation_offset.begin(), other->fragmentation_offset.begin(), other->fragmentation_offset.end());
+		fragmentation_length.insert(fragmentation_length.begin(), other->fragmentation_length.begin(), other->fragmentation_length.end());
+
+		return true;
+	}
+
 	void AddFragment(size_t offset, size_t length)
 	{
 		fragmentation_offset.push_back(offset);
 		fragmentation_length.push_back(length);
+	}
+
+	void AddFragment(size_t length)
+	{
+		return AddFragment(CalculateNextOffset(), length);
+	}
+
+	bool AddFragments(const std::vector<size_t> &offset_list, const std::vector<size_t> &length_list)
+	{
+		const auto fragmentation_count = offset_list.size();
+
+		if (fragmentation_count != length_list.size())
+		{
+			// The fragmentation offset and length must always be managed as pairs, so their counts must always match
+			OV_ASSERT2(fragmentation_count == length_list.size());
+			return false;
+		}
+
+		if (fragmentation_count == 0)
+		{
+			// If the current header is empty, we can simply copy the other header's data
+			fragmentation_offset = offset_list;
+			fragmentation_length = length_list;
+			return true;
+		}
+
+		// If the current header is not empty, we need to accumulate the offsets
+		const auto next_offset = CalculateNextOffset();
+
+		for (size_t i = 0; i < fragmentation_count; ++i)
+		{
+			AddFragment(next_offset + offset_list[i], length_list[i]);
+		}
+
+		return true;
+	}
+
+	// Append another `FragmentationHeader`'s offset and length to this `FragmentationHeader`
+	bool AddFragments(const FragmentationHeader *other)
+	{
+		if (other == nullptr)
+		{
+			return false;
+		}
+
+		return AddFragments(other->fragmentation_offset, other->fragmentation_length);
 	}
 
 	std::optional<std::tuple<size_t, size_t>> GetFragment(size_t index) const
