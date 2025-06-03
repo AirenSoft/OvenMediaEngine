@@ -161,7 +161,7 @@ namespace pvd::rtmp
 		return true;
 	}
 
-	bool RtmpStreamV2::UpdateConnectInfo(const ov::String &app_name, const ov::String &tc_url)
+	bool RtmpStreamV2::UpdateConnectInfo(const ov::String &tc_url)
 	{
 		if (tc_url.IsEmpty())
 		{
@@ -178,10 +178,9 @@ namespace pvd::rtmp
 		}
 
 		_name = url->Stream();
-		_app_name = app_name;
 		_tc_url = tc_url;
 
-		_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Host(), _app_name);
+		_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Host(), url->App());
 
 		if (_vhost_app_name.IsValid() == false)
 		{

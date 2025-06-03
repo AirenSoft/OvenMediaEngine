@@ -558,9 +558,11 @@ namespace pvd::rtmp
 
 		object_encoding = object->GetNumber("objectEncoding").value_or(object_encoding);
 
+		// Instead of extracting `app` from the `object`, we will extract it from the actual streaming URL included in `tcUrl`.
+		// auto app_name = object->GetString("app").value_or("")
+
 		// Notify the app name and `tcUrl` to the stream.
 		if (_stream->UpdateConnectInfo(
-				object->GetString("app").value_or(""),
 				object->GetString("tcUrl").value_or("")) == false)
 		{
 			return false;

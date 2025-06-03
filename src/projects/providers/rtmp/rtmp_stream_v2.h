@@ -58,7 +58,7 @@ namespace pvd::rtmp
 
 		bool OnDataReceived(const std::shared_ptr<const ov::Data> &data) override;
 
-		bool UpdateConnectInfo(const ov::String &app_name, const ov::String &tc_url);
+		bool UpdateConnectInfo(const ov::String &tc_url);
 
 	protected:
 		//--------------------------------------------------------------------
@@ -111,7 +111,6 @@ namespace pvd::rtmp
 		uint32_t _rtmp_stream_id = 1;
 
 		ov::String _tc_url;
-		ov::String _app_name;
 		info::VHostAppName _vhost_app_name = info::VHostAppName::InvalidVHostAppName();
 
 		// To send data
