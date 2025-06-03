@@ -69,7 +69,7 @@ namespace pvd::rtmp
 	private:
 		bool IsReadyToPublish() const;
 
-		void SetFinalUrlWithPort(std::shared_ptr<ov::Url> final_url);
+		void SetRequestedUrlWithPort(std::shared_ptr<ov::Url> requested_url);
 		// Called when received AmfFCPublish & AmfPublish event
 		bool PostPublish(const modules::rtmp::AmfDocument &document);
 

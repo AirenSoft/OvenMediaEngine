@@ -217,15 +217,15 @@ namespace pvd::rtmp
 		return false;
 	}
 
-	void RtmpStreamV2::SetFinalUrlWithPort(std::shared_ptr<ov::Url> final_url)
+	void RtmpStreamV2::SetRequestedUrlWithPort(std::shared_ptr<ov::Url> requested_url)
 	{
 		// PORT can be omitted (1935), but SignedPolicy requires this information.
-		if (final_url->Port() == 0)
+		if (requested_url->Port() == 0)
 		{
-			final_url->SetPort(_remote->GetLocalAddress()->Port());
+			requested_url->SetPort(_remote->GetLocalAddress()->Port());
 		}
 
-		SetFinalUrl(final_url);
+		SetRequestedUrl(requested_url);
 	}
 
 	bool RtmpStreamV2::PostPublish(const modules::rtmp::AmfDocument &document)
@@ -239,7 +239,7 @@ namespace pvd::rtmp
 		}
 
 		{
-			auto final_url = requested_url->Clone();
+			auto url = requested_url->Clone();
 
 			// When using the RTMP authentication, the stream name may be provided here
 			{
@@ -249,17 +249,18 @@ namespace pvd::rtmp
 				auto query_position = stream_name.IndexOf('?');
 				if (query_position >= 0)
 				{
-					final_url->AppendQueryString(stream_name.Substring(query_position));
+					url->AppendQueryString(stream_name.Substring(query_position));
 					stream_name = stream_name.Substring(0, query_position);
 				}
 
 				if (stream_name.IsEmpty() == false)
 				{
-					final_url->SetStream(stream_name);
+					url->SetStream(stream_name);
 				}
 			}
 
-			SetFinalUrlWithPort(final_url);
+			SetRequestedUrlWithPort(url);
+			SetFinalUrl(url);
 		}
 
 		return CheckAccessControl() && ValidatePublishUrl();
@@ -322,7 +323,7 @@ namespace pvd::rtmp
 				// Redirect URL
 				if (admission_webhooks->GetNewURL() != nullptr)
 				{
-					SetFinalUrlWithPort(admission_webhooks->GetNewURL()->Clone());
+					SetFinalUrl(admission_webhooks->GetNewURL()->Clone());
 
 					_chunk_handler.SetVhostAppName(_vhost_app_name, GetName());
 				}
