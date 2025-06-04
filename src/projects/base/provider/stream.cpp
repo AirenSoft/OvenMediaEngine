@@ -413,48 +413,33 @@ namespace pvd
 			return -1LL;
 		}
 
-		double expr_tb2us = track->GetTimeBase().GetExpr() * 1000000;
-		double expr_us2tb = track->GetTimeBase().GetTimescale() / 1000000;
+		const int64_t tb_num = track->GetTimeBase().GetNum(); // e.g., 1
+		const int64_t tb_den = track->GetTimeBase().GetDen(); // e.g., 48000
+		const int64_t AV_TIME_BASE = 1000000;
 
 		// 1. Get the start timestamp and base timebase of this stream.
 		if (_start_timestamp == -1LL)
 		{
-			_start_timestamp = static_cast<double>(dts) * expr_tb2us;
+			_start_timestamp = rescale(dts, AV_TIME_BASE * tb_num, tb_den);
 
 			// for debugging
 			logtd("[%s/%s(%d)] Get start timestamp of stream. track:%d, ts:%lld (%d/%d) (%f us)", _application->GetVHostAppName().CStr(), GetName().CStr(), GetId(), track_id, dts, track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(), _start_timestamp);
 		}
-		double start_timestamp_tb = static_cast<int64_t>(_start_timestamp * expr_us2tb);
+
+		int64_t start_ts_tb = rescale(_start_timestamp, tb_den, AV_TIME_BASE);
 
 		// 2. Get the base timestamp of the track
-		double base_timestamp_tb = 0;
-		auto it = _base_timestamp_us_map.find(track_id);
-		if (it != _base_timestamp_us_map.end())
-		{
-			base_timestamp_tb = static_cast<double>(it->second) * expr_us2tb;
-		}
+		int64_t base_ts_us = _base_timestamp_us_map.count(track_id) ? _base_timestamp_us_map[track_id] : 0;
+		int64_t base_ts_tb = rescale(base_ts_us, tb_den, AV_TIME_BASE);
 
 		// 3. Calculate PTS/DTS (base_timestamp + (pts - start_timestamp))
 
-		double final_pkt_pts_tb_d = base_timestamp_tb + (pts - start_timestamp_tb);
-		int64_t final_pkt_pts_tb = static_cast<int64_t>(final_pkt_pts_tb_d);
-		// remainder
-		_last_pts_tb_remainder_map[track_id] += final_pkt_pts_tb_d - final_pkt_pts_tb;
-		if (_last_pts_tb_remainder_map[track_id] >= 1.0)
-		{
-			final_pkt_pts_tb++;
-			_last_pts_tb_remainder_map[track_id] -= 1.0;
-		}
+		int64_t final_pts_tb = base_ts_tb + (pts - start_ts_tb);
+		int64_t final_dts_tb = base_ts_tb + (dts - start_ts_tb);
 
-		double final_pkt_dts_tb_d = base_timestamp_tb + (dts - start_timestamp_tb);
-		int64_t final_pkt_dts_tb = static_cast<int64_t>(final_pkt_dts_tb_d);
-		// remainder
-		_last_dts_tb_remainder_map[track_id] += final_pkt_dts_tb_d - final_pkt_dts_tb;
-		if (_last_dts_tb_remainder_map[track_id] >= 1.0)
-		{
-			final_pkt_dts_tb++;
-			_last_dts_tb_remainder_map[track_id] -= 1.0;
-		}
+		// Disabled remainder map
+		_last_pts_tb_remainder_map[track_id] = 0.0;
+		_last_dts_tb_remainder_map[track_id] = 0.0;
 
 		// 4. Check wrap around and adjust PTS/DTS
 
@@ -492,7 +477,7 @@ namespace pvd
 			}
 		}
 
-		final_pkt_pts_tb += _wraparound_count_map[0][track_id] * max_timestamp;
+		final_pts_tb += _wraparound_count_map[0][track_id] * max_timestamp;
 
 		// For DTS
 		if (_last_origin_ts_map[1].find(track_id) != _last_origin_ts_map[1].end())
@@ -505,19 +490,17 @@ namespace pvd
 			}
 		}
 
-		final_pkt_dts_tb += _wraparound_count_map[1][track_id] * max_timestamp;
+		final_dts_tb += _wraparound_count_map[1][track_id] * max_timestamp;
 		
 		// 5. Update last timestamp ( Managed in microseconds )
-		_last_timestamp_us_map[track_id] = static_cast<double>(final_pkt_dts_tb) * expr_tb2us;
-
 		_last_origin_ts_map[0][track_id] = pts;
 		_last_origin_ts_map[1][track_id] = dts;
 
-		auto duration_us = static_cast<double>(duration) * expr_tb2us;
-		_last_duration_us_map[track_id] = duration_us;
+		_last_timestamp_us_map[track_id] = rescale(final_dts_tb, AV_TIME_BASE * tb_num, tb_den);
+		_last_duration_us_map[track_id] = rescale(duration, AV_TIME_BASE * tb_num, tb_den);
 
-		pts = final_pkt_pts_tb;
-		dts = final_pkt_dts_tb;
+		pts = final_pts_tb;
+		dts = final_dts_tb;
 
 #if 0
 		// for debugging

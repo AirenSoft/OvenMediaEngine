@@ -564,9 +564,13 @@ namespace pvd
             auto duration = media_packet->GetDuration();
 
             // origin timebase to track timebase
-            pts = static_cast<double>(pts) * (static_cast<double>(origin_tb.num) / static_cast<double>(origin_tb.den) * track->GetTimeBase().GetTimescale());
-            dts = static_cast<double>(dts) * (static_cast<double>(origin_tb.num) / static_cast<double>(origin_tb.den) * track->GetTimeBase().GetTimescale());
-            duration = static_cast<double>(duration) * (static_cast<double>(origin_tb.num) / static_cast<double>(origin_tb.den) * track->GetTimeBase().GetTimescale());
+            // pts = static_cast<double>(pts) * (static_cast<double>(origin_tb.num) / static_cast<double>(origin_tb.den) * track->GetTimeBase().GetTimescale());
+            // dts = static_cast<double>(dts) * (static_cast<double>(origin_tb.num) / static_cast<double>(origin_tb.den) * track->GetTimeBase().GetTimescale());
+            // duration = static_cast<double>(duration) * (static_cast<double>(origin_tb.num) / static_cast<double>(origin_tb.den) * track->GetTimeBase().GetTimescale());
+
+			pts = rescale(pts, track->GetTimeBase().GetDen() * origin_tb.num, origin_tb.den * track->GetTimeBase().GetNum());
+			dts = rescale(dts, track->GetTimeBase().GetDen() * origin_tb.num, origin_tb.den * track->GetTimeBase().GetNum());
+			duration = rescale(duration, track->GetTimeBase().GetDen() * origin_tb.num, origin_tb.den * track->GetTimeBase().GetNum());
 
             if (track_first_packet_map.find(track_id) == track_first_packet_map.end())
             {
@@ -966,6 +970,8 @@ namespace pvd
         std::map<int, int64_t> track_single_file_dts_offset_map;
         std::map<int, bool> end_of_track_map;
 
+		bool sent_keyframe = false;
+
         // Play
         while (_worker_thread_running)
         {
@@ -1022,18 +1028,25 @@ namespace pvd
             }
 
             // Transcoder will make bogus frame if it can't be decoded
-            // if (sent_keyframe == false && media_packet->GetMediaType() == cmn::MediaType::Video)
+			// if (GetRepresentationType() == StreamRepresentationType::Relay && sent_keyframe == false)
             // {
-            //     if (media_packet->GetFlag() != MediaPacketFlag::Key)
-            //     {
-            //         // Skip until key frame
-            //         continue;
-            //     }
-            //     else
-            //     {
-            //         sent_keyframe = true;
-            //     }
-            // }
+			// 	if (media_packet->GetMediaType() == cmn::MediaType::Video)
+			// 	{
+			// 		if (media_packet->GetFlag() != MediaPacketFlag::Key)
+			// 		{
+			// 			// Skip until key frame
+			// 			continue;
+			// 		}
+			// 		else
+			// 		{
+			// 			sent_keyframe = true;
+			// 		}
+			// 	}
+			// 	else 
+			// 	{
+			// 		continue; // Skip until key frame
+			// 	}
+			// }
 
             auto track = GetTrack(track_id);
             if (track == nullptr)
@@ -1050,9 +1063,14 @@ namespace pvd
             auto duration = media_packet->GetDuration();
 
             // origin timebase to track timebase
-            pts = (((double)pts * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
-            dts = (((double)dts * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
-			duration = static_cast<double>(duration) * (static_cast<double>(origin_tb.GetNum()) / static_cast<double>(origin_tb.GetDen()) * track->GetTimeBase().GetTimescale());
+            //pts = (((double)pts * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
+            //dts = (((double)dts * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
+			//duration = static_cast<double>(duration) * (static_cast<double>(origin_tb.GetNum()) / static_cast<double>(origin_tb.GetDen()) * track->GetTimeBase().GetTimescale());
+			
+			// origin timebase to track timebase
+			pts = rescale(pts, track->GetTimeBase().GetDen() * origin_tb.GetNum(), origin_tb.GetDen() * track->GetTimeBase().GetNum());
+			dts = rescale(dts, track->GetTimeBase().GetDen() * origin_tb.GetNum(), origin_tb.GetDen() * track->GetTimeBase().GetNum());
+			duration = rescale(duration, track->GetTimeBase().GetDen() * origin_tb.GetNum(), origin_tb.GetDen() * track->GetTimeBase().GetNum());
 
 			logtd("Scheduled Channel : %s/%s: Track %d, origin dts : %lld, pts %lld, dts %lld, duration %lld, tb %f", GetApplicationName(), GetName().CStr(), track_id, dts, pts, dts, duration, track->GetTimeBase().GetExpr());
 
@@ -1195,7 +1213,8 @@ namespace pvd
     std::shared_ptr<MediaRouterStreamTap> ScheduledStream::PrepareStreamPlayback(const std::shared_ptr<Schedule::Item> &item)
     {
         auto stream_tap = MediaRouterStreamTap::Create();
-		stream_tap->SetNeedPastData(true);
+		// 첫번째 재생인 경우에만 keyframe부터 나가야되니까 그때 적용할까?
+		// stream_tap->SetNeedPastData(true);
 
         auto stream_url = ov::Url::Parse(item->url);
         if (stream_url == nullptr)

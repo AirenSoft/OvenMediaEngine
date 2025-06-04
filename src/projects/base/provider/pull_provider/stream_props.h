@@ -14,8 +14,7 @@ namespace pvd
 	class PullStreamProperties
 	{
 	public:
-		PullStreamProperties()
-			: _persistent(false), _failback(false), _relay(false), _ignore_rtcp_sr_timestamp(false), _failback_timeout(-1), _no_input_failover_timeout(-1), _unused_stream_deletion_timeout(-1), _retry_connect_count(2) {};
+		PullStreamProperties(){};
 
 		PullStreamProperties(bool ignore_rtcp_sr_timestamp, bool persistent, bool failback, bool relay, int32_t failback_timeout = -1, int32_t no_input_failover_timeout = -1, int32_t unused_stream_deletion_timeout = -1, int32_t retry_connect_count = 2)
 		{

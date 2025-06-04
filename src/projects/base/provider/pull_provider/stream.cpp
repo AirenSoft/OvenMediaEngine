@@ -81,11 +81,13 @@ namespace pvd
 			_restart_count++;
 			if (_restart_count > _url_list.size() * _properties->GetRetryConnectCount())
 			{
+				// If the stream state is TERMINATED, it will be deleted by the StreamMotor
 				SetState(Stream::State::TERMINATED);
 			}
 
 			return false;
 		}
+		UpdateStream();
 
 		_restart_count = 0;
 		return Stream::Start();

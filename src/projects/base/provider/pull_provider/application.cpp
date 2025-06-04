@@ -295,8 +295,6 @@ namespace pvd
 			return false;
 		}
 
-		pull_stream->SetMsid(pull_stream->GetMsid() + 1);
-
 		NotifyStreamUpdated(pull_stream);
 
 		if(motor->UpdateStream(pull_stream) == false)

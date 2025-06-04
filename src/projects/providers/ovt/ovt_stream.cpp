@@ -696,7 +696,7 @@ namespace pvd
 
 		while (true)
 		{
-			if (_depacketizer.IsAvailableMediaPacket())
+			if (_depacketizer.IsAvailableMediaPacket()) 
 			{
 				auto media_packet = _depacketizer.PopMediaPacket();
 
@@ -705,31 +705,20 @@ namespace pvd
 
 				int64_t pts = media_packet->GetPts();
 				int64_t dts = media_packet->GetDts();
+				int64_t duration = media_packet->GetDuration();
 
-				AdjustTimestampByBase(media_packet->GetTrackId(), pts, dts, std::numeric_limits<int64_t>::max());
+				AdjustTimestampByBase(media_packet->GetTrackId(), pts, dts, std::numeric_limits<int64_t>::max(), duration);
 				[[maybe_unused]] auto old_pts = media_packet->GetPts();
 				[[maybe_unused]] auto old_dts = media_packet->GetDts();
+
 				media_packet->SetPts(pts);
 				media_packet->SetDts(dts);
 
-				// After the MSID is changed, the packet is dropped until key frame is received.
-				bool drop = false;
-				if (_last_msid_map[media_packet->GetTrackId()] != media_packet->GetMsid())
-				{
-					_last_msid_map[media_packet->GetTrackId()] = media_packet->GetMsid();
-					//  Do not anything if the msid is changed
-				}
+				logtd("[%s/%s(%u)] ProcessMediaPacket : TrackId(%d) ORI_PTS(%lld) PTS(%lld) ORI_DTS(%lld) DTS(%lld) Size(%zu) MSID(%u)",
+					  GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr(), GetId(),
+					  media_packet->GetTrackId(), old_pts, media_packet->GetPts(), old_dts, media_packet->GetDts(), media_packet->GetDataLength(), GetMsid());
 
-				// When switching streams, the PTS of the packet may become negative due to the start time of the first packet. Packets before the base timestamp are defined as a drop policy.
-				if (media_packet->GetPts() < 0)
-				{
-					drop = true;
-				}
-
-				if (drop == false)
-				{
-					SendFrame(media_packet);
-				}
+				SendFrame(media_packet);
 
 				if (_depacketizer.IsAvailableMediaPacket() || _depacketizer.IsAvailableMessage())
 				{

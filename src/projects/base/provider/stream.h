@@ -105,6 +105,12 @@ namespace pvd
 		void UpdateSenderReportTimestamp(uint32_t track_id, uint32_t msw, uint32_t lsw, uint32_t timestamp);
 		bool AdjustRtpTimestamp(uint32_t track_id, int64_t timestamp, int64_t max_timestamp, int64_t &adjusted_timestamp);
 		
+	protected:
+		inline int64_t rescale(int64_t value, int64_t to_timescale, int64_t from_timescale) 
+		{
+			return (value * to_timescale + from_timescale / 2) / from_timescale;
+		}
+
 	private:
 		void ResetSourceStreamTimestamp();
 		int64_t GetDeltaTimestamp(uint32_t track_id, int64_t timestamp, int64_t max_timestamp);
