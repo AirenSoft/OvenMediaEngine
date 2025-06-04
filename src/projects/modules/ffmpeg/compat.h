@@ -102,6 +102,8 @@ namespace ffmpeg
 					return cmn::MediaCodecId::Jpeg;
 				case AV_CODEC_ID_PNG:
 					return cmn::MediaCodecId::Png;
+				case AV_CODEC_ID_WEBP:
+					return cmn::MediaCodecId::Webp;
 				default:
 					break;
 			}
@@ -133,6 +135,8 @@ namespace ffmpeg
 					return AV_CODEC_ID_MJPEG;
 				case cmn::MediaCodecId::Png:
 					return AV_CODEC_ID_PNG;
+				case cmn::MediaCodecId::Webp:
+					return AV_CODEC_ID_WEBP;
 				default:
 					break;
 			}
