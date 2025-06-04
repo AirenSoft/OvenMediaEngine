@@ -713,6 +713,7 @@ namespace pvd
 
 				media_packet->SetPts(pts);
 				media_packet->SetDts(dts);
+				media_packet->SetDuration(-1); // Duration should be set by MediaRouter again due to the AdjustTimestampByBase
 
 				logtd("[%s/%s(%u)] ProcessMediaPacket : TrackId(%d) ORI_PTS(%lld) PTS(%lld) ORI_DTS(%lld) DTS(%lld) Size(%zu) MSID(%u)",
 					  GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr(), GetId(),
