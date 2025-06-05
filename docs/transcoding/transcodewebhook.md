@@ -22,8 +22,8 @@
 			<SecretKey>abc123!@#</SecretKey>
 			<Timeout>1500</Timeout>
 			<UseLocalProfilesOnConnectionFailure>true</UseLocalProfilesOnConnectionFailure>
-                        <UseLocalProfilesOnServerDisallow>false</UseLocalProfilesOnServerDisallow>
-                        <UseLocalProfilesOnErrorResponse>false</UseLocalProfilesOnErrorResponse>
+			<UseLocalProfilesOnServerDisallow>false</UseLocalProfilesOnServerDisallow>
+			<UseLocalProfilesOnErrorResponse>false</UseLocalProfilesOnErrorResponse>
 		</TranscodeWebhook>
 ```
 
@@ -56,58 +56,67 @@ OvenMediaEngine sends requests to the Control Server in the following format.
 
 ```
 POST /configured/target/url/ HTTP/1.1
-Content-Length: 944
+Content-Length: 1482
 Content-Type: application/json
 Accept: application/json
 X-OME-Signature: f871jd991jj1929jsjd91pqa0amm1
 {
-	"source" : "TCP://192.168.0.200:8843",
-	"stream" : 
-	{
-    	"name" : "stream",
-		"virtualHost" : "default",
-		"application" : "app",
-		"sourceType" : "Rtmp",
-		"createdTime" : "2023-10-24T18:10:51.120+09:00",
-		"sourceUrl" : "TCP://192.168.0.200:8843",
-		"tracks" : 
-		[
-			{
-				"id" : 0,
-				"name" : "Video",
-				"type" : "Video",
-				"video" : 
-				{
-					"bitrate" : "2500000",
-					"bypass" : false,
-					"codec" : "H264",
-					"framerate" : 30.0,
-					"hasBframes" : false,
-					"height" : 720,
-					"keyFrameInterval" : 0,
-					"width" : 1280
-				}
-			},
-			{
-				"audio" : 
-				{
-					"bitrate" : "160000",
-					"bypass" : false,
-					"channel" : 2,
-					"codec" : "AAC",
-					"samplerate" : 44100
-				},
-				"id" : 1,
-				"name" : "Audio",
-				"type" : "Audio"
-			},
-			{
-				"id" : 2,
-				"name" : "Data",
-				"type" : "Data"
-			}
-		]
-	}
+  "source": "TCP://192.168.0.220:2216",
+  "stream": {
+    "name": "stream",
+    "virtualHost": "default",
+    "application": "app",
+    "sourceType": "Rtmp",
+    "sourceUrl": "TCP://192.168.0.220:2216",
+    "createdTime": "2025-06-05T14:43:54.001+09:00",
+    "tracks": [
+      {
+        "id": 0,
+        "name": "Video",
+        "type": "Video",
+        "video": {
+          "bitrate": 10000000,
+          "bitrateAvg": 0,
+          "bitrateConf": 10000000,
+          "bitrateLatest": 21845,
+          "bypass": false,
+          "codec": "H264",
+          "deltaFramesSinceLastKeyFrame": 0,
+          "framerate": 30.0,
+          "framerateAvg": 0.0,
+          "framerateConf": 30.0,
+          "framerateLatest": 0.0,
+          "hasBframes": false,
+          "width": 1280,
+          "height": 720,
+          "keyFrameInterval": 1.0,
+          "keyFrameIntervalAvg": 1.0,
+          "keyFrameIntervalConf": 0.0,
+          "keyFrameIntervalLatest": 0.0
+        }
+      },
+      {
+        "id": 1,
+        "name": "Audio",
+        "type": "Audio",
+        "audio": {
+          "bitrate": 160000,
+          "bitrateAvg": 0,
+          "bitrateConf": 160000,
+          "bitrateLatest": 21845,
+          "bypass": false,
+          "channel": 2,
+          "codec": "AAC",
+          "samplerate": 48000
+        }
+      },
+      {
+        "id": 2,
+        "name": "Data",
+        "type": "Data"
+      }
+    ]
+  }
 }
 ```
 
@@ -117,36 +126,22 @@ The Control Server responds in the following format to specify OutputProfiles fo
 
 ```
 HTTP/1.1 200 OK
-Content-Length: 102
+Content-Length: 886
 Content-Type: application/json
 Connection: Closed
 {
   "allowed": true,
-  "reason": "it will be output to the log file when "allowed" is false",
-  "outputProfiles" : {
-    "hardwareAcceleration": true,
-    "outputProfile":[
+  "reason": "it will be output to the log file when `allowed` is false",
+  "outputProfiles": {
+    "outputProfile": [
       {
         "name": "bypass",
         "outputStreamName": "${OriginStreamName}",
-        "playlists": [
-          {
-            "name": "default",
-            "fileName": "default",
-            "renditions":[
-              {
-                "name": "bypass",
-                "video": "bypass_video",
-                "audio": "bypass_audio"
-              }
-            ]
-          }
-        ],
         "encodes": {
           "videos": [
             {
               "name": "bypass_video",
-              "bypass": true
+              "bypass": "true"
             }
           ],
           "audios": [
@@ -155,102 +150,141 @@ Connection: Closed
               "bypass": true
             }
           ]
-        }
+        },
+        "playlists": [
+          {
+            "fileName": "default",
+            "name": "default",
+            "renditions": [
+              {
+                "name": "bypass",
+                "video": "bypass_video",
+                "audio": "bypass_audio"
+              }
+            ]
+          }
+        ]
       }
     ]
   }
 }
 ```
 
-The "outputProfiles" in the JSON is identical to the configuration in Server.xml, and the format is as follows.
+The `outputProfiles` section in the JSON structure mirrors the configuration in `Server.xml` and allows for detailed settings as shown below:
 
 ```
 "outputProfiles": {
-    "hardwareAcceleration": true,
-    "outputProfile": [
+  "hwaccels": {
+    "decoder": {
+      "enable": false
+    },
+    "encoder": {
+      "enable": false
+    }
+  },
+  "decodes": {
+    "threadCount": 2,
+    "onlyKeyframes": false
+  },
+  "outputProfile": [
+    {
+      "name": "bypass",
+      "outputStreamName": "${OriginStreamName}",
+      "encodes": {
+        "videos": [
+          {
+            "name": "bypass_video",
+            "bypass": "true"
+          },
+          {
+            "name": "video_h264_1080p",
+            "codec": "h264",
+            "width": 1920,
+            "height": 1080,
+            "bitrate": 5024000,
+            "framerate": 30,
+            "keyFrameInterval": 60,
+            "bFrames": 0,
+            "preset": "faster"
+          },
+          {
+            "name": "video_h264_720p",
+            "codec": "h264",
+            "width": 1280,
+            "height": 720,
+            "bitrate": 2024000,
+            "framerate": 30,
+            "keyFrameInterval": 60,
+            "bFrames": 0,
+            "preset": "faster"
+          }
+        ],
+        "audios": [
+          {
+            "name": "aac_audio",
+            "codec": "aac",
+            "bitrate": 128000,
+            "samplerate": 48000,
+            "channel": 2,
+            "bypassIfMatch": {
+              "codec": "eq"
+            }
+          },
+          {
+            "name": "opus_audio",
+            "codec": "opus",
+            "bitrate": 128000,
+            "samplerate": 48000,
+            "channel": 2,
+            "bypassIfMatch": {
+              "codec": "eq"
+            }
+          }
+        ],
+        "images": [
+          {
+            "codec": "jpeg",
+            "framerate": 1,
+            "width": 320,
+            "height": 180
+          }
+        ]
+      },
+      "playlists": [
         {
-            "name": "bypass",
-            "outputStreamName": "${OriginStreamName}",
-            "encodes": {
-                "audios": [
-                    {
-                        "name": "bypass_audio",
-                        "bypass": true,
-                        "active": true,
-                        "codec": "",
-                        "bitrate": "",
-                        "samplerate": 0,
-                        "channel": 0,
-                        "bypassIfMatch": {
-                            "codec": "",
-                            "bitrate": "",
-                            "framerate": "",
-                            "width": "",
-                            "height": "",
-                            "sar": "",
-                            "samplerate": "",
-                            "channel": ""
-                        }
-                    }
-                ],
-                "videos": [
-                    {
-                        "name": "bypass_video",
-                        "bypass": true,
-                        "active": true,
-                        "codec": "",
-                        "profile": "",
-                        "bitrate": "",
-                        "width": 0,
-                        "height": 0,
-                        "framerate": 0.000000,
-                        "preset": "",
-                        "threadCount": -1,
-                        "keyFrameInterval": 0,
-                        "bFrames": 0,
-                        "bypassIfMatch": {
-                            "codec": "",
-                            "bitrate": "",
-                            "framerate": "",
-                            "width": "",
-                            "height": "",
-                            "sar": "",
-                            "samplerate": "",
-                            "channel": ""
-                        }
-                    }
-                ],
-                "images": [
-                    {
-                        "name": "bypass_video",
-                        "bypass": true,
-                        "active": true,
-                        "codec": "",
-                        "width": 0,
-                        "height": 0,
-                        "framerate": 0.000000
-                    }
-                ]
+          "fileName": "abr",
+          "name": "abr",
+          "options": {
+            "enableTsPackaging": true,
+            "webRtcAutoAbr": true,
+            "hlsChunklistPathDepth": -1
+          },
+          "renditions": [
+            {
+              "name": "1080p_aac",
+              "video": "video_h264_1080p",
+              "audio": "aac_audio"
             },
-            "playlists": [
-                {
-                    "name": "default",
-                    "fileName": "default",
-                    "options": {
-                        "webRtcAutoAbr": true,
-                        "hlsChunklistPathDepth": -1
-                    },
-                    "renditions": [
-                        {
-                            "name": "bypass",
-                            "video": "bypass_video",
-                            "audio": "bypass_audio"
-                        }
-                    ]
-                }
-            ]
+            {
+              "name": "720p_aac",
+              "video": "video_h264_720p",
+              "audio": "aac_audio"
+            },
+            {
+              "name": "1080p_opus",
+              "video": "video_h264_1080p",
+              "audio": "opus_audio"
+            },
+            {
+              "name": "720p_opus",
+              "video": "video_h264_720p",
+              "audio": "opus_audio"
+            }
+          ]
         }
-    ]
+      ]
+    }
+  ]
 }
 ```
 
