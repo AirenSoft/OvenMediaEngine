@@ -34,10 +34,10 @@ namespace serdes
 			SetString(object, "codec", cmn::GetCodecIdString(track->GetCodecId()), Optional::False);
 			SetInt(object, "width", track->GetWidth());
 			SetInt(object, "height", track->GetHeight());
-			SetString(object, "bitrate", ov::Converter::ToString(track->GetBitrate()), Optional::False);
-			SetString(object, "bitrateConf", ov::Converter::ToString(track->GetBitrateByConfig()), Optional::False);
-			SetString(object, "bitrateAvg", ov::Converter::ToString(track->GetBitrateByMeasured()), Optional::False);
-			SetString(object, "bitrateLatest", ov::Converter::ToString(track->GetBitrateLastSecond()), Optional::False);
+			SetInt(object, "bitrate", track->GetBitrate());
+			SetInt(object, "bitrateConf", track->GetBitrateByConfig());
+			SetInt(object, "bitrateAvg", track->GetBitrateByMeasured());
+			SetInt(object, "bitrateLatest", track->GetBitrateLastSecond());
 			SetFloat(object, "framerate", track->GetFrameRate());
 			SetFloat(object, "framerateConf", track->GetFrameRateByConfig());
 			SetFloat(object, "framerateAvg", track->GetFrameRateByMeasured());
@@ -72,10 +72,10 @@ namespace serdes
 			SetInt(object, "samplerate", track->GetSampleRate());
 			// SetAudioChannel(object, "channel", track->GetChannel(), Optional::False);
 			SetInt(object, "channel", track->GetChannel().GetCounts());
-			SetString(object, "bitrate", ov::Converter::ToString(track->GetBitrate()), Optional::False);
-			SetString(object, "bitrateConf", ov::Converter::ToString(track->GetBitrateByConfig()), Optional::False);
-			SetString(object, "bitrateAvg", ov::Converter::ToString(track->GetBitrateByMeasured()), Optional::False);
-			SetString(object, "bitrateLatest", ov::Converter::ToString(track->GetBitrateLastSecond()), Optional::False);
+			SetInt(object, "bitrate", track->GetBitrate());
+			SetInt(object, "bitrateConf", track->GetBitrateByConfig());
+			SetInt(object, "bitrateAvg", track->GetBitrateByMeasured());
+			SetInt(object, "bitrateLatest", track->GetBitrateLastSecond());
 			SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
 		}
 	}
