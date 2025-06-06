@@ -71,12 +71,6 @@ namespace cfg
 		LoadServerConfig(config_path);
 
 		_config_path = config_path;
-
-		LoadServerID(config_path);
-		_server->SetID(_server_id);
-
-		LoadLicenseKey(config_path);
-		_server->SetLicenseKey(_license_key);
 	}
 
 	void ConfigManager::ReloadConfigs()
@@ -260,6 +254,9 @@ namespace cfg
 
 		logti("Trying to load configurations... (%s)", server_config_path.CStr());
 		DataSource data_source(DataType::Xml, config_path, CFG_MAIN_FILE_NAME, XML_ROOT_NAME);
+
+		std::unique_lock lock(_server_mutex);
+
 		_server = std::make_shared<Server>();
 		_server->SetItemName(XML_ROOT_NAME);
 		_server->FromDataSource(data_source);
@@ -268,6 +265,12 @@ namespace cfg
 
 		logtd("Validating omit rules...");
 		_server->ValidateOmitJsonNameRules();
+
+		LoadServerID(config_path);
+		_server->SetID(_server_id);
+
+		LoadLicenseKey(config_path);
+		_server->SetLicenseKey(_license_key);
 	}
 
 	void ConfigManager::CheckValidVersion(const ov::String &name, int version)

@@ -33,6 +33,7 @@ namespace cfg
 
 		std::shared_ptr<const Server> GetServer() const noexcept
 		{
+			std::shared_lock lock(_server_mutex);
 			return _server;
 		}
 
@@ -64,6 +65,7 @@ namespace cfg
 
 		ov::String _config_path;
 
+		mutable std::shared_mutex _server_mutex;
 		std::shared_ptr<Server> _server;
 		ov::String _server_id;
 		ov::String _license_key;
