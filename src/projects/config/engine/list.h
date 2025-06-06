@@ -41,14 +41,14 @@ namespace cfg
 	//--------------------------------------------------------------------
 	MAY_THROWS(cfg::ConfigError)
 	template <typename Tvalue_type, std::enable_if_t<!std::is_base_of_v<Item, Tvalue_type>, int> = 0>
-	void CopyValueToJson(Json::Value &json, const Tvalue_type *value, bool include_default_values)
+	void CopyValueToJson(Json::Value &json, const Tvalue_type *value, bool original_value, bool include_default_values)
 	{
 		// This function is declared for the specialization of this API and is not actually called
 		OV_ASSERT2(false);
 	}
 
 	MAY_THROWS(cfg::ConfigError)
-	void CopyValueToJson(Json::Value &json, const Item *value, bool include_default_values);
+	void CopyValueToJson(Json::Value &json, const Item *value, bool original_value, bool include_default_values);
 	//--------------------------------------------------------------------
 
 	void SetItemDataFromDataSource(Item *item, const ItemName &item_name, const DataSource &data_source);
@@ -189,7 +189,7 @@ namespace cfg
 
 		// Copy children to json array
 		MAY_THROWS(cfg::ConfigError)
-		void CopyToJsonValue(Json::Value &value, bool include_default_values) const override
+		void CopyToJsonValue(Json::Value &value, bool original_value, bool include_default_values) const override
 		{
 			const auto &list_target = *_item_list;
 
@@ -211,7 +211,7 @@ namespace cfg
 			{
 				for (const auto &list_item : list_target)
 				{
-					CopyValueToJson(value.append({}), &list_item, include_default_values);
+					CopyValueToJson(value.append({}), &list_item, original_value, include_default_values);
 				}
 			}
 			else

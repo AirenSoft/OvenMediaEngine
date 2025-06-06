@@ -38,7 +38,7 @@ namespace cfg
 
 	void ListInterface::SetJsonChildValue(ValueType value_type, Json::Value &object, const ov::String &child_name, const Json::Value &original_value)
 	{
-		Item::SetJsonChildValue(value_type, object, child_name, original_value);
+		Item::SetOriginalJsonValue(value_type, object, child_name, original_value);
 	}
 
 	void ListInterface::ValidateOmitJsonNameRule(const ov::String &path, const ItemName &item_name) const

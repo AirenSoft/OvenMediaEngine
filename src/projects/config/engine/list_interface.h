@@ -40,7 +40,7 @@ namespace cfg
 
 		MAY_THROWS(cfg::ConfigError)
 		// virtual void AddChildrenToJson(Json::Value &object, ValueType value_type, OmitRule omit_name, const ov::String &child_name, const std::any &child_target, const Json::Value &original_value, bool include_default_values) const = 0;
-		virtual void CopyToJsonValue(Json::Value &object, bool include_default_values) const = 0;
+		virtual void CopyToJsonValue(Json::Value &object, bool original_value, bool include_default_values) const = 0;
 
 		virtual ov::String ToString(int indent_count, const std::shared_ptr<const Child> &child) const = 0;
 
