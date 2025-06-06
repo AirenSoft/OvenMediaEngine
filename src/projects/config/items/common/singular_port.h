@@ -21,11 +21,12 @@ namespace cfg
 			explicit SingularPort(const char *port)
 				: Port(port)
 			{
+				SetPort(port);
 			}
 
 		protected:
 			MAY_THROWS(cfg::ConfigError)
-			void FromString(const ov::String &str) override
+			void SetPort(const ov::String &str)
 			{
 				_port = str;
 				_socket_type = ov::SocketType::Unknown;
@@ -47,6 +48,12 @@ namespace cfg
 				}
 
 				throw CreateConfigError("Invalid port: %s", str.CStr());
+			}
+
+			MAY_THROWS(cfg::ConfigError)
+			void FromString(const ov::String &str) override
+			{
+				SetPort(str);
 			}
 		};
 	}  // namespace cmn

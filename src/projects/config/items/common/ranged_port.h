@@ -22,6 +22,7 @@ namespace cfg
 			explicit RangedPort(const char *port)
 				: Port(port)
 			{
+				SetPort(port);
 			}
 
 			CFG_DECLARE_CONST_REF_GETTER_OF(GetPortList, _port_value);
@@ -77,7 +78,7 @@ namespace cfg
 			}
 
 			MAY_THROWS(cfg::ConfigError)
-			void FromString(const ov::String &str) override
+			void SetPort(const ov::String &str)
 			{
 				_port = str;
 				_socket_type = ov::SocketType::Unknown;
@@ -95,6 +96,12 @@ namespace cfg
 				{
 					AddPorts(port_item.Trim());
 				}
+			}
+
+			MAY_THROWS(cfg::ConfigError)
+			void FromString(const ov::String &str) override
+			{
+				SetPort(str);
 			}
 		};
 	}  // namespace cmn
