@@ -65,14 +65,14 @@ To allow the duplicated stream name feature can cause several problems. When a n
 
 If you want to publish the source stream, you need to set the following in the Encoder:
 
-* **`URL`**` ``RTMP://<OvenMediaEngine IP>[:<RTMP Listen Port>]/<App Name]>`
-* **`Stream Key`**` ``Stream Name`
+* `URL`: `rtmp://<OvenMediaEngine IP>[:<RTMP Listen Port>]/<App Name]>`
+* `Stream Key`: `Stream Name`
 
 If you use the default configuration, the `<RTMP><ListenPort>` is 1935, which is the default port for RTMP. So it can be omitted. Also, since the Application named `app` is created by default in the default configuration, you can enter `app` in the `[App Name]`. You can define a Stream Key and use it in the Encoder, and the Streaming URL will change according to the Stream Key.
 
 Moreover, some encoders can include a stream key in the URL, and if you use these encoders, you need to set it as follows:
 
-* **`URL`**` ``RTMP://<OvenMediaEngine IP>[:<RTMP Listen Port>/<App Name>/<Stream Name>`
+* `URL`: `rtmp://<OvenMediaEngine IP>[:<RTMP Listen Port>/<App Name>/<Stream Name>`
 
 ### Example with OvenLiveKit (OvenStreamEncoder)
 
@@ -86,7 +86,37 @@ Also, `<App name>` and `<Stream name>` can be changed and used as desired in the
 
 If you use the default configuration, set the OBS as follows:
 
-![](<../.gitbook/assets/image (2) (1) (1) (1).png>)
+<figure><img src="../.gitbook/assets/image (63).png" alt=""><figcaption></figcaption></figure>
 
 You can set the Stream Key to any name you like at any time.
+
+## E-RTMP
+
+Enhanced RTMP (E-RTMP) is an experimental streaming feature that extends the capabilities of the traditional RTMP protocol. One of its key advantages is support for modern video codecs such as H.265 (HEVC), which are not available in standard RTMP. This allows for better video quality and lower bitrates, making it ideal for high-efficiency streaming workflows. The list of supported codecs will continue to grow as development progresses.
+
+Since E-RTMP is still experimental, **it is disabled by default** and must be manually enabled in the server settings.
+
+### How to Enable E-RTMP
+
+To enable E-RTMP, you need to update the `Server.xml` configuration file. Add the following configuration:
+
+```xml
+<Server>
+	...
+	<Modules>
+		...
+		<ERTMP>
+			<Enable>true</Enable>
+		</ERTMP>
+		...
+	</Modules>
+	...
+</Server>
+```
+
+### Publish with OBS
+
+To stream with E-RTMP using OBS, select an encoder that supports HEVC in the `Video Encoder` section of the `Output` settings as shown below:
+
+<figure><img src="../.gitbook/assets/image (64).png" alt=""><figcaption></figcaption></figure>
 
