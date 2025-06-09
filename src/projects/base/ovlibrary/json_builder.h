@@ -9,6 +9,7 @@
 #pragma once
 
 #include <variant>
+#include <functional>
 
 #include "./enable_shared_from_this.h"
 #include "./json_object.h"

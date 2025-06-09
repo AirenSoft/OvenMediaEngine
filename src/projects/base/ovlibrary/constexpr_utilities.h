@@ -79,7 +79,7 @@ namespace ov
 			// This cast is valid because haystack is a non-const pointer
 			return const_cast<char *>(StrStr(haystack, needle));
 		}
-		static_assert(StrStr("Sample", "le") != nullptr, "StrStr() doesn't work properly");
+		static_assert(StrCmp(StrStr("Sample", "le"), "le"), "StrStr() doesn't work properly");
 		static_assert(StrStr("Sample", "LE") == nullptr, "StrStr() doesn't work properly");
 
 		constexpr off_t IndexOf(const char *str, const char *sub_str, off_t start_position = 0)
