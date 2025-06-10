@@ -52,11 +52,22 @@ public:
 	// Instance can be initialized by putting raw data in AVCDecoderConfigurationRecord.
 	bool Parse(const std::shared_ptr<const ov::Data> &data) override;
 	bool Equals(const std::shared_ptr<DecoderConfigurationRecord> &other) override;
+
+	MAY_THROWS(ov::BitReaderError)
+	static std::shared_ptr<AVCDecoderConfigurationRecord> ParseV2(ov::BitReader &reader)
+	{
+		auto record = std::make_shared<AVCDecoderConfigurationRecord>();
+		if (record->ParseV2Internal(reader) == false)
+		{
+			return nullptr;
+		}
+		return record;
+	}
 	
 	// Instance can be initialized by putting SPS/PPS in AVCDecoderConfigurationRecord.
-	bool AddSPS(const std::shared_ptr<ov::Data> &sps);
-	bool AddPPS(const std::shared_ptr<ov::Data> &pps);
-	bool AddSPSExt(const std::shared_ptr<ov::Data> &sps_ext);
+	bool AddSPS(const std::shared_ptr<const ov::Data> &sps);
+	bool AddPPS(const std::shared_ptr<const ov::Data> &pps);
+	bool AddSPSExt(const std::shared_ptr<const ov::Data> &sps_ext);
 
 	std::shared_ptr<const ov::Data> Serialize() override;
 
@@ -68,9 +79,9 @@ public:
 	uint8_t NumOfSPS() const;
 	uint8_t NumOfPPS() const;
 	uint8_t NumOfSPSExt() const;
-	std::shared_ptr<ov::Data>	GetSPSData(int index) const;
-	std::shared_ptr<ov::Data>	GetPPSData(int index) const;
-	std::shared_ptr<ov::Data>	GetSPSExtData(int index) const;
+	std::shared_ptr<const ov::Data>	GetSPSData(int index) const;
+	std::shared_ptr<const ov::Data>	GetPPSData(int index) const;
+	std::shared_ptr<const ov::Data>	GetSPSExtData(int index) const;
 
 	// Get SPS
 	bool GetSPS(int sps_id, H264SPS &sps) const;
@@ -88,6 +99,9 @@ public:
 	ov::String GetInfoString() const;
 
 private:
+	MAY_THROWS(ov::BitReaderError)
+	bool ParseV2Internal(ov::BitReader &reader);
+	
 	// It only be called by AddSPS and AddPPS
 	void SetVersion(uint8_t version);
 	void SetProfileIndication(uint8_t profile_indication);
@@ -112,14 +126,14 @@ private:
 	// for(int i=0; i<_num_of_sps; i++)
 		// sps_length(16 bits) + sps
 	uint8_t		_num_of_sps = 0;		// (5 bits)
-	std::vector<std::shared_ptr<ov::Data>>	_sps_data_list;
+	std::vector<std::shared_ptr<const ov::Data>>	_sps_data_list;
 	// sps_id, sps
 	std::map<uint8_t, H264SPS> _sps_map;
 
 	// for(int i=0; i<_num_of_pps; i++)
 		// pps_length(16 bits) + sps
 	uint8_t		_num_of_pps = 0;		// (8 bits)
-	std::vector<std::shared_ptr<ov::Data>>	_pps_data_list;
+	std::vector<std::shared_ptr<const ov::Data>>	_pps_data_list;
 	// pps_id, pps
 	std::map<uint8_t, H264PPS> _pps_map;
 
@@ -134,7 +148,7 @@ private:
 	// for(int i=0; i<_num_of_sps_ext; i++)
 		// sps_ext_length(16 bits) + sps_ext
 	uint8_t		_num_of_sps_ext = 0;		// (8 bits)
-	std::vector<std::shared_ptr<ov::Data>>	_sps_ext_data_list;
+	std::vector<std::shared_ptr<const ov::Data>>	_sps_ext_data_list;
 
 
 	//////////////////////////////////////////
