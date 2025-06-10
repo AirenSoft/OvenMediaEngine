@@ -8,6 +8,7 @@
 //==============================================================================
 #pragma once
 
+#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 #include <modules/bitstream/h265/h265_decoder_configuration_record.h>
 #include <modules/rtmp_v2/amf0/amf_document.h>
 
@@ -35,6 +36,8 @@ namespace modules
 			std::optional<uint24_t> video_timestamp_nano_offset;
 			std::optional<VideoFourCc> video_fourcc;
 			std::optional<rtmp::AmfDocument> video_metadata;
+			std::shared_ptr<AVCDecoderConfigurationRecord> avc_header;
+			std::shared_ptr<const ov::Data> avc_header_data;
 			std::shared_ptr<HEVCDecoderConfigurationRecord> hevc_header;
 			// This is used to store the data to re-parse `H265DecoderConfigurationRecord`
 			// when receiving `cmn::PacketType::SEQUENCE_HEADER`

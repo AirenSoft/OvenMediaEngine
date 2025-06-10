@@ -8,7 +8,6 @@
 //==============================================================================
 #include "./flv_video_parser.h"
 
-#include <modules/bitstream/h265/h265_parser.h>
 #include <modules/rtmp_v2/amf0/amf_document.h>
 
 #include "./flv_private.h"
@@ -29,7 +28,7 @@ namespace modules
 			// Interpret UB[4] bits as VideoPacketType instead of sound rate, size, and type.
 			// videoPacketType = UB[4] as VideoPacketType	// at byte boundary after this read
 			video_data->video_packet_type = reader.ReadAs<VideoPacketType>(4);
-			logtp("videoPacketType (4 bits): %s (%d, 0x%04X)", EnumToString(video_data->video_packet_type), video_data->video_packet_type, video_data->video_packet_type);
+			logap("videoPacketType (4 bits): %s (%d, 0x%04X)", EnumToString(video_data->video_packet_type), video_data->video_packet_type, video_data->video_packet_type);
 
 			uint32_t mod_ex_data_size = 0;
 			std::shared_ptr<const ov::Data> mod_ex_data = nullptr;
@@ -40,14 +39,14 @@ namespace modules
 				// Determine the size of the packet ModEx data (ranging from 1 to 256 bytes)
 				// modExDataSize = UI8 + 1
 				mod_ex_data_size = reader.ReadU8() + 1;
-				logtp("modExDataSize (8 bits): %u (0x%02X + 1)", mod_ex_data_size, (mod_ex_data_size - 1));
+				logap("modExDataSize (8 bits): %u (0x%02X + 1)", mod_ex_data_size, (mod_ex_data_size - 1));
 
 				// If maximum 8-bit size is not sufficient, use a 16-bit value
 				if (mod_ex_data_size == 256)
 				{
 					// modExDataSize = UI16 + 1;
 					mod_ex_data_size = reader.ReadU16() + 1;
-					logtp("modExDataSize (16 bits): %u (0x%04X + 1)", mod_ex_data_size, (mod_ex_data_size - 1));
+					logap("modExDataSize (16 bits): %u (0x%04X + 1)", mod_ex_data_size, (mod_ex_data_size - 1));
 				}
 
 				// Fetch the packet ModEx data based on its determined size
@@ -56,7 +55,7 @@ namespace modules
 				// fetch the VideoPacketOptionType
 				// videoPacketModExType = UB[4] as VideoPacketModExType
 				auto video_packet_mod_ex_type = reader.ReadAs<VideoPacketModExType>(4);
-				logtp("videoPacketModExType (4 bits): %s (%d, 0x%01X)", EnumToString(video_packet_mod_ex_type), video_packet_mod_ex_type, video_packet_mod_ex_type);
+				logap("videoPacketModExType (4 bits): %s (%d, 0x%01X)", EnumToString(video_packet_mod_ex_type), video_packet_mod_ex_type, video_packet_mod_ex_type);
 
 				// Update videoPacketType
 				// videoPacketType = UB[4] as VideoPacketType	// at byte boundary after this read
@@ -80,7 +79,7 @@ namespace modules
 
 					// videoTimestampNanoOffset = bytesToUI24(modExData)
 					video_data->video_timestamp_nano_offset = ov::BE24ToHost(reader.ReadU24());
-					logtp("videoTimestampNanoOffset (24 bits): %u (0x%06X)", video_data->video_timestamp_nano_offset, video_data->video_timestamp_nano_offset);
+					logap("videoTimestampNanoOffset (24 bits): %u (0x%06X)", video_data->video_timestamp_nano_offset, video_data->video_timestamp_nano_offset);
 
 					// TODO: Integrate this nanosecond offset into timestamp management
 					// to accurately adjust the presentation time.
@@ -95,7 +94,7 @@ namespace modules
 				{
 					auto video_command = reader.ReadU8As<VideoCommand>();
 					video_data->video_command = video_command;
-					logtp("videoCommand (8 bits): %s (%d, 0x%02X)", EnumToString(video_command), video_command, video_command);
+					logap("videoCommand (8 bits): %s (%d, 0x%02X)", EnumToString(video_command), video_command, video_command);
 				}
 
 				// ExVideoTagBody has no payload if we got here.
@@ -105,16 +104,16 @@ namespace modules
 			else if (video_data->video_packet_type == VideoPacketType::Multitrack)
 			{
 				_is_multitrack = true;
-				logtp("isMultiTrack: true");
+				logap("isMultiTrack: true");
 				// videoMultitrackType = UB[4] as AvMultitrackType
 				_multitrack_type = reader.ReadAs<AvMultitrackType>(4);
-				logtp("videoMultitrackType (4 bits): %s (%d, 0x%01X)", EnumToString(_multitrack_type), _multitrack_type, _multitrack_type);
+				logap("videoMultitrackType (4 bits): %s (%d, 0x%01X)", EnumToString(_multitrack_type), _multitrack_type, _multitrack_type);
 
 				// Fetch VideoPacketType for all video tracks in the video message.
 				// This fetch MUST not result in a VideoPacketType.Multitrack
 				// videoPacketType = UB[4] as VideoPacketType
 				video_data->video_packet_type = reader.ReadAs<VideoPacketType>(4);
-				logtp("videoPacketType (4 bits): %s (%d, 0x%01X)", EnumToString(video_data->video_packet_type), video_data->video_packet_type, video_data->video_packet_type);
+				logap("videoPacketType (4 bits): %s (%d, 0x%01X)", EnumToString(video_data->video_packet_type), video_data->video_packet_type, video_data->video_packet_type);
 
 				if (_multitrack_type != AvMultitrackType::ManyTracksManyCodecs)
 				{
@@ -123,7 +122,7 @@ namespace modules
 					{
 						auto video_fourcc = reader.ReadU32BEAs<VideoFourCc>();
 						video_data->video_fourcc = video_fourcc;
-						logtp("videoFourCc (32 bits): %s (%08X)", FourCcToString(video_fourcc), video_fourcc);
+						logap("videoFourCc (32 bits): %s (%08X)", FourCcToString(video_fourcc), video_fourcc);
 					}
 				}
 			}
@@ -132,7 +131,7 @@ namespace modules
 				// videoFourCc = FOURCC as VideoFourCc
 				auto video_fourcc = reader.ReadU32BEAs<VideoFourCc>();
 				video_data->video_fourcc = video_fourcc;
-				logtp("videoFourCc (32 bits): %s (%08X)", FourCcToString(video_fourcc), video_fourcc);
+				logap("videoFourCc (32 bits): %s (%08X)", FourCcToString(video_fourcc), video_fourcc);
 			}
 
 			return video_data;
@@ -163,13 +162,13 @@ namespace modules
 				}
 				else
 				{
-					logte("Failed to decode metadata\n%s", data->Dump(16).CStr());
+					logae("Failed to decode metadata\n%s", data->Dump(16).CStr());
 					OV_ASSERT2(false);
 				}
 			}
 			else
 			{
-				logtw("Empty metadata received");
+				logaw("Empty metadata received");
 			}
 
 			return std::nullopt;
@@ -202,17 +201,35 @@ namespace modules
 			//                               else if AVCPacketType == 2
 			//                                 Empty
 			video_data->video_packet_type = reader.ReadU8As<VideoPacketType>();
-			logtp("[legacy AVC] videoPacketType (8 bits): %s (%d, 0x%02X)",
+			logap("[legacy AVC] videoPacketType (8 bits): %s (%d, 0x%02X)",
 				  EnumToString(video_data->video_packet_type), video_data->video_packet_type, video_data->video_packet_type);
 			video_data->composition_time_offset = reader.ReadS24BE();
-			logtp("[legacy AVC] compositionTimeOffset (24 bits): %d (0x%06X)", video_data->composition_time_offset, video_data->composition_time_offset);
+			logap("[legacy AVC] compositionTimeOffset (24 bits): %d (0x%06X)", video_data->composition_time_offset, video_data->composition_time_offset);
 
 			video_data->payload = GetPayload(false, reader, 0, 0);
-			logtp("[legacy AVC] payload: %zu bytes", video_data->payload->GetLength());
+			logap("[legacy AVC] payload: %zu bytes", video_data->payload->GetLength());
 
 			video_data->track_id = _track_id_if_legacy;
 
 			return true;
+		}
+
+		std::shared_ptr<AVCDecoderConfigurationRecord> VideoParser::ParseAVC(ov::BitReader &reader)
+		{
+			if ((reader.GetBitOffset() % 8) != 0)
+			{
+				OV_ASSERT2(false);
+			}
+
+			auto record = AVCDecoderConfigurationRecord::ParseV2(reader);
+
+			if (record == nullptr)
+			{
+				logae("FAILED TO PARSE!");
+				OV_ASSERT2(false);
+			}
+
+			return record;
 		}
 
 		std::shared_ptr<HEVCDecoderConfigurationRecord> VideoParser::ParseHEVC(ov::BitReader &reader)
@@ -226,7 +243,7 @@ namespace modules
 
 			if (record == nullptr)
 			{
-				logte("FAILED TO PARSE!");
+				logae("FAILED TO PARSE!");
 				OV_ASSERT2(false);
 			}
 
@@ -248,7 +265,7 @@ namespace modules
 						// videoFourCc = FOURCC as VideoFourCc
 						auto video_fourcc = reader.ReadU32BEAs<VideoFourCc>();
 						video_data->video_fourcc = video_fourcc;
-						logtp("[MultiTrack/ManyTracksManyCodecs] videoFourCc (32 bits): %s (%08X)", FourCcToString(video_fourcc), video_fourcc);
+						logap("[MultiTrack/ManyTracksManyCodecs] videoFourCc (32 bits): %s (%08X)", FourCcToString(video_fourcc), video_fourcc);
 					}
 
 					// Track Ordering:
@@ -266,7 +283,7 @@ namespace modules
 					{
 						auto video_track_id = reader.ReadU8();
 						video_data->track_id = video_track_id;
-						logtp("[MultiTrack] videoTrackId (8 bits): %u", video_track_id);
+						logap("[MultiTrack] videoTrackId (8 bits): %u", video_track_id);
 					}
 
 					if (_multitrack_type != AvMultitrackType::OneTrack)
@@ -280,7 +297,7 @@ namespace modules
 						// type, the offset points to either a `fourCc` or a `trackId.`
 						// sizeOfVideoTrack = UI24
 						size_of_video_track = reader.ReadU24BE();
-						logtp("[MultiTrack] sizeOfVideoTrack (24 bits): %u", size_of_video_track);
+						logap("[MultiTrack] sizeOfVideoTrack (24 bits): %u", size_of_video_track);
 
 						// Record the offset of the sizeOfVideoTrack field
 						// to calculate the size of payload
@@ -299,67 +316,76 @@ namespace modules
 					// of SCRIPTDATA and SCRIPTDATAVALUE in the FLV file specification.
 					// videoMetadata = [VideoMetadata]
 #if DEBUG
-					auto current_bit_offset = reader.GetBitOffset();
+					auto last_bit_offset = reader.GetBitOffset();
 #endif	// DEBUG
 					video_data->video_metadata = ParseVideoMetadata(reader);
 #if DEBUG
-					auto used_bits = reader.GetBitOffset() - current_bit_offset;
-					logtp("[Metadata] videoMetadata (AMF): %zu bytes (%zu bits)", (used_bits + 7) / 8, used_bits);
+					auto used_bits = reader.GetBitOffset() - last_bit_offset;
+					logap("[Metadata] videoMetadata (AMF): %zu bytes (%zu bits)", (used_bits + 7) / 8, used_bits);
 #endif	// DEBUG
 				}
 
 				if (video_data->video_packet_type == VideoPacketType::SequenceEnd)
 				{
 					// signals end of sequence
-					logtp("[SequenceEnd]");
+					logap("[SequenceEnd]");
 				}
 
 				if (video_data->video_packet_type == VideoPacketType::SequenceStart)
 				{
-#if DEBUG
-					auto current_bit_offset = reader.GetBitOffset();
-#endif	// DEBUG
+					auto last_bit_offset = reader.GetBitOffset();
+
 					if (video_data->video_fourcc == VideoFourCc::Vp8)
 					{
 						// body contains a VP8 configuration record to start the sequence
 						// vp8Header = [VPCodecConfigurationRecord]
-						logtp("[SequenceStart] VPCodecConfigurationRecord");
+						logap("[SequenceStart] VPCodecConfigurationRecord");
 					}
 					else if (video_data->video_fourcc == VideoFourCc::Vp9)
 					{
 						// body contains a VP9 configuration record to start the sequence
 						// vp9Header = [VPCodecConfigurationRecord]
-						logtp("[SequenceStart] VPCodecConfigurationRecord");
+						logap("[SequenceStart] VPCodecConfigurationRecord");
 					}
 					else if (video_data->video_fourcc == VideoFourCc::Av1)
 					{
 						// body contains a configuration record to start the sequence
 						// av1Header = [AV1CodecConfigurationRecord]
-						logtp("[SequenceStart] AV1CodecConfigurationRecord");
+						logap("[SequenceStart] AV1CodecConfigurationRecord");
 					}
 					else if (video_data->video_fourcc == VideoFourCc::Avc)
 					{
+						auto current_data = reader.GetData();
+
 						// body contains a configuration record to start the sequence.
 						// See ISO/IEC 14496-15:2019, 5.3.4.1 for the description of
 						// the AVCDecoderConfigurationRecord.
 						// avcHeader = [AVCDecoderConfigurationRecord]
-						logtp("[SequenceStart] AVCDecoderConfigurationRecord");
+						logap("[SequenceStart] AVCDecoderConfigurationRecord");
+						video_data->avc_header = ParseAVC(reader);
+
+						if (video_data->hevc_header != nullptr)
+						{
+							auto used_bits = (reader.GetBitOffset() - last_bit_offset);
+							auto used_bytes = (used_bits + 7) / 8;
+
+							video_data->avc_header_data = current_data->Subdata(0, used_bytes);
+						}
 					}
 					else if (video_data->video_fourcc == VideoFourCc::Hevc)
 					{
-						auto current_bit_offset = reader.GetBitOffset();
 						auto current_data = reader.GetData();
 
 						// body contains a configuration record to start the sequence.
 						// See ISO/IEC 14496-15:2022, 8.3.3.2 for the description of
 						// the HEVCDecoderConfigurationRecord.
 						// hevcHeader = [HEVCDecoderConfigurationRecord]
-						logtp("[SequenceStart] HEVCDecoderConfigurationRecord");
+						logap("[SequenceStart] HEVCDecoderConfigurationRecord");
 						video_data->hevc_header = ParseHEVC(reader);
 
 						if (video_data->hevc_header != nullptr)
 						{
-							auto used_bits = (reader.GetBitOffset() - current_bit_offset);
+							auto used_bits = (reader.GetBitOffset() - last_bit_offset);
 							auto used_bytes = (used_bits + 7) / 8;
 
 							video_data->hevc_header_data = current_data->Subdata(0, used_bytes);
@@ -369,21 +395,21 @@ namespace modules
 					{
 						if (video_data->video_fourcc.has_value())
 						{
-							logtw("Not supported video_fourcc: %s (%08X)",
+							logaw("Not supported video_fourcc: %s (%08X)",
 								  FourCcToString(video_data->video_fourcc.value()),
 								  video_data->video_fourcc.value());
 						}
 						else
 						{
-							logte("video_fourcc is not set");
+							logae("video_fourcc is not set");
 							OV_ASSERT2(false);
 						}
 
 						return nullptr;
 					}
 #if DEBUG
-					auto used_bits = reader.GetBitOffset() - current_bit_offset;
-					logtp("[SequenceStart] ConfigurationRecord: %zu bytes (%zu bits)", (used_bits + 7) / 8, used_bits);
+					auto used_bits = reader.GetBitOffset() - last_bit_offset;
+					logap("[SequenceStart] ConfigurationRecord: %zu bytes (%zu bits)", (used_bits + 7) / 8, used_bits);
 #endif	// DEBUG
 				}
 
@@ -393,33 +419,33 @@ namespace modules
 					{
 						// body contains a video descriptor to start the sequence
 						// av1Header = [AV1VideoDescriptor]
-						logtp("[MPEG2TSSequenceStart] AV1VideoDescriptor");
+						logap("[MPEG2TSSequenceStart] AV1VideoDescriptor");
 					}
 				}
 
 				if (video_data->video_packet_type == VideoPacketType::CodedFrames)
 				{
 #if DEBUG
-					auto current_bit_offset = reader.GetBitOffset();
+					auto last_bit_offset = reader.GetBitOffset();
 #endif	// DEBUG
 
 					if (video_data->video_fourcc == VideoFourCc::Vp8)
 					{
 						// body contains series of coded full frames
 						// vp8CodedData = [Vp8CodedData]
-						logtp("[CodedFrames] Vp8CodedData");
+						logap("[CodedFrames] Vp8CodedData");
 					}
 					else if (video_data->video_fourcc == VideoFourCc::Vp9)
 					{
 						// body contains series of coded full frames
 						// vp9CodedData = [Vp9CodedData]
-						logtp("[CodedFrames] Vp9CodedData");
+						logap("[CodedFrames] Vp9CodedData");
 					}
 					else if (video_data->video_fourcc == VideoFourCc::Av1)
 					{
 						// body contains one or more OBUs representing a single temporal unit
 						// av1CodedData = [Av1CodedData]
-						logtp("[CodedFrames] Av1CodedData");
+						logap("[CodedFrames] Av1CodedData");
 					}
 					else if (video_data->video_fourcc == VideoFourCc::Avc)
 					{
@@ -427,11 +453,12 @@ namespace modules
 						// time offset. The offset in an FLV file is always in milliseconds.
 						// compositionTimeOffset = SI24
 						video_data->composition_time_offset = reader.ReadS24BE();
-						logtp("[Coded Frames] AVC compositionTimeOffset (24 bits): %d (0x%06X)", video_data->composition_time_offset, video_data->composition_time_offset);
+						logap("[Coded Frames] AVC compositionTimeOffset (24 bits): %d (0x%06X)", video_data->composition_time_offset, video_data->composition_time_offset);
 
 						// Body contains one or more NALUs; full frames are required
 						// avcCodedData = [AvcCodedData]
-						logtp("[CodedFrames] AvcCodedData");
+						logap("[CodedFrames] AvcCodedData (Remaining bytes: %zu)",
+							  reader.GetRemainingBytes());
 					}
 					else if (video_data->video_fourcc == VideoFourCc::Hevc)
 					{
@@ -439,11 +466,12 @@ namespace modules
 						// time offset. The offset in an FLV file is always in milliseconds.
 						// compositionTimeOffset = SI24
 						video_data->composition_time_offset = reader.ReadS24BE();
-						logtp("[Coded Frames] HEVC compositionTimeOffset (24 bits): %d (0x%06X)", video_data->composition_time_offset, video_data->composition_time_offset);
+						logap("[Coded Frames] HEVC compositionTimeOffset (24 bits): %d (0x%06X)", video_data->composition_time_offset, video_data->composition_time_offset);
 
 						// Body contains one or more NALUs; full frames are required
 						// hevcData = [HevcCodedData]
-						logtp("[CodedFrames] HevcCodedData");
+						logap("[CodedFrames] HevcCodedData (Remaining bytes: %zu)",
+							  reader.GetRemainingBytes());
 					}
 					else
 					{
@@ -458,8 +486,8 @@ namespace modules
 						size_of_video_track_offset);
 
 #if DEBUG
-					auto used_bits = reader.GetBitOffset() - current_bit_offset;
-					logtp("[CodedFrames] CodedData: %zu bytes (%zu bits)", (used_bits + 7) / 8, used_bits);
+					auto used_bits = reader.GetBitOffset() - last_bit_offset;
+					logap("[CodedFrames] CodedData: %zu bytes (%zu bits)", (used_bits + 7) / 8, used_bits);
 #endif	// DEBUG
 				}
 
@@ -472,7 +500,7 @@ namespace modules
 					{
 						// Body contains one or more NALUs; full frames are required
 						// avcCodedData = [AvcCodedData]
-						logtp("[CodedFramesX] AvcCodedData");
+						logap("[CodedFramesX] AvcCodedData");
 						OV_ASSERT2(false);
 						// TODO: Need to implement this
 						return nullptr;
@@ -481,7 +509,7 @@ namespace modules
 					{
 						// Body contains one or more NALUs; full frames are required
 						// hevcData = [HevcCodedData]
-						logtp("[CodedFramesX] HevcCodedData");
+						logap("[CodedFramesX] HevcCodedData");
 
 #if DEBUG
 						auto current_bit_offset = reader.GetBitOffset();
@@ -496,13 +524,13 @@ namespace modules
 						video_data->payload = payload;
 #if DEBUG
 						auto used_bits = reader.GetBitOffset() - current_bit_offset;
-						logtp("[CodedFramesX] CodedData: %zu bytes (%zu bits)", (used_bits + 7) / 8, used_bits);
+						logap("[CodedFramesX] CodedData: %zu bytes (%zu bits)", (used_bits + 7) / 8, used_bits);
 #endif	// DEBUG
 					}
 					else
 					{
 						// Not supported video_packet_type
-						logte("Not supported video_packet_type: %s", EnumToString(video_data->video_packet_type));
+						logae("Not supported video_packet_type: %s", EnumToString(video_data->video_packet_type));
 						return nullptr;
 					}
 				}
@@ -541,14 +569,14 @@ namespace modules
 				//
 				// isExVideoHeader = UB[1]
 				_is_ex_header = reader.ReadBit();
-				logtp("isExVideoHeader (1 bit): %s (%d)", _is_ex_header ? "true" : "false", _is_ex_header);
+				logap("isExVideoHeader (1 bit): %s (%d)", _is_ex_header ? "true" : "false", _is_ex_header);
 				// videoFrameType = UB[3] as VideoFrameType
 				auto video_frame_type = reader.ReadAs<VideoFrameType>(3);
-				logtp("videoFrameType (3 bits): %s (%d, 0x%08X)", EnumToString(video_frame_type), video_frame_type, video_frame_type);
+				logap("videoFrameType (3 bits): %s (%d, 0x%08X)", EnumToString(video_frame_type), video_frame_type, video_frame_type);
 
 				if (_is_ex_header)
 				{
-					logtp("Enhanced video header found");
+					logap("Enhanced video header found");
 
 					bool process_video_body;
 
@@ -565,7 +593,7 @@ namespace modules
 				}
 				else
 				{
-					logtp("Legacy video header found");
+					logap("Legacy video header found");
 
 					// Utilize the VideoCodecId values and the bitstream description
 					// as defined in the legacy [FLV] specification. Refer to this
@@ -578,7 +606,7 @@ namespace modules
 
 					if (video_codec_id != VideoCodecId::Avc)
 					{
-						logte("Unsupported video codec id: %s (%d, 0x%02X)",
+						logae("Unsupported video codec id: %s (%d, 0x%02X)",
 							  EnumToString(video_codec_id), video_codec_id, video_codec_id);
 						return false;
 					}
@@ -598,18 +626,18 @@ namespace modules
 				switch (static_cast<ov::BitReaderError::Code>(e.GetCode()))
 				{
 					case ov::BitReaderError::Code::NotEnoughBitsToRead:
-						logtw("Not enough bits to read: %s - probably malformed video data", e.GetMessage().CStr());
+						logaw("Not enough bits to read: %s - probably malformed video data", e.GetMessage().CStr());
 						break;
 
 					case ov::BitReaderError::Code::NotEnoughSpaceInBuffer:
 						// Internal server error
-						logte("Not enough space in video buffer: %s", e.GetMessage().CStr());
+						logae("Not enough space in video buffer: %s", e.GetMessage().CStr());
 						OV_ASSERT2(false);
 						break;
 
 					case ov::BitReaderError::Code::FailedToReadBits:
 						// Internal server error
-						logte("Failed to read bits for video: %s", e.GetMessage().CStr());
+						logae("Failed to read bits for video: %s", e.GetMessage().CStr());
 						OV_ASSERT2(false);
 						break;
 				}

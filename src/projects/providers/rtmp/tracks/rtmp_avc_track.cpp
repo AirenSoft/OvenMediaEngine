@@ -46,17 +46,56 @@ namespace pvd::rtmp
 			AdjustTimestamp(pts, dts);
 			_last_pts = dts;
 
-			if (video_data->payload == nullptr)
-			{
-				OV_ASSERT2(false);
-				return false;
-			}
+			std::shared_ptr<MediaPacket> media_packet;
 
-			_media_packet_list.push_back(CreateMediaPacket(
-				video_data->payload,
-				pts, dts,
-				packet_type,
-				video_data->IsKeyFrame()));
+			if (parser.IsExHeader())
+			{
+				if (packet_type == cmn::PacketType::SEQUENCE_HEADER)
+				{
+					if (video_data->avc_header == nullptr)
+					{
+						logte("AVC sequence header is not found");
+						OV_ASSERT2(false);
+						return false;
+					}
+
+					media_packet = CreateMediaPacket(
+						video_data->avc_header_data,
+						pts, dts,
+						packet_type,
+						true);
+				}
+				else
+				{
+					if (video_data->payload == nullptr)
+					{
+						logte("AVC payload is not found");
+						return false;
+					}
+
+					media_packet = CreateMediaPacket(
+						video_data->payload,
+						pts, dts,
+						packet_type,
+						video_data->IsKeyFrame());
+				}
+
+				_media_packet_list.push_back(media_packet);
+			}
+			else
+			{
+				if (video_data->payload == nullptr)
+				{
+					OV_ASSERT2(false);
+					return false;
+				}
+
+				_media_packet_list.push_back(CreateMediaPacket(
+					video_data->payload,
+					pts, dts,
+					packet_type,
+					video_data->IsKeyFrame()));
+			}
 		} while (false);
 
 		return true;

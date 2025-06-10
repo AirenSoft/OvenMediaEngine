@@ -29,9 +29,11 @@ namespace pvd::rtmp
 	static constexpr const size_t MAX_PACKET_SIZE = (20 * 1024 * 1024);
 
 	// Used for legacy RTMP streams
-	static constexpr const uint32_t TRACK_ID_FOR_VIDEO = 0;
-	static constexpr const uint32_t TRACK_ID_FOR_AUDIO = 1;
-	static constexpr const uint32_t TRACK_ID_FOR_DATA = 2;
+	// TODO(dimiden): Assigning a sufficiently large temporary value to avoid `track_id` conflicts.
+	// Needs to be changed later.
+	static constexpr const uint32_t TRACK_ID_FOR_VIDEO = 100;
+	static constexpr const uint32_t TRACK_ID_FOR_AUDIO = 200;
+	static constexpr const uint32_t TRACK_ID_FOR_DATA = 300;
 
 	enum class EncoderType : int32_t
 	{

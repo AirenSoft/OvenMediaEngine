@@ -38,6 +38,9 @@ namespace modules
 			bool ParseLegacyAvc(ov::BitReader &reader, const std::shared_ptr<VideoData> &video_data);
 
 			MAY_THROWS(BitReaderError)
+			std::shared_ptr<AVCDecoderConfigurationRecord> ParseAVC(ov::BitReader &reader);
+
+			MAY_THROWS(BitReaderError)
 			std::shared_ptr<HEVCDecoderConfigurationRecord> ParseHEVC(ov::BitReader &reader);
 
 			MAY_THROWS(BitReaderError)

@@ -50,15 +50,9 @@ namespace modules
 			{
 				static auto EMPTY_DATA = std::make_shared<ov::Data>();
 
-				if (is_multi_track && (size_of_track_offset == 0))
-				{
-					OV_ASSERT2(false);
-					return EMPTY_DATA;
-				}
-
 				size_t payload_size = 0;
 
-				if (is_multi_track == false)
+				if ((is_multi_track == false) || (size_of_track == 0))
 				{
 					payload_size = reader.GetRemainingBytes();
 				}
@@ -69,12 +63,7 @@ namespace modules
 					payload_size = size_of_track - read_bytes_since_size_of_track;
 				}
 
-				if (payload_size > 0)
-				{
-					return reader.ReadBytes(payload_size);
-				}
-
-				return EMPTY_DATA;
+				return (payload_size > 0) ? reader.ReadBytes(payload_size) : EMPTY_DATA;
 			}
 
 		protected:
