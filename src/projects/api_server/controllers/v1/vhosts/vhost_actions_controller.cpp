@@ -28,12 +28,12 @@ namespace api
 
 		// GET /v1/vhosts:reloadCertificates
 		ApiResponse VHostActionsController::OnPostReloadAllCertificates(const std::shared_ptr<http::svr::HttpExchange> &client,
-																	const Json::Value &request_body)
+																		const Json::Value &request_body)
 		{
 			auto orchestrator = ocst::Orchestrator::GetInstance();
 
-			auto result = orchestrator->ReloadAllCertificates();
-			auto http_code = http::StatusCodeFromCommonError(result);
+			auto result		  = orchestrator->ReloadAllCertificates();
+			auto http_code	  = http::StatusCodeFromCommonError(result);
 
 			if (http_code != http::StatusCode::OK)
 			{
@@ -50,8 +50,8 @@ namespace api
 		{
 			auto orchestrator = ocst::Orchestrator::GetInstance();
 
-			auto result = orchestrator->ReloadCertificate(vhost->GetName());
-			auto http_code = http::StatusCodeFromCommonError(result);
+			auto result		  = orchestrator->ReloadCertificate(vhost->GetName());
+			auto http_code	  = http::StatusCodeFromCommonError(result);
 
 			if (http_code != http::StatusCode::OK)
 			{

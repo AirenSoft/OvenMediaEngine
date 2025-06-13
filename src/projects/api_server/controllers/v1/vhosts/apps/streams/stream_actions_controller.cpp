@@ -70,7 +70,7 @@ namespace api
 			}
 
 			auto output_stream = *output_stream_it;
-			auto llhls_stream = GetOutputStream<LLHlsStream>(output_stream, PublisherType::LLHls);
+			auto llhls_stream  = GetOutputStream<LLHlsStream>(output_stream, PublisherType::LLHls);
 			if (llhls_stream == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
@@ -147,7 +147,7 @@ namespace api
 			}
 
 			auto output_stream = *output_stream_it;
-			auto llhls_stream = GetOutputStream<LLHlsStream>(output_stream, PublisherType::LLHls);
+			auto llhls_stream  = GetOutputStream<LLHlsStream>(output_stream, PublisherType::LLHls);
 			if (llhls_stream == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
@@ -203,7 +203,7 @@ namespace api
 			}
 
 			auto output_stream = *output_stream_it;
-			auto llhls_stream = GetOutputStream<LLHlsStream>(output_stream, PublisherType::LLHls);
+			auto llhls_stream  = GetOutputStream<LLHlsStream>(output_stream, PublisherType::LLHls);
 			if (llhls_stream == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound,
@@ -245,7 +245,7 @@ namespace api
 
 					Json::Value response;
 					response["statusCode"] = static_cast<int>(http::StatusCode::OK);
-					response["message"] = StringFromStatusCode(http::StatusCode::OK);
+					response["message"]	   = StringFromStatusCode(http::StatusCode::OK);
 					response_value.append(response);
 				}
 				catch (const http::HttpError &error)
@@ -329,27 +329,27 @@ namespace api
 				throw http::HttpError(http::StatusCode::BadRequest, "eventFormat(string) and events(array) are required");
 			}
 
-			cmn::BitstreamFormat event_format = cmn::BitstreamFormat::Unknown;
-			ov::String event_format_string = request_body["eventFormat"].asString().c_str();
+			cmn::BitstreamFormat event_format	  = cmn::BitstreamFormat::Unknown;
+			ov::String event_format_string		  = request_body["eventFormat"].asString().c_str();
 			std::shared_ptr<ov::Data> events_data = nullptr;
-			int64_t timestamp = -1;
+			int64_t timestamp					  = -1;
 
 			if (event_format_string.UpperCaseString() == "ID3V2")
 			{
 				event_format = cmn::BitstreamFormat::ID3v2;
-				events_data = MakeID3Data(request_body["events"]);
+				events_data	 = MakeID3Data(request_body["events"]);
 			}
 			else if (event_format_string.UpperCaseString() == "CUE")
 			{
 				event_format = cmn::BitstreamFormat::CUE;
-				timestamp = source_stream->GetCurrentTimestampMs();
-				events_data = MakeCueData(request_body["events"]);
+				timestamp	 = source_stream->GetCurrentTimestampMs();
+				events_data	 = MakeCueData(request_body["events"]);
 			}
 			else if (event_format_string.UpperCaseString() == "SCTE35")
 			{
 				event_format = cmn::BitstreamFormat::SCTE35;
-				timestamp = source_stream->GetCurrentTimestampMs();
-				events_data = MakeScte35Data(request_body["events"], timestamp);
+				timestamp	 = source_stream->GetCurrentTimestampMs();
+				events_data	 = MakeScte35Data(request_body["events"], timestamp);
 			}
 			else
 			{
@@ -533,7 +533,7 @@ namespace api
 				throw http::HttpError(http::StatusCode::BadRequest, "cueType is required in events");
 			}
 
-			ov::String cue_type = event["cueType"].asString().c_str();
+			ov::String cue_type	   = event["cueType"].asString().c_str();
 			CueEvent::CueType type = CueEvent::GetCueTypeByName(cue_type);
 			if (type == CueEvent::CueType::Unknown)
 			{
@@ -610,7 +610,7 @@ namespace api
 			}
 
 			// only first event is used
-			auto event = events[0];
+			auto event						  = events[0];
 			H264SEI::PayloadType payload_type = H264SEI::PayloadType::USER_DATA_UNREGISTERED;
 			if (event.isMember("seiType") == true && event["seiType"].isString() == true)
 			{
@@ -646,7 +646,7 @@ namespace api
 			}
 
 			// only first event is used
-			auto event = events[0];
+			auto event				  = events[0];
 
 			/*
 			{
@@ -662,7 +662,7 @@ namespace api
 				]
 			}
 			*/
-			
+
 			// spliceCommand (optional)
 			ov::String splice_command = "spliceInsert";
 			if (event.isMember("spliceCommand") == true && event["spliceCommand"].isString() == true)
@@ -694,7 +694,7 @@ namespace api
 				throw http::HttpError(http::StatusCode::BadRequest, "type must be 'out' or 'in'");
 			}
 
-			bool out_of_network = type.UpperCaseString() == "OUT";
+			bool out_of_network	   = type.UpperCaseString() == "OUT";
 
 			// duration (optional)
 			uint32_t duration_msec = 0;

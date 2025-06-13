@@ -6,7 +6,7 @@
 //  Copyright (c) 2020 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "./controller.h"
+#include "./controller_base.h"
 
 namespace api
 {
@@ -35,7 +35,7 @@ namespace api
 		if (json.isArray())
 		{
 			_status_code = status_codes.GetStatusCode();
-			_json = json;
+			_json		 = json;
 		}
 		else
 		{
@@ -69,13 +69,13 @@ namespace api
 	ApiResponse::ApiResponse(const ApiResponse &response)
 	{
 		_status_code = response._status_code;
-		_json = response._json;
+		_json		 = response._json;
 	}
 
 	ApiResponse::ApiResponse(ApiResponse &&response)
 	{
 		_status_code = std::move(response._status_code);
-		_json = std::move(response._json);
+		_json		 = std::move(response._json);
 	}
 
 	void ApiResponse::SetResponse(http::StatusCode status_code)
@@ -85,10 +85,10 @@ namespace api
 
 	void ApiResponse::SetResponse(http::StatusCode status_code, const char *message)
 	{
-		_status_code = status_code;
+		_status_code		= status_code;
 
 		_json["statusCode"] = static_cast<int>(status_code);
-		_json["message"] = (message == nullptr) ? StringFromStatusCode(status_code) : message;
+		_json["message"]	= (message == nullptr) ? StringFromStatusCode(status_code) : message;
 	}
 
 	void ApiResponse::SetResponse(http::StatusCode status_code, const char *message, const Json::Value &json)

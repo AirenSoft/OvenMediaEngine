@@ -39,7 +39,7 @@ namespace api
 				{
 					Json::Value obj = serdes::JsonFromQueueMetrics(metrics);
 
-					if(obj.isNull())
+					if (obj.isNull())
 						continue;
 
 					response.append(obj);
@@ -48,5 +48,5 @@ namespace api
 				return response;
 			}
 		}  // namespace stats
-	}	   // namespace v1
+	}  // namespace v1
 }  // namespace api

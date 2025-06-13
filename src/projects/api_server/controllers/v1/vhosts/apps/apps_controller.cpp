@@ -16,10 +16,10 @@
 
 #include "../../../../api_private.h"
 #include "app_actions_controller.h"
-#include "output_profiles/output_profiles_controller.h"
-#include "streams/streams_controller.h"
-#include "scheduled_channels/scheduled_channels_controller.h"
 #include "multiplex_channels/multiplex_channels_controller.h"
+#include "output_profiles/output_profiles_controller.h"
+#include "scheduled_channels/scheduled_channels_controller.h"
+#include "streams/streams_controller.h"
 
 namespace api
 {
@@ -79,13 +79,13 @@ namespace api
 						"application",
 						ov::String::FormatString("%s/%s", vhost->GetName().CStr(), app_config.GetName().CStr()));
 
-					auto app = GetApplication(vhost, app_config.GetName().CStr());
+					auto app	  = GetApplication(vhost, app_config.GetName().CStr());
 					auto app_json = ::serdes::JsonFromApplication(app);
 
 					Json::Value response;
 					response["statusCode"] = static_cast<int>(http::StatusCode::OK);
-					response["message"] = StringFromStatusCode(http::StatusCode::OK);
-					response["response"] = app_json;
+					response["message"]	   = StringFromStatusCode(http::StatusCode::OK);
+					response["response"]   = app_json;
 
 					status_codes.AddStatusCode(http::StatusCode::OK);
 					response_value.append(std::move(response));

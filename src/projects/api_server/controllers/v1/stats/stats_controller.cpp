@@ -21,5 +21,5 @@ namespace api
 				CreateSubController<CurrentController>(R"(\/current)");
 			};
 		}  // namespace stats
-	}	   // namespace v1
+	}  // namespace v1
 }  // namespace api
