@@ -39,15 +39,13 @@ namespace cmn
 		HVCC,		  // H.265 HVCC
 		H265_ANNEXB,  // OME's default internal bitstream format for H265
 		H265_RTP_RFC_7798,
-		VP8,
-		/*raw*/	 // OME's default internal bitstream format for VP8
+		VP8,  // raw - OME's default internal bitstream format for VP8
 		VP8_RTP_RFC_7741,
 		AAC_RAW,
 		AAC_MPEG4_GENERIC,
 		AAC_ADTS,  // OME's default internal bitstream format for AAC
 		AAC_LATM,
-		OPUS,
-		/*raw*/	 // OME's default internal bitstream format for OPUS
+		OPUS,  // raw - OME's default internal bitstream format for OPUS
 		OPUS_RTP_RFC_7587,
 		MP3,
 		JPEG,
