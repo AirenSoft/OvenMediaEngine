@@ -63,6 +63,13 @@ namespace api
 			return;
 		}
 
+		auto config_error = dynamic_cast<const cfg::ConfigError *>(error);
+		if (config_error != nullptr)
+		{
+			SetResponse(http::StatusCode::BadRequest, config_error->What());
+			return;
+		}
+
 		SetResponse(http::StatusCode::InternalServerError, error->what());
 	}
 
