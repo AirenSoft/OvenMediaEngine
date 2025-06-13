@@ -6,10 +6,11 @@
 //  Copyright (c) 2020 AirenSoft. All rights reserved.
 //
 //==============================================================================
+#include "./controller.h"
+
 #include <main/main.h>
 
 #include "./stats/stats_controller.h"
-#include "./controller.h"
 #include "./vhosts/vhosts_controller.h"
 
 namespace api
