@@ -140,24 +140,18 @@ namespace api
 		virtual void PrepareHandlers() = 0;
 
 	protected:
-		using Handler = std::function<ApiResponse(Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client)>;
+		using Handler						   = std::function<ApiResponse(Tclass *clazz, const std::shared_ptr<http::svr::HttpExchange> &client)>;
 
 		// API Handlers
-		template <typename... Args>
-		using ApiHandlerT				   = ApiResponse (Tclass::*)(const std::shared_ptr<http::svr::HttpExchange> &client, Args...);
+		using ApiHandler					   = ApiResponse (Tclass::*)(const std::shared_ptr<http::svr::HttpExchange> &client);
+		using ApiHandlerWithVHost			   = ApiResponse (Tclass::*)(const std::shared_ptr<http::svr::HttpExchange> &client, const std::shared_ptr<mon::HostMetrics> &vhost);
+		using ApiHandlerWithVHostApp		   = ApiResponse (Tclass::*)(const std::shared_ptr<http::svr::HttpExchange> &client, const std::shared_ptr<mon::HostMetrics> &vhost, const std::shared_ptr<mon::ApplicationMetrics> &app);
+		using ApiHandlerWithVHostAppStream	   = ApiResponse (Tclass::*)(const std::shared_ptr<http::svr::HttpExchange> &client, const std::shared_ptr<mon::HostMetrics> &vhost, const std::shared_ptr<mon::ApplicationMetrics> &app, const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
 
-		using ApiHandler				   = ApiHandler<>;
-		using ApiHandlerWithVHost		   = ApiHandlerT<const std::shared_ptr<mon::HostMetrics> & vhost>;
-		using ApiHandlerWithVHostApp	   = ApiHandlerT<const std::shared_ptr<mon::HostMetrics> & vhost, const std::shared_ptr<mon::ApplicationMetrics> & app>;
-		using ApiHandlerWithVHostAppStream = ApiHandlerT<const std::shared_ptr<mon::HostMetrics> & vhost, const std::shared_ptr<mon::ApplicationMetrics> & app, const std::shared_ptr<mon::StreamMetrics> & stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> & output_streams>;
-
-		template <typename... Args>
-		using ApiHandlerWithBodyT			   = ApiHandlerT<const Json::Value & request_body, Args...>;
-
-		using ApiHandlerWithBody			   = ApiHandlerWithBodyT<>;
-		using ApiHandlerWithBodyVHost		   = ApiHandlerWithBodyT<const std::shared_ptr<mon::HostMetrics> & vhost>;
-		using ApiHandlerWithBodyVHostApp	   = ApiHandlerWithBodyT<const std::shared_ptr<mon::HostMetrics> & vhost, const std::shared_ptr<mon::ApplicationMetrics> & app>;
-		using ApiHandlerWithBodyVHostAppStream = ApiHandlerWithBodyT<const std::shared_ptr<mon::HostMetrics> & vhost, const std::shared_ptr<mon::ApplicationMetrics> & app, const std::shared_ptr<mon::StreamMetrics> & stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> & output_streams>;
+		using ApiHandlerWithBody			   = ApiResponse (Tclass::*)(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body);
+		using ApiHandlerWithBodyVHost		   = ApiResponse (Tclass::*)(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body, const std::shared_ptr<mon::HostMetrics> &vhost);
+		using ApiHandlerWithBodyVHostApp	   = ApiResponse (Tclass::*)(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body, const std::shared_ptr<mon::HostMetrics> &vhost, const std::shared_ptr<mon::ApplicationMetrics> &app);
+		using ApiHandlerWithBodyVHostAppStream = ApiResponse (Tclass::*)(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body, const std::shared_ptr<mon::HostMetrics> &vhost, const std::shared_ptr<mon::ApplicationMetrics> &app, const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
 
 	protected:
 		void Register(http::Method method, const ov::String &pattern, const Handler &handler)

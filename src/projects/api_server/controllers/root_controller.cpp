@@ -10,7 +10,7 @@
 
 #include <base/ovcrypto/ovcrypto.h>
 
-#include "v1/controller_base.h"
+#include "./v1/controller.h"
 
 namespace api
 {

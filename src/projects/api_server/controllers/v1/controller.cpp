@@ -8,9 +8,9 @@
 //==============================================================================
 #include <main/main.h>
 
-#include "stats/stats_controller.h"
-#include "v1_controller.h"
-#include "vhosts/vhosts_controller.h"
+#include "./stats/stats_controller.h"
+#include "./controller.h"
+#include "./vhosts/vhosts_controller.h"
 
 namespace api
 {
