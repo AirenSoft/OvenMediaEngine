@@ -451,11 +451,11 @@ static ov::String StringFromProviderType(const ProviderType &type)
 		case ProviderType::Rtsp:
 			return "RTSP";
 		case ProviderType::RtspPull:
-			return "RTSP Pull";
+			return "RTSPPull";
 		case ProviderType::Ovt:
 			return "OVT";
 		case ProviderType::Mpegts:
-			return "MPEG-TS";
+			return "MPEGTS";
 		case ProviderType::WebRTC:
 			return "WebRTC";
 		case ProviderType::Srt:
