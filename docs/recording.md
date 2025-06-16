@@ -34,6 +34,13 @@ Server.xml
 </Publishers>
 ```
 
+#### Supported video codecs
+
+| Format | Codec             |
+| ------ | ----------------- |
+| TS     | H.264, H.265, AAC |
+| MP4    | H.264, H.265, AAC |
+
 ## Recording via REST API
 
 For control of recording, use the REST API. Recording can be requested based on the output stream name (specified in the JSON body), and all/some tracks can be selectively recorded. And, it is possible to simultaneously record multiple files for the same stream. When recording is complete, an XML file is created at the path specified in InfoPath. For a sample of the recorded file information XML, refer to Appendix B.

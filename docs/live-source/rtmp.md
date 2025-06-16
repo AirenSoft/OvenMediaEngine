@@ -1,5 +1,14 @@
 # RTMP
 
+RTMP is one of the most widely used protocols in live streaming.
+
+| Title       | Functions  |
+| ----------- | ---------- |
+| Container   | FLV        |
+| Transport   | TCP        |
+| Codec       | H.264, AAC |
+| Negotiation | AMF0       |
+
 ## Configuration
 
 `Providers` ingests streams that come from a media source. OvenMediaEngine supports RTMP protocol. You can set it in the configuration as follows:
@@ -93,6 +102,14 @@ You can set the Stream Key to any name you like at any time.
 ## E-RTMP
 
 Enhanced RTMP (E-RTMP) is an experimental streaming feature that extends the capabilities of the traditional RTMP protocol. One of its key advantages is support for modern video codecs such as H.265 (HEVC), which are not available in standard RTMP. This allows for better video quality and lower bitrates, making it ideal for high-efficiency streaming workflows. The list of supported codecs will continue to grow as development progresses.
+
+| Title               | Functions             |
+| ------------------- | --------------------- |
+| Container           | FLV                   |
+| Transport           | TCP                   |
+| Codec               | H.264, H.265, AAC     |
+| Negotiation         | AMF0                  |
+| Additional Features | Simulcast, Multitrack |
 
 Since E-RTMP is still experimental, **it is disabled by default** and must be manually enabled in the server settings.
 

@@ -1,6 +1,17 @@
 # WebRTC / WHIP
 
-User can send video/audio from web browser to OvenMediaEngine via WebRTC without plug-in. Of course, you can use any encoder that supports WebRTC transmission as well as a browser.
+Users can send video and audio from a web browser to OvenMediaEngine via WebRTC without requiring any plug-ins. In addition to browsers, any encoder that supports WebRTC transmission can also be used as a media source.
+
+| Title               | Functions                                                        |
+| ------------------- | ---------------------------------------------------------------- |
+| Container           | RTP / RTCP                                                       |
+| Security            | DTLS, SRTP                                                       |
+| Transport           | ICE                                                              |
+| Error Correction    | ULPFEC (VP8, H.264), In-band FEC (Opus)                          |
+| Codec               | VP8, H.264, H.265, Opus                                          |
+| Signaling           | Self-Defined Signaling Protocol, Embedded WebSocket-based Server |
+| Negotiation         | SDP - Offer / Answer (Signaling)                                 |
+| Additional Features | Simulcast                                                        |
 
 ## Configuration
 

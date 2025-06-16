@@ -4,12 +4,12 @@ Apple supports Low-Latency HLS (LLHLS), which enables low-latency video streamin
 
 LLHLS is an extension of HLS, so legacy HLS players can play LLHLS streams. However, the legacy HLS player plays the stream without using the low-latency function.
 
-| Title     | Descriptions                    |
-| --------- | ------------------------------- |
-| Delivery  | <p>HTTP/1.1<br>HTTP/2</p>       |
-| Security  | TLS (HTTPS)                     |
-| Container | fMP4                            |
-| Codecs    | <p>H.264</p><p>H.265<br>AAC</p> |
+| Title     | Descriptions        |
+| --------- | ------------------- |
+| Container | fMP4 (Audio, Video) |
+| Security  | TLS (HTTPS)         |
+| Transport | HTTP/1.1, HTTP/2    |
+| Codec     | H.264, H.265, AAC   |
 
 ## Configuration
 
@@ -99,11 +99,11 @@ If your input stream is already h.264/aac, you can use the input stream as is li
 
 When you create a stream, as shown above, you can play LLHLS with the following URL:
 
-> http\[s]://domain\[:port]/\<app name>/\<stream name>/llhls.m3u8
+> http\[s]://domain\[:port]/\<app name>/\<stream name>/master.m3u8
 
 If you use the default configuration, you can start streaming with the following URL:
 
-`https://domain:3334/app/<stream name>/llhls.m3u8`
+`https://domain:3334/app/<stream name>/master.m3u8`
 
 We have prepared a test player that you can quickly see if OvenMediaEngine is working. Please refer to the [Test Player](../quick-start/test-player.md) for more information.
 

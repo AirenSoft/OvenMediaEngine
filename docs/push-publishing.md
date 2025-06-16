@@ -1,8 +1,8 @@
 # Push Publishing
 
-&#x20;OvenMediaEngine supports **Push Publishing** function that can restreaming live streams to other systems.  The protocol supports widely used protocols such as SRT, RTMP, and MPEGTS. &#x20;
+OvenMediaEngine supports **Push Publishing** function that can restreaming live streams to other systems. The protocol supports widely used protocols such as [SRT](live-source/srt.md), [RTMP](live-source/rtmp.md), and MPEG-2 TS.
 
-The **StreamMap** feature has been added, and it now automatically restreaming based on predefined conditions. You can also use the Rest API to control and monitor it.
+The `StreamMap` feature has been added, and it now automatically restreaming based on predefined conditions. You can also use the Rest API to control and monitor it.
 
 ## Configuration
 
@@ -35,9 +35,9 @@ The RTMP protocol only supports H264 and AAC codecs.
 
 ### StreamMap
 
-**\<StreamMap>** is used for automatically pushing content based on user-defined conditions. The XML file path should be specified relative to \<ApplicationPath>/conf.&#x20;
+**\<StreamMap>** is used for automatically pushing content based on user-defined conditions. The XML file path should be specified relative to `<ApplicationPath>/conf`.
 
-&#x20;**\<StreamName>** is used to match output stream names and supports the use of wildcard characters. **\<VariantNames>** can be used to select specific tracks. Multiple variants can be specified using commas (',').  The **\<Protocol>** supports rtmp, mpegts, and srt. You enter the destination address in the **\<Url>** and **\<StreamKey>** field, where macros can also be used.
+**\<StreamName>** is used to match output stream names and supports the use of wildcard characters. **\<VariantNames>** can be used to select specific tracks. Multiple variants can be specified using commas (','). The **\<Protocol>** supports rtmp, mpegts, and srt. You enter the destination address in the **\<Url>** and **\<StreamKey>** field, where macros can also be used.
 
 <pre class="language-xml"><code class="lang-xml">&#x3C;?xml version="1.0" encoding="UTF-8"?>
 &#x3C;PushInfo>
@@ -84,8 +84,6 @@ The RTMP protocol only supports H264 and AAC codecs.
 &#x3C;/PushInfo>
 </code></pre>
 
-
-
 | Macro           | Description        |
 | --------------- | ------------------ |
 | ${Application}  | Application name   |
@@ -99,4 +97,3 @@ Push can be controlled using the REST API. Please refer to the documentation bel
 {% content-ref url="rest-api/v1/virtualhost/application/push.md" %}
 [push.md](rest-api/v1/virtualhost/application/push.md)
 {% endcontent-ref %}
-

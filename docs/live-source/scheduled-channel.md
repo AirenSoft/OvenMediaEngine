@@ -25,7 +25,7 @@ Root path where the schedule file is located. If you specify a relative path, th
 
 ## Schedule Files
 
-Scheduled Channel creates/updates/deletes streams by creating/editing/deleting files with the .sch extension in the ScheduleFileDir path. Schedule files (.sch) use the following XML format. When a `<Stream Name>.sch` file is created in ScheduleFileDir, OvenMediaEngine analyzes the file and creates a Schedule Channel with `<Stream Name>`. If the contents of `<Stream Name>.sch` are changed, the Schedule Channel is updated, and if the file is deleted, the stream is deleted.
+Scheduled Channel creates/updates/deletes streams by creating/editing/deleting files with the .sch extension in the ScheduleFileDir path. Schedule files (`.sch`) use the following XML format. When a `<Stream Name>.sch` file is created in ScheduleFileDir, OvenMediaEngine analyzes the file and creates a Schedule Channel with `<Stream Name>`. If the contents of `<Stream Name>.sch` are changed, the Schedule Channel is updated, and if the file is deleted, the stream is deleted.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -98,6 +98,12 @@ The `url` points to the location of the media source. If it starts with `file://
 For 'file' cases, the `start` attribute can be set in milliseconds to indicate where in the file playback should start.\
 `duration` indicates the playback time of that item in milliseconds. After the duration ends, it moves to the next item.\
 Both 'start' and 'duration' are optional. If not set, `start` defaults to 0, and `duration` defaults to the file's duration; if not specified, the media file will be played until its full duration.
+
+#### Supported Formats for File Live
+
+| Title   | Description                                                                                    |
+| ------- | ---------------------------------------------------------------------------------------------- |
+| Formats | <p>MP4, TS, MP3, and more.</p><ul><li>All formats supported by FFmpeg are supported.</li></ul> |
 
 ## Multiple Audio Track
 

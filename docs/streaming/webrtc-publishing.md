@@ -4,14 +4,16 @@ OvenMediaEngine uses WebRTC to provide sub-second latency streaming. WebRTC uses
 
 OvenMediaEngine provides the following features:
 
-| Title            | Functions                                                            |
-| ---------------- | -------------------------------------------------------------------- |
-| Delivery         | RTP / RTCP                                                           |
-| Security         | DTLS, SRTP                                                           |
-| Connectivity     | ICE                                                                  |
-| Error Correction | ULPFEC (VP8, H.264), In-band FEC (Opus)                              |
-| Codec            | VP8, H.264, H.265, Opus                                              |
-| Signaling        | Self-Defined Signaling Protocol and Embedded Web Socket-Based Server |
+| Title               | Functions                                                        |
+| ------------------- | ---------------------------------------------------------------- |
+| Container           | RTP / RTCP                                                       |
+| Security            | DTLS, SRTP                                                       |
+| Transport           | ICE                                                              |
+| Error Correction    | ULPFEC (VP8, H.264), In-band FEC (Opus)                          |
+| Codec               | VP8, H.264, H.265, Opus                                          |
+| Signaling           | Self-Defined Signaling Protocol, Embedded WebSocket-based Server |
+| Negotiation         | SDP - Offer / Answer (Signaling)                                 |
+| Additional Features | Simulcast                                                        |
 
 ## Configuration
 
@@ -167,7 +169,7 @@ OvenMediaEnigne provides adaptive bitrates streaming over WebRTC. OvenPlayer can
 
 ### Create Playlist for WebRTC ABR
 
-You can provide ABR by creating a `playlist` in `<OutputProfile>` as shown below. The URL to play the playlist is `ws[s]://domain[:port]/<app name>/<stream name>/<playlist file name>`
+You can provide ABR by creating a `playlist` in `<OutputProfile>` as shown below. The URL to play the playlist is `ws[s]://domain[:port]/<app name>/<stream name>/master`.
 
 `<Playlist><Rendition><Video>` and `<Playlist><Rendition><Audio>` can connected using `<Encodes><Video><Name>` or `<Encodes><Audio><Name>`.
 

@@ -62,7 +62,7 @@ To publish thumbnails, you need to set up an encoding profile. You can choose **
 | Height    | Height of resolution             |
 | Framerate | Frames per second                |
 
-#### Support image codecs
+#### Supported image codecs
 
 <table><thead><tr><th width="149">Encode Type</th><th width="177.33333333333331">Codec</th><th>Codec of Configuration</th></tr></thead><tbody><tr><td>Image</td><td>JPEG</td><td>jpeg</td></tr><tr><td></td><td>PNG</td><td>png</td></tr><tr><td></td><td>WEBP</td><td>webp</td></tr></tbody></table>
 

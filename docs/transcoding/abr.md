@@ -2,110 +2,89 @@
 
 ## Adaptive Bitrate Streaming (ABR)
 
-From version 0.14.0, OvenMediaEngine can encode same source with multiple bitrates renditions and deliver it to the player.
-
-As shown in the example configuration below, you can provide ABR by adding `<Playlists>` to `<OutputProfile>`. There can be multiple playlists, and each playlist can be accessed with `<FileName>`.
-
-The method to access the playlist set through LLHLS is as follows.
-
-`http[s]://<domain>[:port]/<app>/<stream>/`**`<FileName>`**`.m3u8`
-
-The method to access the playlist set through HLS is as follows.
-
-`http[s]://<domain>[:port]/<app>/<stream>/`**`<FileName>`**`.m3u8?format=ts`
-
-The method to access the Playlist set through WebRTC is as follows.
-
-`ws[s]://<domain>[:port]/<app>/<stream>/`**`<FileName>`**
-
-Note that `<FileName>` must never contain the **`playlist`** and **`chunklist`** keywords. This is a reserved word used inside the system.
-
-To set up `<Rendition>`, you need to add `<Name>` to the elements of `<Encodes>`. Connect the set `<Name>` into `<Rendition><Video>` or `<Rendition><Audio>`.
-
-In the example below, three quality renditions are provided and the URL to play the `abr` playlist as LLHLS is `https://domain:port/app/stream/abr.m3u8` and The WebRTC playback URL is `wss://domain:port/app/stream/abr`
+From version `0.14.0`, OvenMediaEngine can encode the same source with multiple bitrate renditions and deliver them to the player. You can provide ABR by adding `<Playlists>` to `<OutputProfile>`. There can be multiple playlists, and each playlist can be accessed with `<FileName>`.
 
 {% hint style="info" %}
-TS files used in HLS must have A/V pre-muxed, so the `EnableTsPackaging` option must be set in the Playlist.
+Note that `<FileName>` must never contain the **`playlist`** and **`chunklist`** keywords. This is a reserved word used inside the system.
 {% endhint %}
+
+Building on this, starting from version `0.18.0`, OvenMediaEngine provides a default playlist named `master` to simplify playback access. When simulcast input or ABR output is provided, the `master` dynamically includes the appropriate renditions and reflects the current encoding settings. This allows users to stream flexibly without additional configuration.
+
+The method to access the playlist set through LLHLS is as follows:
+
+* `http[s]://<host>[:port]/<app>/<stream>/master.m3u8`
+
+The method to access the playlist set through HLS is as follows:
+
+* `http[s]://<host>[:port]/<app>/<stream>/ts:master.m3u8`
+* `http[s]://<host>[:port]/<app>/<stream>/master.m3u8?format=ts`
+
+The method to access the Playlist set through WebRTC is as follows:
+
+* `ws[s]://<host>[:port]/<app>/<stream>/master`
+
+The method to access the Playlist set through SRT is as follows:
+
+* `srt://<host>[:port]?streamid=<vhost>/<app>/<stream>/master`
+
+#### For example
 
 ```xml
 <OutputProfile>
 	<Name>bypass_stream</Name>
 	<OutputStreamName>${OriginStreamName}</OutputStreamName>
-	<!--LLHLS URL : https://domain/app/stream/abr.m3u8 --> 
+
 	<Playlist>
-		<Name>For LLHLS</Name>
-		<FileName>abr</FileName>
-		<Options> <!-- Optional -->
-			<!-- 
-			Automatically switch rendition in WebRTC ABR 
-			[Default] : true
-			-->
-			<WebRtcAutoAbr>true</WebRtcAutoAbr> 
+		<Name>default</Name>
+		<FileName>master</FileName>
+		<Options>
+			<WebRtcAutoAbr>true</WebRtcAutoAbr>
+			<HLSChunklistPathDepth>0</HLSChunklistPathDepth>
 			<EnableTsPackaging>true</EnableTsPackaging>
 		</Options>
-		<Rendition>
-			<Name>Bypass</Name>
-			<Video>bypass_video</Video>
-			<Audio>bypass_audio</Audio>
-		</Rendition>
-		<Rendition>
-			<Name>FHD</Name>
-			<Video>video_1280</Video>
-			<Audio>bypass_audio</Audio>
-		</Rendition>
-		<Rendition>
-			<Name>HD</Name>
-			<Video>video_720</Video>
-			<Audio>bypass_audio</Audio>
-		</Rendition>
+		<RenditionTemplate>
+			<Name>${Height}p</Name>
+			<VideoTemplate>
+				<EncodingType>all</EncodingType>
+			</VideoTemplate>
+			<AudioTemplate>
+				<EncodingType>all</EncodingType>
+			</AudioTemplate>
+		</RenditionTemplate>
 	</Playlist>
-	<!--LLHLS URL : https://domain/app/stream/llhls.m3u8 --> 
-	<Playlist>
-		<Name>Change Default</Name>
-		<FileName>llhls</FileName>
-		<Rendition>
-			<Name>HD</Name>
-			<Video>video_720</Video>
-			<Audio>bypass_audio</Audio>
-		</Rendition>
-	</Playlist> 
+
 	<Encodes>
-		<Audio>
-			<Name>bypass_audio</Name>
-			<Bypass>true</Bypass>
-		</Audio>
 		<Video>
 			<Name>bypass_video</Name>
 			<Bypass>true</Bypass>
 		</Video>
 		<Audio>
+			<Name>aac_audio</Name>
+			<Codec>aac</Codec>
+			<Bitrate>128000</Bitrate>
+			<Samplerate>48000</Samplerate>
+			<Channel>2</Channel>
+			<BypassIfMatch>
+				<Codec>eq</Codec>
+			</BypassIfMatch>
+		</Audio>
+		<Audio>
+			<Name>opus_audio</Name>
 			<Codec>opus</Codec>
 			<Bitrate>128000</Bitrate>
 			<Samplerate>48000</Samplerate>
 			<Channel>2</Channel>
-		</Audio>
-		<Video>
-			<Name>video_1280</Name>
-			<Codec>h264</Codec>
-			<Bitrate>5024000</Bitrate>
-			<Framerate>30</Framerate>
-			<Width>1920</Width>
-			<Height>1280</Height>
-			<Preset>faster</Preset>
-		</Video>
-		<Video>
-			<Name>video_720</Name>
-			<Codec>h264</Codec>
-			<Bitrate>2024000</Bitrate>
-			<Framerate>30</Framerate>
-			<Width>1280</Width>
-			<Height>720</Height>
-			<Preset>faster</Preset>
-		</Video>
+			<BypassIfMatch>
+				<Codec>eq</Codec>
+			</BypassIfMatch>
+		</Audio>	
 	</Encodes>
 </OutputProfile>
 ```
+
+{% hint style="info" %}
+TS files used in HLS must have A/V pre-muxed, so the `EnableTsPackaging` option must be set in the Playlist.
+{% endhint %}
 
 ## Supported codecs by streaming protocol
 
@@ -113,13 +92,11 @@ Even if you set up multiple codecs, there is a codec that matches each streaming
 
 The following is a list of codecs that match each streaming protocol:
 
-| Protocol | Supported Codec   |
-| -------- | ----------------- |
-| WebRTC   | VP8, H.264, Opus  |
-| LLHLS    | H.264, H.265, AAC |
+| Protocol | Supported Codec         |
+| -------- | ----------------------- |
+| WebRTC   | VP8, H.264, H.265, Opus |
+| LLHLS    | H.264, H.265, AAC       |
 
-Therefore, you set it up as shown in the table. If you want to stream using LLHLS, you need to set up H.264, H.265 and AAC, and if you want to stream using WebRTC, you need to set up Opus.
-
-Also, if you are going to use WebRTC on all platforms, you need to configure both VP8 and H.264. This is because different codecs are supported for each browser, for example, VP8 only, H264 only, or both.
+Therefore, you set it up as shown in the table. If you want to stream using LLHLS, you need to set up H.264, H.265 and AAC, and if you want to stream using WebRTC, you need to set up Opus. Also, if you are going to use WebRTC on all platforms, you need to configure both VP8 and H.264. This is because different codecs are supported for each browser, for example, VP8 only, H264 only, or both.
 
 However, don't worry. If you set the codecs correctly, OME automatically sends the stream of codecs requested by the browser.

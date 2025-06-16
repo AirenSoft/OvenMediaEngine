@@ -2,6 +2,13 @@
 
 Secure Reliable Transport (or SRT in short) is an open source video transport protocol and technology stack that optimizes streaming performance across unpredictable networks with secure streams and easy firewall traversal, bringing the best quality live video over the worst networks. We consider SRT to be one of the great alternatives to RTMP, and OvenMediaEngine can receive video streaming over SRT. For more information on SRT, please visit the [SRT Alliance website](https://www.srtalliance.org).
 
+| Title               | Functions                                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------- |
+| Container           | MPEG-2 TS                                                                                               |
+| Transport           | SRT                                                                                                     |
+| Codec               | <p>H.264, H.265, AAC</p><ul><li>Apple Safari does not support H.265 (HEVC) in MPEG-TS format.</li></ul> |
+| Additional Features | Simulcast                                                                                               |
+
 SRT uses the MPEG-TS format when transmitting live streams. This means that unlike RTMP, it can support many codecs. Currently, OvenMediaEngine supports H.264, H.265 and AAC codecs received by SRT.
 
 ## Configuration
