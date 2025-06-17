@@ -51,9 +51,9 @@ PrivacyProtection is an option to comply with GDPR, PIPEDA, CCPA, LGPD, etc. by 
 
 ### StunServer
 
-OvenMediaEngine needs to know its public IP in order to connect to the player through WebRTC. The server must inform the player of the IceCandidates and TURN server addresses when signaling, and this information must be the IP the player can connect to. However, in environments such as Docker or AWS, public IP cannot be obtained through a local interface, so a method of obtaining public IP using stun server is provided (available from version 0.11.1).
+OvenMediaEngine needs to know its public IP in order to connect to the player through WebRTC. The server must inform the player of the `IceCandidates` and TURN server addresses when signaling, and this information must be the IP the player can connect to. However, in environments such as Docker or AWS, public IP cannot be obtained through a local interface, so a method of obtaining public IP using stun server is provided (available from version 0.11.1).
 
-If OvenMediaEngine obtains the public IP through communication with the set stun server, you can set the public IP by using \* or ${PublicIP} in IceCandidate and TcpRelay.
+If OvenMediaEngine obtains the public IP through communication with the set stun server, you can set the public IP by using \* or `${PublicIP}` in `IceCandidate` and `TcpRelay`.
 
 ```markup
 <StunServer>stun.l.google.com:19302</StunServer>
@@ -210,7 +210,7 @@ The meaning of each element is shown in the following table:
 
 ### Host
 
-The Domain has `Names` and TLS. Names can be either a domain address or an IP address. Setting \* means it allows all domains and IP addresses.
+The Domain has `Names` and `TLS`. Names can be either a domain address or an IP address. Setting `*` means it allows all domains and IP addresses.
 
 ```markup
 <Host>
@@ -232,11 +232,11 @@ The Domain has `Names` and TLS. Names can be either a domain address or an IP ad
 
 ### SignedPolicy
 
-SignedPolicy is a module that limits the user's privileges and time. For example, operators can distribute RTMP URLs that can be accessed for 60 seconds to authorized users, and limit RTMP transmission to 1 hour. The provided URL will be destroyed after 60 seconds, and transmission will automatically stop after 1 hour. Users who are provided with a SingedPolicy URL cannot access resources other than the provided URL. This is because the SignedPolicy URL is authenticated. See the [SignedPolicy](../access-control/signedpolicy.md) chapter for more information.
+`SignedPolicy` is a module that limits the user's privileges and time. For example, operators can distribute RTMP URLs that can be accessed for 60 seconds to authorized users, and limit RTMP transmission to 1 hour. The provided URL will be destroyed after 60 seconds, and transmission will automatically stop after 1 hour. Users who are provided with a SingedPolicy URL cannot access resources other than the provided URL. This is because the SignedPolicy URL is authenticated. See the [SignedPolicy](../access-control/signedpolicy.md) chapter for more information.
 
 ### Origins
 
-Origins (also we called OriginMap) are a feature to pull streams from external servers. It now supports OVT and RTSP for the pulling protocols. OVT is a protocol defined by OvenMediaEngine for Origin-Edge communication. It allows OvenMediaEngine to relay a stream from other OvenMediaEngines that have OVP Publisher turned on. Using RTSP, OvenMediaEngine pulls a stream from an RTSP server and creates a stream. RTSP stream from external servers can stream by WebRTC, HLS, and MPEG-DASH.
+Origins (also we called `OriginMap`) are a feature to pull streams from external servers. It now supports OVT and RTSP for the pulling protocols. OVT is a protocol defined by OvenMediaEngine for Origin-Edge communication. It allows OvenMediaEngine to relay a stream from other OvenMediaEngines that have OVP Publisher turned on. Using RTSP, OvenMediaEngine pulls a stream from an RTSP server and creates a stream. RTSP stream from external servers can stream by WebRTC, HLS, and MPEG-DASH.
 
 The Origin has `Location` and `Pass` elements. Location is a URI pattern for incoming requests. If the incoming URL request matches Location, OvenMediaEngine pulls the stream according to a Pass element. In the Pass element, you can set the origin stream's protocol and URLs.
 

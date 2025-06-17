@@ -43,7 +43,7 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
   * _H.264, H.265, AAC_
   * More codec support will be added continuously
 * **Embedded Live Transcoder**
-  * Video: VP8, H.264, H.265(Hardware only), Pass-through
+  * Video: VP8, H.264, H.265 (Hardware only), Pass-through
   * Audio: Opus, AAC, Pass-through
 * **Clustering** (Origin-Edge Structure)
 * **Monitoring**

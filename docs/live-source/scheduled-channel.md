@@ -101,9 +101,7 @@ Both 'start' and 'duration' are optional. If not set, `start` defaults to 0, and
 
 #### Supported Formats for File Live
 
-| Title   | Description                                                                                    |
-| ------- | ---------------------------------------------------------------------------------------------- |
-| Formats | <p>MP4, TS, MP3, and more.</p><ul><li>All formats supported by FFmpeg are supported.</li></ul> |
+<table><thead><tr><th width="290">Title</th><th>Description</th></tr></thead><tbody><tr><td>Formats</td><td><p>MP4, TS, MP3, and more.</p><ul><li>All formats supported by FFmpeg are supported.</li></ul></td></tr></tbody></table>
 
 ## Multiple Audio Track
 

@@ -4,16 +4,7 @@ OvenMediaEngine uses WebRTC to provide sub-second latency streaming. WebRTC uses
 
 OvenMediaEngine provides the following features:
 
-| Title               | Functions                                                        |
-| ------------------- | ---------------------------------------------------------------- |
-| Container           | RTP / RTCP                                                       |
-| Security            | DTLS, SRTP                                                       |
-| Transport           | ICE                                                              |
-| Error Correction    | ULPFEC (VP8, H.264), In-band FEC (Opus)                          |
-| Codec               | VP8, H.264, H.265, Opus                                          |
-| Signaling           | Self-Defined Signaling Protocol, Embedded WebSocket-based Server |
-| Negotiation         | SDP - Offer / Answer (Signaling)                                 |
-| Additional Features | Simulcast                                                        |
+<table><thead><tr><th width="290">Title</th><th>Functions</th></tr></thead><tbody><tr><td>Container</td><td>RTP / RTCP</td></tr><tr><td>Security</td><td>DTLS, SRTP</td></tr><tr><td>Transport</td><td>ICE</td></tr><tr><td>Error Correction</td><td>ULPFEC (VP8, H.264), In-band FEC (Opus)</td></tr><tr><td>Codec</td><td>VP8, H.264, H.265, Opus</td></tr><tr><td>Signaling</td><td>Self-Defined Signaling Protocol, Embedded WebSocket-based Server / WHEP</td></tr><tr><td>Additional Features</td><td>Simulcast</td></tr><tr><td>Default URL Pattern</td><td>ws[s]://&#x3C;host>[:port]/&#x3C;app>/&#x3C;stream>/<strong>master</strong></td></tr></tbody></table>
 
 ## Configuration
 
@@ -179,7 +170,7 @@ It is not recommended to use a \<Bypass>true\</Bypass> encode item if you want a
 
 If `<Options><WebRtcAutoAbr>` is set to true, OvenMediaEngine will measure the bandwidth of the player session and automatically switch to the appropriate rendition.
 
-Here is an example play URL for ABR in the playlist settings below. `wss://domain:13334/app/stream/abr`
+Here is an example play URL for ABR in the playlist settings below. `wss://domain:13334/app/stream/master`
 
 {% hint style="info" %}
 Streaming starts from the top rendition of Playlist, and when Auto ABR is true, the server finds the best rendition and switches to it. Alternatively, the user can switch manually by selecting a rendition in the player.
@@ -193,7 +184,7 @@ Streaming starts from the top rendition of Playlist, and when Auto ABR is true, 
 
     <Playlist>
         <Name>for Webrtc</Name>
-        <FileName>abr</FileName>
+        <FileName>master</FileName>
         <Options>
             <WebRtcAutoAbr>false</WebRtcAutoAbr> 
         </Options>
@@ -216,7 +207,7 @@ Streaming starts from the top rendition of Playlist, and when Auto ABR is true, 
 
     <Playlist>
         <Name>for llhls</Name>
-        <FileName>llhls_abr</FileName>
+        <FileName>master</FileName>
         <Rendition>
             <Name>480p</Name>
             <Video>480p</Video>

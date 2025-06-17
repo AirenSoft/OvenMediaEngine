@@ -2,12 +2,7 @@
 
 RTMP is one of the most widely used protocols in live streaming.
 
-| Title       | Functions  |
-| ----------- | ---------- |
-| Container   | FLV        |
-| Transport   | TCP        |
-| Codec       | H.264, AAC |
-| Negotiation | AMF0       |
+<table><thead><tr><th width="290">Title</th><th>Functions</th></tr></thead><tbody><tr><td>Container</td><td>FLV</td></tr><tr><td>Transport</td><td>TCP</td></tr><tr><td>Codec</td><td>H.264, AAC / H.265 (E-RTMP only)</td></tr><tr><td>Additional Features (E-RTMP only)</td><td>Simulcast, Multitrack</td></tr></tbody></table>
 
 ## Configuration
 
@@ -74,14 +69,14 @@ To allow the duplicated stream name feature can cause several problems. When a n
 
 If you want to publish the source stream, you need to set the following in the Encoder:
 
-* `URL`: `rtmp://<OvenMediaEngine IP>[:<RTMP Listen Port>]/<App Name]>`
-* `Stream Key`: `Stream Name`
+* URL: `rtmp://<OvenMediaEngine IP>[:<RTMP Listen Port>]/<App Name]>`
+* Stream Key: `<Stream Name>`
 
 If you use the default configuration, the `<RTMP><ListenPort>` is 1935, which is the default port for RTMP. So it can be omitted. Also, since the Application named `app` is created by default in the default configuration, you can enter `app` in the `[App Name]`. You can define a Stream Key and use it in the Encoder, and the Streaming URL will change according to the Stream Key.
 
 Moreover, some encoders can include a stream key in the URL, and if you use these encoders, you need to set it as follows:
 
-* `URL`: `rtmp://<OvenMediaEngine IP>[:<RTMP Listen Port>/<App Name>/<Stream Name>`
+* URL: `rtmp://<OvenMediaEngine IP>[:<RTMP Listen Port>/<App Name>/<Stream Name>`
 
 ### Example with OvenLiveKit (OvenStreamEncoder)
 
@@ -108,7 +103,6 @@ Enhanced RTMP (E-RTMP) is an experimental streaming feature that extends the cap
 | Container           | FLV                   |
 | Transport           | TCP                   |
 | Codec               | H.264, H.265, AAC     |
-| Negotiation         | AMF0                  |
 | Additional Features | Simulcast, Multitrack |
 
 Since E-RTMP is still experimental, **it is disabled by default** and must be manually enabled in the server settings.

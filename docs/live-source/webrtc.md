@@ -2,16 +2,7 @@
 
 Users can send video and audio from a web browser to OvenMediaEngine via WebRTC without requiring any plug-ins. In addition to browsers, any encoder that supports WebRTC transmission can also be used as a media source.
 
-| Title               | Functions                                                        |
-| ------------------- | ---------------------------------------------------------------- |
-| Container           | RTP / RTCP                                                       |
-| Security            | DTLS, SRTP                                                       |
-| Transport           | ICE                                                              |
-| Error Correction    | ULPFEC (VP8, H.264), In-band FEC (Opus)                          |
-| Codec               | VP8, H.264, H.265, Opus                                          |
-| Signaling           | Self-Defined Signaling Protocol, Embedded WebSocket-based Server |
-| Negotiation         | SDP - Offer / Answer (Signaling)                                 |
-| Additional Features | Simulcast                                                        |
+<table><thead><tr><th width="290">Title</th><th>Functions</th></tr></thead><tbody><tr><td>Container</td><td>RTP / RTCP</td></tr><tr><td>Security</td><td>DTLS, SRTP</td></tr><tr><td>Transport</td><td>ICE</td></tr><tr><td>Error Correction</td><td>ULPFEC (VP8, H.264), In-band FEC (Opus)</td></tr><tr><td>Codec</td><td>VP8, H.264, H.265, Opus</td></tr><tr><td>Signaling</td><td>Self-Defined Signaling Protocol, Embedded WebSocket-based Server / WHIP</td></tr><tr><td>Additional Features</td><td>Simulcast</td></tr></tbody></table>
 
 ## Configuration
 
@@ -39,7 +30,7 @@ OvenMediaEngine supports self-defined signaling protocol and [WHIP ](https://dat
 
 You can set the port to use for signaling in `<Bind><Provider><WebRTC><Signaling>`. `<Port>` is for setting an unsecured HTTP port, and `<TLSPort>` is for setting a secured HTTP port that is encrypted with TLS.&#x20;
 
-For WebRTC ingest, you must set the ICE candidates of the OvenMediaEnigne server to `<IceCandidates>`. The candidates set in `<IceCandate>` are delivered to the WebRTC peer, and the peer requests communication with this candidate. Therefore, you must set the IP that the peer can access. If the IP is specified as \*, OvenMediaEngine gathers all IPs of the server and delivers them to the peer.
+For WebRTC ingest, you must set the ICE candidates of the OvenMediaEnigne server to `<IceCandidates>`. The candidates set in `<IceCandate>` are delivered to the WebRTC peer, and the peer requests communication with this candidate. Therefore, you must set the IP that the peer can access. If the IP is specified as `*`, OvenMediaEngine gathers all IPs of the server and delivers them to the peer.
 
 `<TcpRelay>` means OvenMediaEngine's built-in TURN Server. When this is enabled, the address of this turn server is passed to the peer via self-defined signaling protocol or WHIP, and the peer communicates with this turn server over TCP. This allows OvenMediaEngine to support WebRTC/TCP itself. For more information on URL settings, check out [WebRTC over TCP](webrtc.md#webrtc-over-tcp).
 
@@ -94,7 +85,7 @@ If `<TcpForce>` is set to true, it works over TCP even if you omit the `?transpo
 
 Simulcast is a feature that allows the sender to deliver multiple layers of quality to the end viewer without relying on a server encoder. This is a useful feature that allows for high-quality streaming to be delivered to viewers while significantly reducing costs in environments with limited server resources.
 
-OvenMediaEngine supports webrtc simulcast since 0.18.0. OvenMediaEngine only supports simulcast with WHIP signaling, and not with OvenMediaEngine's own signaling. Simulcast is only supported with WHIP signaling, and is not supported with OvenMediaEngine's own defined signaling.
+OvenMediaEngine supports WebRTC simulcast since 0.18.0. OvenMediaEngine only supports simulcast with WHIP signaling, and not with OvenMediaEngine's own signaling. Simulcast is only supported with WHIP signaling, and is not supported with OvenMediaEngine's own defined signaling.
 
 You can test this using an encoder that supports WHIP and simulcast, such as OvenLiveKit or OBS. You can usually set the number of layers as below, and if you use the OvenLiveKit API directly, you can also configure the resolution and bitrate per layer.
 
@@ -106,7 +97,7 @@ You can test this using an encoder that supports WHIP and simulcast, such as Ove
 
 ### Playlist Template for Simulcast
 
-When multiple input video Tracks exist, it means that several Tracks with the same Variant Name are present. For example, consider the following basic OutputProfile and assume there are three input video Tracks. In this case, three Tracks with the Variant Name `video_bypass` will be created:
+When multiple input video Tracks exist, it means that several Tracks with the same Variant Name are present. For example, consider the following basic `OutputProfile` and assume there are three input video Tracks. In this case, three Tracks with the Variant Name `video_bypass` will be created:
 
 ```xml
 <OutputProfile>
@@ -230,4 +221,4 @@ To create a custom WebRTC Producer, you need to implement OvenMediaEngine's Self
 
 ![](<../.gitbook/assets/image (10).png>)
 
-When the player connects to ws\[s]://host:port/app/stream?**direction=send** through a web socket and sends a request offer command, the server responds to the offer sdp. If transport=tcp exists in the query string of the URL, [iceServers ](https://developer.mozilla.org/en-US/docs/Web/API/RTCIceServer)information is included in offer sdp, which contains the information of OvenMediaEngine's built-in TURN server, so you need to set this in RTCPeerConnection to use WebRTC/TCP. The player then setsRemoteDescription and addIceCandidate offer sdp, generates an answer sdp, and responds to the server.
+When the player connects to ws\[s]://host:port/app/stream?**direction=send** through a WebSocket and sends a request offer command, the server responds to the offer SDP. If `transport=tcp` exists in the query string of the URL, [iceServers ](https://developer.mozilla.org/en-US/docs/Web/API/RTCIceServer)information is included in offer SDP, which contains the information of OvenMediaEngine's built-in TURN server, so you need to set this in `RTCPeerConnection` to use WebRTC/TCP. The player then `setsRemoteDescription` and `addIceCandidate` offer SDP, generates an answer SDP, and responds to the server.

@@ -6,7 +6,7 @@ Alert is a module that can detect anomalies and patterns of interest in a stream
 
 ## Configuration
 
-Alert can be set up on \<Server>, as shown below.
+Alert can be set up on `<Server>`, as shown below.
 
 ```xml
 <Server version="8">
@@ -34,12 +34,7 @@ Alert can be set up on \<Server>, as shown below.
 </Server>
 ```
 
-| Key       | Description                                                                                                                         |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Url       | The HTTP Server to receive the notification. HTTP and HTTPS are available.                                                          |
-| Secretkey | <p>The secret key used when encrypting with HMAC-SHA1</p><p>For more information, see <a href="alert.md#security">Security</a>.</p> |
-| Timeout   | Time to wait for a response after request. (in milliseconds)                                                                        |
-| Rules     | Anomalies and patterns of interest to be detected.                                                                                  |
+<table><thead><tr><th width="290">Key</th><th>Description</th></tr></thead><tbody><tr><td>Url</td><td>The HTTP Server to receive the notification. HTTP and HTTPS are available.</td></tr><tr><td>Secretkey</td><td><p>The secret key used when encrypting with HMAC-SHA1</p><p>For more information, see <a href="alert.md#security">Security</a>.</p></td></tr><tr><td>Timeout</td><td>Time to wait for a response after request. (in milliseconds)</td></tr><tr><td>Rules</td><td>Anomalies and patterns of interest to be detected.</td></tr></tbody></table>
 
 ### Rules
 
@@ -56,7 +51,7 @@ Alert can be set up on \<Server>, as shown below.
 |         | MinSamplerate        | Detects when the input stream's samplerate is lower than the set value.            |
 |         | MaxSamplerate        | Detects when the input stream's samplerate is greater than the set value.          |
 |         | LongKeyFrameInterval | Detects when the input stream's keyframe interval is too long (exceeds 4 seconds). |
-|         | HasBFrames            | Detects when there are B-frames in the input stream.                               |
+|         | HasBFrames           | Detects when there are B-frames in the input stream.                               |
 
 ## Notification
 
@@ -127,29 +122,24 @@ X-OME-Signature: f871jd991jj1929jsjd91pqa0amm1
 
 Here is a detailed explanation of each element of JSON payload:
 
-| Element        | Description                                                                                                              |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| sourceUri      | <p>URI information of the detected source.</p><p>It consists of #&#x3C;vhost>#&#x3C;application>/&#x3C;stream>.</p>      |
-| messages       | List of messages detected by the Rules.                                                                                  |
-| sourceInfo     | Detailed information about the source at the time of detection. It is identical to the response of the REST API's source information query for the detected source. |
-| type           | <p>It represents the format of the JSON payload. The information of the JSON elements can vary depending on the value of the type.</p><p>Currently, the value is fixed as `INGRESS`.</p> |
+<table><thead><tr><th width="290">Element</th><th>Description</th></tr></thead><tbody><tr><td>sourceUri</td><td><p>URI information of the detected source.</p><p>It consists of #&#x3C;vhost>#&#x3C;application>/&#x3C;stream>.</p></td></tr><tr><td>messages</td><td>List of messages detected by the Rules.</td></tr><tr><td>sourceInfo</td><td>Detailed information about the source at the time of detection. It is identical to the response of the REST API's source information query for the detected source.</td></tr><tr><td>type</td><td><p>It represents the format of the JSON payload. The information of the JSON elements can vary depending on the value of the type.</p><p>Currently, the value is fixed as <code>INGRESS</code>.</p></td></tr></tbody></table>
 
 #### Messages
 
-| Code                                 | Description                                                                                              |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| INGRESS\_BITRATE\_LOW                | The ingress stream's current bitrate (`%d` bps) is lower than the configured bitrate (`%d` bps)          |
-| INGRESS\_BITRATE\_HIGH               | The ingress stream's current bitrate (`%d` bps) is higher than the configured bitrate (`%d` bps)         |
-| INGRESS\_FRAMERATE\_LOW              | The ingress stream's current framerate (`%.2f` fps) is lower than the configured framerate (`%.2f` fps)  |
-| INGRESS\_FRAMERATE\_HIGH             | The ingress stream's current framerate (`%f` fps) is higher than the configured framerate (`%f` fps)     |
-| INGRESS\_WIDTH\_SMALL                | The ingress stream's width (`%d`) is smaller than the configured width (`%d`)                            |
-| INGRESS\_WIDTH\_LARGE                | The ingress stream's width (`%d`) is larger than the configured width (`%d`)                             |
-| INGRESS\_HEIGHT\_SMALL               | The ingress stream's height (`%d`) is smaller than the configured height (`%d`)                          |
-| INGRESS\_HEIGHT\_LARGE               | The ingress stream's height (`%d`) is larger than the configured height (`%d`)                           |
-| INGRESS\_SAMPLERATE\_LOW             | The ingress stream's current samplerate (`%d`) is lower than the configured samplerate (`%d`)            |
-| INGRESS\_SAMPLERATE\_HIGH            | The ingress stream's current samplerate (`%d`) is higher than the configured samplerate (`%d`)           |
-| INGRESS\_LONG\_KEY\_FRAME\_INTERVAL  | The ingress stream's current keyframe interval (`%.1f` seconds) is too long. Please use a keyframe interval of 4 seconds or less |
-| INGRESS\_HAS\_BFRAME                 | There are B-Frames in the ingress stream                                                                 |
+| Code                                | Description                                                                                                                      |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| INGRESS\_BITRATE\_LOW               | The ingress stream's current bitrate (`%d` bps) is lower than the configured bitrate (`%d` bps)                                  |
+| INGRESS\_BITRATE\_HIGH              | The ingress stream's current bitrate (`%d` bps) is higher than the configured bitrate (`%d` bps)                                 |
+| INGRESS\_FRAMERATE\_LOW             | The ingress stream's current framerate (`%.2f` fps) is lower than the configured framerate (`%.2f` fps)                          |
+| INGRESS\_FRAMERATE\_HIGH            | The ingress stream's current framerate (`%f` fps) is higher than the configured framerate (`%f` fps)                             |
+| INGRESS\_WIDTH\_SMALL               | The ingress stream's width (`%d`) is smaller than the configured width (`%d`)                                                    |
+| INGRESS\_WIDTH\_LARGE               | The ingress stream's width (`%d`) is larger than the configured width (`%d`)                                                     |
+| INGRESS\_HEIGHT\_SMALL              | The ingress stream's height (`%d`) is smaller than the configured height (`%d`)                                                  |
+| INGRESS\_HEIGHT\_LARGE              | The ingress stream's height (`%d`) is larger than the configured height (`%d`)                                                   |
+| INGRESS\_SAMPLERATE\_LOW            | The ingress stream's current samplerate (`%d`) is lower than the configured samplerate (`%d`)                                    |
+| INGRESS\_SAMPLERATE\_HIGH           | The ingress stream's current samplerate (`%d`) is higher than the configured samplerate (`%d`)                                   |
+| INGRESS\_LONG\_KEY\_FRAME\_INTERVAL | The ingress stream's current keyframe interval (`%.1f` seconds) is too long. Please use a keyframe interval of 4 seconds or less |
+| INGRESS\_HAS\_BFRAME                | There are B-Frames in the ingress stream                                                                                         |
 
 #### Security
 

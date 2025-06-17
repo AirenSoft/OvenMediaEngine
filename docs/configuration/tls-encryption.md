@@ -4,7 +4,7 @@ Most browsers can't load resources via HTTP and WS (WebSocket) from HTTPS web pa
 
 ### Docker
 
-To link certificates from your Docker host, uncomment the example in the Docker compose file or manually connect a volume in the Docker run command, e.g. -v \~/local/cert/path:/opt/ovenmediaengine/bin/certs You can set the port for TLS in `TLSPort`. Currently, LLHLS and WebRTC Signaling support TLS.
+To link certificates from your Docker host, uncomment the example in the Docker compose file or manually connect a volume in the Docker run command, e.g. -v \~/local/cert/path:/opt/ovenmediaengine/bin/certs You can set the port for `TLS` in `TLSPort`. Currently, LLHLS and WebRTC Signaling support TLS.
 
 ```markup
 <Bind>

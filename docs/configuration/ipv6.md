@@ -106,7 +106,7 @@ tcp6       0      0 :::1935                 :::*                    LISTEN      
 
 
 
-## 2. Configuration for `IceCandidates` (for WebRTC)
+## 2. Configuration for IceCandidates (for WebRTC)
 
 When you specify IPv6 interface `/Server/IP`, most Providers/Publishers will work with IPv6, but WebRTC will not. While the WebSocket server used as the WebRTC Signalling server works well with the above setting, but more setting is required for ICE Candidates that actually transmit/receive data.
 
@@ -138,7 +138,7 @@ By setting up as above, OME is ready to use ICE Candidates for IPv6 as well as I
 
 <figure><img src="../.gitbook/assets/image (3) (1).png" alt=""><figcaption></figcaption></figure>
 
-## 3. Configuration for `<Origin>`
+## 3. Configuration for \<Origin>
 
 Now you can set up the OME edge to look at an origin with an IPv6 IP address. To do this, you can set `/Server/VirtualHosts/VirtualHost/Origins/Origin/Pass/Urls/Url` as follows:
 
@@ -163,7 +163,7 @@ Now you can set up the OME edge to look at an origin with an IPv6 IP address. To
 
 This configuration creates a stream that refers an RTSP source provided on port 1234 of an origin which has an IPv6 address of `1:2:3:4:5:6:7:8`.
 
-## 4. Configuration for `<AdmissionWebhooks>`
+## 4. Configuration for \<AdmissionWebhooks>
 
 You can also specify an IPv6 address for the server that `AdmissionWebhooks` is using. To do this, set the value of `/Server/VirtualHosts/VirtualHost/AdmissionWebhooks/ControlServerUrl` as follows:
 
