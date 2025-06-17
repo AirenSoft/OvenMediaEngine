@@ -65,9 +65,9 @@ namespace ov
 		}
 
 		{
-			std::lock_guard lock_guard(_worker_list_mutex);
+			std::vector<std::shared_ptr<SocketPoolWorker>> worker_list;
 
-			auto pool = GetSharedPtr();
+			auto pool	   = GetSharedPtr();
 			bool succeeded = true;
 
 			logad("Trying to initialize socket pool with %d workers...", worker_count);
@@ -82,11 +82,19 @@ namespace ov
 					break;
 				}
 
-				_worker_list.emplace_back(instance);
+				worker_list.emplace_back(instance);
 			}
 
 			if (succeeded)
 			{
+				{
+					std::lock_guard lock_guard(_worker_list_mutex);
+					_worker_list.insert(
+						_worker_list.end(),
+						std::make_move_iterator(worker_list.begin()),
+						std::make_move_iterator(worker_list.end()));
+				}
+
 				logad("%d workers were created successfully", worker_count);
 				_initialized = true;
 			}
@@ -95,21 +103,19 @@ namespace ov
 				logae("An error occurred while creating workers. Rollbacking...", worker_count);
 
 				// Rollback
-				UninitializeInternal();
+				UninitializeWorkers(worker_list);
 			}
 		}
 
 		return _initialized;
 	}
 
-	bool SocketPool::UninitializeInternal()
+	bool SocketPool::UninitializeWorkers(const std::vector<std::shared_ptr<SocketPoolWorker>> &worker_list)
 	{
-		for (auto worker : _worker_list)
+		for (auto worker : worker_list)
 		{
 			worker->Uninitialize();
 		}
-
-		_worker_list.clear();
 
 		return true;
 	}
@@ -118,9 +124,14 @@ namespace ov
 	{
 		logad("Trying to uninitialize socket pool...");
 
-		std::lock_guard lock_guard(_worker_list_mutex);
+		std::vector<std::shared_ptr<SocketPoolWorker>> worker_list;
 
-		return UninitializeInternal();
+		{
+			std::lock_guard lock_guard(_worker_list_mutex);
+			worker_list = std::move(_worker_list);
+		}
+
+		return UninitializeWorkers(worker_list);
 	}
 
 	String SocketPool::ToString() const
