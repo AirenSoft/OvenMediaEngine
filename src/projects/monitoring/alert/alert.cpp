@@ -23,8 +23,18 @@ namespace mon
 			Stop();
 		}
 
+		bool Alert::IsStart()
+		{
+			return _is_start;
+		}
+
 		bool Alert::Start(const std::shared_ptr<const cfg::Server> &server_config)
 		{
+			if (IsStart() == true)
+			{
+				return true;
+			}
+
 			if (server_config == nullptr)
 			{
 				return false;
@@ -47,6 +57,8 @@ namespace mon
 
 			_server_config = server_config;
 
+			_is_start = true;
+
 			_timer.Push(
 				[this](void *paramter) -> ov::DelayQueueAction {
 					DispatchThreadProc();
@@ -61,6 +73,8 @@ namespace mon
 		bool Alert::Stop()
 		{
 			_timer.Stop();
+
+			_is_start = false;
 
 			return true;
 		}
@@ -145,6 +159,52 @@ namespace mon
 
 				message_list.push_back(message);
 			}
+		}
+
+		void Alert::SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric)
+		{
+			if (IsStart() == false)
+			{
+				return;
+			}
+
+			auto alert = _server_config->GetAlert();
+			auto rules = alert.GetRules();
+
+			if (!VerifyStreamRule(rules, code))
+			{
+				return;
+			}
+			
+			ov::String description = Message::DescriptionFromMessageCode(code);
+			auto message = Message::CreateMessage(code, description);
+
+			std::vector<std::shared_ptr<Message>> message_list(1, message);
+
+			auto messages_key = stream_metric->GetUri();
+			auto type = NotificationData::Type::STREAM;
+
+			if (IsAlertNeeded(messages_key, message_list))
+			{
+				SendNotification(type, message_list, stream_metric->GetUri(), stream_metric);
+			}
+		}
+
+		bool Alert::VerifyStreamRule(const cfg::alrt::rule::Rules &rules, Message::Code code)
+		{
+			if (!rules.IsStreamStatus())
+			{
+				return false;
+			}
+
+			if (code != Message::Code::STREAM_CREATED && code != Message::Code::STREAM_PREPARED && code != Message::Code::STREAM_DELETED && code != Message::Code::STREAM_CREATION_FAILED_DUPLICATE_NAME)
+			{
+				// Invalid message code for stream
+				logtw("Invalid message code: %s", Message::StringFromMessageCode(code).CStr());
+				return false;
+			}
+
+			return true;
 		}
 
 		bool Alert::VerifyQueueCongestionRules(const cfg::alrt::rule::Rules &rules, const std::shared_ptr<QueueMetrics> &queue_metric, std::vector<std::shared_ptr<Message>> &message_list)
@@ -377,6 +437,7 @@ namespace mon
 			{
 				// Probably this doesn't happen
 				logte("Could not load Notification");
+				return;
 			}
 
 			if (notification_response->GetStatusCode() != Notification::StatusCode::OK)

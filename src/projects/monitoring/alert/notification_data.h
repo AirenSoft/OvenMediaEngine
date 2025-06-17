@@ -21,6 +21,7 @@ namespace mon
 		public:
 			enum class Type : uint16_t
 			{
+				STREAM,
 				INGRESS,
 				INTERNAL_QUEUE
 			};
@@ -29,6 +30,8 @@ namespace mon
 			{
 				switch (type)
 				{
+					case Type::STREAM:
+						return "STREAM";
 					case Type::INGRESS:
 						return "INGRESS";
 					case Type::INTERNAL_QUEUE:

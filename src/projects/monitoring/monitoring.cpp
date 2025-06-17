@@ -211,6 +211,8 @@ namespace mon
 			{
 				return false;
 			}
+
+			_alert.SendStreamMessage(alrt::Message::Code::STREAM_CREATED, stream_metrics);
 		}
 		// Output stream created
 		else
@@ -234,6 +236,51 @@ namespace mon
 			auto event = Event(event_type, _server_metric);
 			event.SetExtraMetric(stream_metrics);
 			_logger.Write(event);
+		}
+
+		return true;
+	}
+
+	bool Monitoring::OnStreamCreationFailed(const info::Stream &stream)
+	{
+		if (stream.IsInputStream())
+		{
+			auto app_metrics = GetApplicationMetrics(stream.GetApplicationInfo());
+			if (app_metrics == nullptr)
+			{
+				return false;
+			}
+
+			auto stream_metrics = std::make_shared<StreamMetrics>(app_metrics, stream);
+			if(stream_metrics == nullptr)
+			{
+					logte("Cannot create StreamMetrics (%s - %s)", stream.GetUri().CStr(), stream.GetUUID().CStr());
+					return false;
+			}
+
+			_alert.SendStreamMessage(alrt::Message::Code::STREAM_CREATION_FAILED_DUPLICATE_NAME, stream_metrics);
+		}
+
+		return true;
+	}
+
+	bool Monitoring::OnStreamPrepared(const info::Stream &stream)
+	{
+		if (stream.IsInputStream())
+		{
+			auto app_metrics = GetApplicationMetrics(stream.GetApplicationInfo());
+			if (app_metrics == nullptr)
+			{
+				return false;
+			}
+
+			auto stream_metrics = app_metrics->GetStreamMetrics(stream);
+			if (stream_metrics == nullptr)
+			{
+				return false;
+			}
+
+			_alert.SendStreamMessage(alrt::Message::Code::STREAM_PREPARED, stream_metrics);
 		}
 
 		return true;
@@ -263,6 +310,8 @@ namespace mon
 				{
 					OnSessionsDisconnected(*stream_metrics, static_cast<PublisherType>(type), stream_metrics->GetConnections(static_cast<PublisherType>(type)));
 				}
+
+				_alert.SendStreamMessage(alrt::Message::Code::STREAM_DELETED, stream_metrics);
 			}
 
 			if(app_metrics->OnStreamDeleted(stream) == false)

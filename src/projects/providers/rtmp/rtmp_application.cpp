@@ -39,6 +39,9 @@ namespace pvd
 			if (GetConfig().GetProviders().GetRtmpProvider().IsBlockDuplicateStreamName())
 			{
 				logti("Reject %s/%s stream it is a stream with a duplicate name.", GetVHostAppName().CStr(), stream->GetName().CStr());
+				stream->SetApplication(GetSharedPtrAs<Application>());
+				stream->SetApplicationInfo(GetSharedPtrAs<Application>());
+				MonitorInstance->OnStreamCreationFailed(*stream);
 				return false;
 			}
 			else

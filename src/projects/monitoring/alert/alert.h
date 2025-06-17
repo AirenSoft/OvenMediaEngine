@@ -24,11 +24,16 @@ namespace mon
 		public:
 			~Alert();
 
+			bool IsStart();
 			bool Start(const std::shared_ptr<const cfg::Server> &server_config);
 			bool Stop();
 
+			void SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric);
+
 		private:
 			void DispatchThreadProc();
+
+			bool VerifyStreamRule(const cfg::alrt::rule::Rules &rules, Message::Code code);
 
 			bool VerifyQueueCongestionRules(const cfg::alrt::rule::Rules &rules, const std::shared_ptr<QueueMetrics> &queue_metric, std::vector<std::shared_ptr<Message>> &message_list);
 			void VerifyIngressRules(const cfg::alrt::rule::Rules &rules, const std::shared_ptr<StreamMetrics> &stream_metric, std::vector<std::shared_ptr<Message>> &message_list);
@@ -44,6 +49,8 @@ namespace mon
 			bool PutVerifiedMessages(const ov::String &messages_key, std::vector<std::shared_ptr<Message>> &message_list);
 			bool RemoveVerifiedMessages(const ov::String &messages_key);
 			std::vector<std::shared_ptr<Message>> GetVerifiedMessages(const ov::String &messages_key);
+
+			bool _is_start { false };
 
 			std::shared_ptr<const cfg::Server> _server_config = nullptr;
 

@@ -15,6 +15,7 @@ Alert can be set up on `<Server>`, as shown below.
 		<SecretKey>1234</SecretKey>
 		<Timeout>3000</Timeout>
 		<Rules>
+			<StreamStatus />
 			<Ingress>
 				<MinBitrate>2000000</MinBitrate>
 				<MaxBitrate>4000000</MaxBitrate>
@@ -38,20 +39,21 @@ Alert can be set up on `<Server>`, as shown below.
 
 ### Rules
 
-| Key     |                      | Description                                                                        |
-| ------- | -------------------- | ---------------------------------------------------------------------------------- |
-| Ingress | MinBitrate           | Detects when the input stream's bitrate is lower than the set value.               |
-|         | MaxBitrate           | Detects when the input stream's bitrate is greater than the set value.             |
-|         | MinFramerate         | Detects when the input stream's framerate is lower than the set value.             |
-|         | MaxFramerate         | Detects when the input stream's framerate is greater than the set value.           |
-|         | MinWidth             | Detects when the input stream's width is lower than the set value.                 |
-|         | MaxWidth             | Detects when the input stream's width is greater than the set value.               |
-|         | MinHeight            | Detects when the input stream's height is lower than the set value.                |
-|         | MaxHeight            | Detects when the input stream's height is greater than the set value.              |
-|         | MinSamplerate        | Detects when the input stream's samplerate is lower than the set value.            |
-|         | MaxSamplerate        | Detects when the input stream's samplerate is greater than the set value.          |
-|         | LongKeyFrameInterval | Detects when the input stream's keyframe interval is too long (exceeds 4 seconds). |
-|         | HasBFrames           | Detects when there are B-frames in the input stream.                               |
+| Key          |                      | Description                                                                        |
+| ------------ | -------------------- | ---------------------------------------------------------------------------------- |
+| StreamStatus |                      | It detects the creation, failure, readiness, and deletion states of a stream.      |
+| Ingress      | MinBitrate           | Detects when the input stream's bitrate is lower than the set value.               |
+|              | MaxBitrate           | Detects when the input stream's bitrate is greater than the set value.             |
+|              | MinFramerate         | Detects when the input stream's framerate is lower than the set value.             |
+|              | MaxFramerate         | Detects when the input stream's framerate is greater than the set value.           |
+|              | MinWidth             | Detects when the input stream's width is lower than the set value.                 |
+|              | MaxWidth             | Detects when the input stream's width is greater than the set value.               |
+|              | MinHeight            | Detects when the input stream's height is lower than the set value.                |
+|              | MaxHeight            | Detects when the input stream's height is greater than the set value.              |
+|              | MinSamplerate        | Detects when the input stream's samplerate is lower than the set value.            |
+|              | MaxSamplerate        | Detects when the input stream's samplerate is greater than the set value.          |
+|              | LongKeyFrameInterval | Detects when the input stream's keyframe interval is too long (exceeds 4 seconds). |
+|              | HasBFrames           | Detects when there are B-frames in the input stream.                               |
 
 ## Notification
 
@@ -60,7 +62,7 @@ Alert can be set up on `<Server>`, as shown below.
 #### Format
 
 ```http
-POST /configured/target/url/ HTTP/1.1
+POST /configured/target/url HTTP/1.1
 Content-Length: 1037
 Content-Type: application/json
 Accept: application/json
@@ -87,7 +89,7 @@ X-OME-Signature: f871jd991jj1929jsjd91pqa0amm1
 				"name":"Video",
 				"type":"Video",
 				"video":{
-					"bitrate":"300000",
+					"bitrate":300000,
 					"bypass":false,
 					"codec":"H264",
 					"framerate":30.0,
@@ -99,7 +101,7 @@ X-OME-Signature: f871jd991jj1929jsjd91pqa0amm1
 			},
 			{
 				"audio":{
-					"bitrate":"160000",
+					"bitrate":160000,
 					"bypass":false,
 					"channel":1,
 					"codec":"AAC",
@@ -122,24 +124,28 @@ X-OME-Signature: f871jd991jj1929jsjd91pqa0amm1
 
 Here is a detailed explanation of each element of JSON payload:
 
-<table><thead><tr><th width="290">Element</th><th>Description</th></tr></thead><tbody><tr><td>sourceUri</td><td><p>URI information of the detected source.</p><p>It consists of #&#x3C;vhost>#&#x3C;application>/&#x3C;stream>.</p></td></tr><tr><td>messages</td><td>List of messages detected by the Rules.</td></tr><tr><td>sourceInfo</td><td>Detailed information about the source at the time of detection. It is identical to the response of the REST API's source information query for the detected source.</td></tr><tr><td>type</td><td><p>It represents the format of the JSON payload. The information of the JSON elements can vary depending on the value of the type.</p><p>Currently, the value is fixed as <code>INGRESS</code>.</p></td></tr></tbody></table>
+<table><thead><tr><th width="290">Element</th><th>Description</th></tr></thead><tbody><tr><td>sourceUri</td><td><p>URI information of the detected source.</p><p>It consists of #&#x3C;vhost>#&#x3C;application>/&#x3C;stream>.</p></td></tr><tr><td>messages</td><td>List of messages detected by the Rules.</td></tr><tr><td>sourceInfo</td><td>Detailed information about the source at the time of detection. It is identical to the response of the REST API's source information query for the detected source.</td></tr><tr><td>type</td><td><p>It represents the format of the JSON payload. The information of the JSON elements can vary depending on the value of the type.</p></td></tr></tbody></table>
 
 #### Messages
 
-| Code                                | Description                                                                                                                      |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| INGRESS\_BITRATE\_LOW               | The ingress stream's current bitrate (`%d` bps) is lower than the configured bitrate (`%d` bps)                                  |
-| INGRESS\_BITRATE\_HIGH              | The ingress stream's current bitrate (`%d` bps) is higher than the configured bitrate (`%d` bps)                                 |
-| INGRESS\_FRAMERATE\_LOW             | The ingress stream's current framerate (`%.2f` fps) is lower than the configured framerate (`%.2f` fps)                          |
-| INGRESS\_FRAMERATE\_HIGH            | The ingress stream's current framerate (`%f` fps) is higher than the configured framerate (`%f` fps)                             |
-| INGRESS\_WIDTH\_SMALL               | The ingress stream's width (`%d`) is smaller than the configured width (`%d`)                                                    |
-| INGRESS\_WIDTH\_LARGE               | The ingress stream's width (`%d`) is larger than the configured width (`%d`)                                                     |
-| INGRESS\_HEIGHT\_SMALL              | The ingress stream's height (`%d`) is smaller than the configured height (`%d`)                                                  |
-| INGRESS\_HEIGHT\_LARGE              | The ingress stream's height (`%d`) is larger than the configured height (`%d`)                                                   |
-| INGRESS\_SAMPLERATE\_LOW            | The ingress stream's current samplerate (`%d`) is lower than the configured samplerate (`%d`)                                    |
-| INGRESS\_SAMPLERATE\_HIGH           | The ingress stream's current samplerate (`%d`) is higher than the configured samplerate (`%d`)                                   |
-| INGRESS\_LONG\_KEY\_FRAME\_INTERVAL | The ingress stream's current keyframe interval (`%.1f` seconds) is too long. Please use a keyframe interval of 4 seconds or less |
-| INGRESS\_HAS\_BFRAME                | There are B-Frames in the ingress stream                                                                                         |
+| Type    | Code                                      | Description                                                                                                                      |
+| ------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| STREAM  | STREAM\_CREATED                           | A new stream has been created                                                                                                    |
+|         | STREAM\_PREPARED                          | A stream has been prepared                                                                                                       |
+|         | STREAM\_DELETED                           | A stream has been deleted                                                                                                        |
+|         | STREAM\_CREATION\_FAILED\_DUPLICATE\_NAME | Failed to create stream because the specified stream name is already in use                                                      |
+| INGRESS | INGRESS\_BITRATE\_LOW                     | The ingress stream's current bitrate (`%d` bps) is lower than the configured bitrate (`%d` bps)                                  |
+|         | INGRESS\_BITRATE\_HIGH                    | The ingress stream's current bitrate (`%d` bps) is higher than the configured bitrate (`%d` bps)                                 |
+|         | INGRESS\_FRAMERATE\_LOW                   | The ingress stream's current framerate (`%.2f` fps) is lower than the configured framerate (`%.2f` fps)                          |
+|         | INGRESS\_FRAMERATE\_HIGH                  | The ingress stream's current framerate (`%f` fps) is higher than the configured framerate (`%f` fps)                             |
+|         | INGRESS\_WIDTH\_SMALL                     | The ingress stream's width (`%d`) is smaller than the configured width (`%d`)                                                    |
+|         | INGRESS\_WIDTH\_LARGE                     | The ingress stream's width (`%d`) is larger than the configured width (`%d`)                                                     |
+|         | INGRESS\_HEIGHT\_SMALL                    | The ingress stream's height (`%d`) is smaller than the configured height (`%d`)                                                  |
+|         | INGRESS\_HEIGHT\_LARGE                    | The ingress stream's height (`%d`) is larger than the configured height (`%d`)                                                   |
+|         | INGRESS\_SAMPLERATE\_LOW                  | The ingress stream's current samplerate (`%d`) is lower than the configured samplerate (`%d`)                                    |
+|         | INGRESS\_SAMPLERATE\_HIGH                 | The ingress stream's current samplerate (`%d`) is higher than the configured samplerate (`%d`)                                   |
+|         | INGRESS\_LONG\_KEY\_FRAME\_INTERVAL       | The ingress stream's current keyframe interval (`%.1f` seconds) is too long. Please use a keyframe interval of 4 seconds or less |
+|         | INGRESS\_HAS\_BFRAME                      | There are B-Frames in the ingress stream                                                                                         |
 
 #### Security
 

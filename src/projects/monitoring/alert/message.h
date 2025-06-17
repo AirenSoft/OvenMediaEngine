@@ -21,6 +21,12 @@ namespace mon
 			{
 				OK,
 
+				// Stream events
+				STREAM_CREATED,
+				STREAM_PREPARED,
+				STREAM_DELETED,
+				STREAM_CREATION_FAILED_DUPLICATE_NAME,
+
 				// Ingress Codes
 				INGRESS_BITRATE_LOW,
 				INGRESS_BITRATE_HIGH,
@@ -65,6 +71,11 @@ namespace mon
 				{
 					OV_CASE_RETURN(Code::OK, "OK");
 
+					OV_CASE_RETURN(Code::STREAM_CREATED, "STREAM_CREATED");
+					OV_CASE_RETURN(Code::STREAM_PREPARED, "STREAM_PREPARED");
+					OV_CASE_RETURN(Code::STREAM_DELETED, "STREAM_DELETED");
+					OV_CASE_RETURN(Code::STREAM_CREATION_FAILED_DUPLICATE_NAME, "STREAM_CREATION_FAILED_DUPLICATE_NAME");
+
 					OV_CASE_RETURN(Code::INGRESS_BITRATE_LOW, "INGRESS_BITRATE_LOW");
 					OV_CASE_RETURN(Code::INGRESS_BITRATE_HIGH, "INGRESS_BITRATE_HIGH");
 					OV_CASE_RETURN(Code::INGRESS_FRAMERATE_LOW, "INGRESS_FRAMERATE_LOW");
@@ -84,6 +95,11 @@ namespace mon
 				return "OK";
 			}
 
+			static ov::String DescriptionFromMessageCode(Code message_code)
+			{
+				return DescriptionFromMessageCode(message_code, 0, 0);
+			}
+
 			template <typename T>
 			static ov::String DescriptionFromMessageCode(Code message_code, T config_value, T measured_value)
 			{
@@ -93,6 +109,11 @@ namespace mon
 				switch (message_code)
 				{
 					OV_CASE_RETURN(Code::OK, "The current status is good");
+
+					OV_CASE_RETURN(Code::STREAM_CREATED, "A new stream has been created");
+					OV_CASE_RETURN(Code::STREAM_PREPARED, "A stream has been prepared");
+					OV_CASE_RETURN(Code::STREAM_DELETED, "A stream has been deleted");
+					OV_CASE_RETURN(Code::STREAM_CREATION_FAILED_DUPLICATE_NAME, "Failed to create stream because the specified stream name is already in use");
 
 					OV_CASE_RETURN(Code::INGRESS_BITRATE_LOW,
 										ov::String::FormatString("The ingress stream's current bitrate (%d bps) is lower than the configured bitrate (%d bps)", measured, config));

@@ -49,6 +49,8 @@ namespace mon
 		bool OnApplicationCreated(const info::Application &app_info);
 		bool OnApplicationDeleted(const info::Application &app_info);
 		bool OnStreamCreated(const info::Stream &stream_info);
+		bool OnStreamCreationFailed(const info::Stream &stream_info);
+		bool OnStreamPrepared(const info::Stream &stream_info);
 		bool OnStreamDeleted(const info::Stream &stream_info);
 		bool OnStreamUpdated(const info::Stream &stream_info);
 
