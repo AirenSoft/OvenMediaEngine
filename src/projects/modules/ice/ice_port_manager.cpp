@@ -18,19 +18,21 @@ std::shared_ptr<IcePort> IcePortManager::CreatePort(std::shared_ptr<IcePortObser
 	if (_ice_port == nullptr)
 	{
 		_ice_port = std::make_shared<IcePort>();
-
-		observer->SetId(_last_issued_observer_id++);
-		_observers.push_back(observer);
 	}
+
+	auto new_id = _last_issued_observer_id++;
+
+	observer->SetId(new_id);
+	_registered_observer_map[new_id] = observer;
 
 	return _ice_port;
 }
 
 bool IcePortManager::IsRegisteredObserver(const std::shared_ptr<IcePortObserver> &observer)
 {
-	for (const auto &item : _observers)
+	for (const auto &registered_observer : _registered_observer_map)
 	{
-		if (item->GetId() == observer->GetId())
+		if (registered_observer.first == observer->GetId())
 		{
 			return true;
 		}
@@ -61,7 +63,7 @@ bool IcePortManager::CreateIceCandidates(
 
 	bool is_parsed;
 	auto ice_worker_count = ice_candidates_config.GetIceWorkerCount(&is_parsed);
-	ice_worker_count = is_parsed ? ice_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+	ice_worker_count	  = is_parsed ? ice_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
 
 	if (_ice_port->CreateIceCandidates(server_name, server_config, ice_candidate_list, ice_worker_count) == false)
 	{
@@ -108,19 +110,19 @@ bool IcePortManager::CreateTurnServersInternal(
 	const std::shared_ptr<IcePortObserver> &observer,
 	const cfg::Server &server_config, const cfg::bind::cmm::Webrtc &webrtc_bind_config)
 {
-	auto &ice_candidates_config = webrtc_bind_config.GetIceCandidates();
+	auto &ice_candidates_config	 = webrtc_bind_config.GetIceCandidates();
 
 	bool is_tcp_relay_configured = false;
-	const auto &tcp_relay_list = ice_candidates_config.GetTcpRelayList(&is_tcp_relay_configured);
+	const auto &tcp_relay_list	 = ice_candidates_config.GetTcpRelayList(&is_tcp_relay_configured);
 	std::vector<ov::String> tcp_relay_address_string_list;
 
 	if (is_tcp_relay_configured)
 	{
 		bool is_tcp_relay_worker_count_configured;
 		auto tcp_relay_worker_count = ice_candidates_config.GetTcpRelayWorkerCount(&is_tcp_relay_worker_count_configured);
-		tcp_relay_worker_count = is_tcp_relay_worker_count_configured ? tcp_relay_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+		tcp_relay_worker_count		= is_tcp_relay_worker_count_configured ? tcp_relay_worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
 
-		auto &ip_list = server_config.GetIPList();
+		auto &ip_list				= server_config.GetIPList();
 
 		if (ip_list.empty())
 		{
@@ -158,7 +160,7 @@ bool IcePortManager::CreateTurnServersInternal(
 
 						for (auto &address : tcp_relay_address_list)
 						{
-							auto found = bound_map.find(address);
+							auto found			= bound_map.find(address);
 							auto address_string = ov::String::FormatString("%s/%s", address.ToString().CStr(), ov::StringFromSocketType(ov::SocketType::Tcp));
 
 							if (found != bound_map.end())
@@ -244,7 +246,7 @@ bool IcePortManager::Release(std::shared_ptr<IcePortObserver> observer)
 		_ice_port = nullptr;
 	}
 
-	_observers.clear();
+	_registered_observer_map.clear();
 
 	return true;
 }
@@ -283,7 +285,7 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 
 		address.EachPort([&](const ov::String &host, const uint16_t port) -> bool {
 			auto &socket_type_map = port_map[port];
-			auto &address_map = socket_type_map[socket_type];
+			auto &address_map	  = socket_type_map[socket_type];
 
 			std::vector<ov::SocketAddress> address_list;
 
@@ -324,8 +326,8 @@ bool IcePortManager::GenerateIceCandidates(const cfg::bind::cmm::IceCandidates &
 
 		for (auto &socket_type_item : port_item.second)
 		{
-			const auto socket_type = socket_type_item.first;
-			const auto &address_map = socket_type_item.second;
+			const auto socket_type	  = socket_type_item.first;
+			const auto &address_map	  = socket_type_item.second;
 
 			const ov::String protocol = StringFromSocketType(socket_type);
 
@@ -390,7 +392,7 @@ bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vec
 		return false;
 	}
 
-	auto protocol = (tokens.size() == 2) ? tokens[1].UpperCaseString() : "";
+	auto protocol		= (tokens.size() == 2) ? tokens[1].UpperCaseString() : "";
 
 	ov::SocketType type = ov::SocketType::Tcp;
 	if (protocol == "UDP")
@@ -411,10 +413,10 @@ bool IcePortManager::ParseIceCandidate(const ov::String &ice_candidate, std::vec
 		// Use default value
 	}
 
-	*address = ov::SocketAddress::ParseAddress(tokens[0]);
+	*address			   = ov::SocketAddress::ParseAddress(tokens[0]);
 	auto address_utilities = ov::AddressUtilities::GetInstance();
 
-	const auto &host = address->host;
+	const auto &host	   = address->host;
 
 	if (host.IsEmpty())
 	{

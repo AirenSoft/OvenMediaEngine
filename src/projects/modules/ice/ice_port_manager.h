@@ -56,5 +56,5 @@ protected:
 private:
 	std::shared_ptr<IcePort> _ice_port = nullptr;
 	std::atomic<uint32_t> _last_issued_observer_id{0};
-	std::vector<std::shared_ptr<IcePortObserver>> _observers;
+	std::unordered_map<uint32_t, std::shared_ptr<IcePortObserver>> _registered_observer_map;
 };
