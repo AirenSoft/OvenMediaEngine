@@ -155,16 +155,16 @@ namespace pub
 
 	bool SrtPublisher::Stop()
 	{
-		decltype(_physical_port_list) physical_port_list;
-		{
-			std::lock_guard lock_guard(_physical_port_list_mutex);
-			physical_port_list = std::move(_physical_port_list);
-		}
+		_physical_port_list_mutex.lock();
+		auto physical_port_list = std::move(_physical_port_list);
+		_physical_port_list_mutex.unlock();
 
-		for (auto &server_port : physical_port_list)
+		auto physical_port_manager = PhysicalPortManager::GetInstance();
+
+		for (auto &physical_port : physical_port_list)
 		{
-			server_port->RemoveObserver(this);
-			server_port->Close();
+			physical_port->RemoveObserver(this);
+			physical_port_manager->DeletePort(physical_port);
 		}
 
 		_disconnect_timer.Stop();
