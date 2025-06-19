@@ -970,7 +970,7 @@ namespace pvd
         std::map<int, int64_t> track_single_file_dts_offset_map;
         std::map<int, bool> end_of_track_map;
 
-		bool sent_keyframe = false;
+		// bool sent_keyframe = false;
 
         // Play
         while (_worker_thread_running)

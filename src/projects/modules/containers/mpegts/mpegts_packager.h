@@ -485,5 +485,7 @@ namespace mpegts
 		mutable std::shared_mutex _retained_segments_guard;
 
 		std::vector<std::shared_ptr<PackagerSink>> _sinks;
+
+		double _next_target_duration_ms = 0.0; // next target duration in milliseconds
     };
 }
