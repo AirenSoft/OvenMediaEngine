@@ -48,6 +48,8 @@ public:
 	ov::String GetCodecsString() const;
 
 	ov::String ToString(bool rewind) const;
+	ov::String MakeSegmentString(const std::shared_ptr<mpegts::Segment> &segment) const;
+	std::shared_ptr<mpegts::Segment> GetLatestSegment() const;
 
 	void SetEndList();
 
