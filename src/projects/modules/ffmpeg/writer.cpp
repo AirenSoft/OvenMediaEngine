@@ -270,8 +270,18 @@ namespace ffmpeg
 		AVPacket av_packet = {0};
 		if (ToAVPacket(av_packet, av_stream, packet, media_track, start_time) == false)
 		{
-			logte("Failed to convert packet to av packet");
+			logte("Failed to convert MediaPacket to AVPacket");
 			return false;
+		}
+
+		// When a packet with a higher PTS from one of several tracks is sent first, the start time is set. 
+		// If a later packet arrives but actually comes from an earlier time than the first one, it is dropped. 
+		// But this is not treated as an error.
+		if(av_packet.pts < 0 || av_packet.dts < 0 || av_packet.size <= 0)
+		{
+			logtw("To avoid negative timestamps, the packet is dropped. track:%d, pts:%lld, dts:%lld", media_track->GetId(), av_packet.pts, av_packet.dts);
+			av_packet_unref(&av_packet);
+			return true;
 		}
 
 		std::shared_ptr<const ov::Data> new_data = nullptr;
