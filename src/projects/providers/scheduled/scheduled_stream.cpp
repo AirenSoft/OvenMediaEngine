@@ -562,7 +562,7 @@ namespace pvd
             auto pts = media_packet->GetPts();
             auto dts = media_packet->GetDts();
             auto duration = media_packet->GetDuration();
-
+			
             // origin timebase to track timebase
             // pts = static_cast<double>(pts) * (static_cast<double>(origin_tb.num) / static_cast<double>(origin_tb.den) * track->GetTimeBase().GetTimescale());
             // dts = static_cast<double>(dts) * (static_cast<double>(origin_tb.num) / static_cast<double>(origin_tb.den) * track->GetTimeBase().GetTimescale());
@@ -581,6 +581,14 @@ namespace pvd
            
             AdjustTimestampByBase(track_id, pts, dts, std::numeric_limits<int64_t>::max(), duration);
 			logtd("Scheduled Channel Send Packet : %s/%s: Track %d, origin dts : %lld, pts %lld, dts %lld, duration %lld, tb %f", GetApplicationName(), GetName().CStr(), track_id, single_file_dts, pts, dts, duration, track->GetTimeBase().GetExpr());
+
+			int64_t dts_us = rescale(dts, 1000000 * track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen());
+			if (_global_track_offset_us_map.find(track_id) == _global_track_offset_us_map.end())
+			{
+				_global_track_offset_us_map[track_id] = dts_us;
+			}
+
+			int64_t global_zero_based_dts = dts_us - _global_track_offset_us_map[track_id];
 
             media_packet->SetPts(pts);
             media_packet->SetDts(dts);
@@ -637,12 +645,11 @@ namespace pvd
                 }
             }
             
-            double elapsed = _realtime_clock.ElapsedUs();
-            double dts_us = static_cast<double>(dts) * 1000.0 * 1000.0 * track->GetTimeBase().GetExpr();
-            if (elapsed < dts_us)
+            int64_t elapsed = _realtime_clock.ElapsedUs();
+            if (elapsed < global_zero_based_dts)
             {
-                int64_t wait_time = dts_us - elapsed;
-                logtd("Scheduled Channel : %s/%s: Current(%f) Dts(%f) Wait(%lld)", GetApplicationName(), GetName().CStr(), elapsed, dts_us, wait_time);
+                int64_t wait_time = global_zero_based_dts - elapsed;
+                // logti("Scheduled Channel : %s/%s: Track(%d) Current(%lld) DTS(%lld) Wait(%lld)", GetApplicationName(), GetName().CStr(), track_id, elapsed, global_zero_based_dts, wait_time);
                 std::this_thread::sleep_for(std::chrono::microseconds(wait_time));
             }
         }
@@ -1082,7 +1089,13 @@ namespace pvd
             auto single_file_dts = dts - track_single_file_dts_offset_map[track_id];
 
             AdjustTimestampByBase(track_id, pts, dts, std::numeric_limits<int64_t>::max(), duration);
-			
+
+			int64_t dts_us = rescale(dts, 1000000 * track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen());
+			if (_global_track_offset_us_map.find(track_id) == _global_track_offset_us_map.end())
+			{
+				_global_track_offset_us_map[track_id] = dts_us;
+			}
+
 			media_packet->SetMsid(GetMsid());
             media_packet->SetPts(pts);
             media_packet->SetDts(dts);

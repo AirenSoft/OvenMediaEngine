@@ -85,6 +85,14 @@ enum class ProviderType : int8_t
 	Multiplex
 };
 
+enum class TimestampMode : int8_t
+{
+	Auto = 0, // Default mode
+	ZeroBased,
+	Original,
+	SystemClock
+};
+
 // Note : If you update PublisherType, you have to update /base/ovlibrary/converter.h:ToString(PublisherType type)
 enum class PublisherType : int8_t
 {

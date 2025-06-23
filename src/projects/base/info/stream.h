@@ -138,6 +138,16 @@ namespace info
 			}
 		}
 
+		void SetTimestampMode(TimestampMode mode)
+		{
+			_timestamp_mode = mode;
+		}
+
+		TimestampMode GetTimestampMode() const
+		{
+			return _timestamp_mode;
+		}
+
 	protected:
 		info::stream_id_t _id = 0;
 		uint32_t _msid = 0;
@@ -181,5 +191,7 @@ namespace info
 		ov::String _origin_stream_uuid;
 
 		bool _on_air = false;
+
+		TimestampMode _timestamp_mode = TimestampMode::Auto;
 	};
 }  // namespace info

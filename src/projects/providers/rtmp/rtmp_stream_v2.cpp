@@ -404,20 +404,9 @@ namespace pvd::rtmp
 	}
 
 	// Make PTS/DTS of first frame are 0
-	void RtmpStreamV2::AdjustTimestamp(int64_t &pts, int64_t &dts)
+	void RtmpStreamV2::AdjustTimestamp(uint32_t track_id, int64_t &pts, int64_t &dts)
 	{
-		if (_is_incoming_timestamp_used == false)
-		{
-			if (_first_frame)
-			{
-				_first_frame = false;
-				_first_pts_offset = pts;
-				_first_dts_offset = dts;
-			}
-
-			pts -= _first_pts_offset;
-			dts -= _first_dts_offset;
-		}
+		AdjustTimestampByBase(track_id, pts, dts, std::numeric_limits<int64_t>::max());
 	}
 
 	bool RtmpStreamV2::PublishStream()
@@ -442,7 +431,6 @@ namespace pvd::rtmp
 		const auto &rtmp_provider = application->GetConfig().GetProviders().GetRtmpProvider();
 
 		_chunk_handler.SetEventGeneratorConfig(rtmp_provider.GetEventGenerator());
-		_is_incoming_timestamp_used = rtmp_provider.IsIncomingTimestampUsed();
 
 		// Data Track
 		if (GetFirstTrackByType(cmn::MediaType::Data) == nullptr)

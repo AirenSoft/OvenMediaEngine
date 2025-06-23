@@ -122,7 +122,7 @@ namespace pvd
 		bool CheckStreamExpired();
 		bool ValidatePublishUrl();
 
-		void AdjustTimestamp(int64_t &pts, int64_t &dts);
+		void AdjustTimestamp(uint32_t track_id, int64_t &pts, int64_t &dts);
 
 		// RTMP related
 		RtmpHandshakeState _handshake_state = RtmpHandshakeState::Uninitialized;
@@ -200,7 +200,5 @@ namespace pvd
 
 		cfg::vhost::app::pvd::EventGenerator _event_generator;
 		ov::DelayQueue _event_test_timer{"RtmpEventTestTimer"};
-
-		bool _is_incoming_timestamp_used = false;
 	};
 }  // namespace pvd

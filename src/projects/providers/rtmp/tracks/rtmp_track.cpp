@@ -41,7 +41,7 @@ namespace pvd::rtmp
 
 	void RtmpTrack::AdjustTimestamp(int64_t &pts, int64_t &dts)
 	{
-		_stream->AdjustTimestamp(pts, dts);
+		_stream->AdjustTimestamp(GetTrackId(), pts, dts);
 	}
 
 	std::shared_ptr<MediaTrack> RtmpTrack::CreateMediaTrack(

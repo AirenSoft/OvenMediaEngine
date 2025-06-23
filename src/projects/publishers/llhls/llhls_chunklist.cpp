@@ -460,6 +460,11 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 		std::chrono::system_clock::time_point tp{std::chrono::milliseconds{segment->GetStartTime()}};
 		playlist.AppendFormat("#EXT-X-PROGRAM-DATE-TIME:%s\n", ov::Converter::ToISO8601String(tp).CStr());
 
+		logtd("MakeChunklist[Track : %s/%s]: segment(%d) duration(%.2f) url(%s) start_time(%lld) date_time(%s)",
+			_track->GetPublicName().CStr(), _track->GetVariantName().CStr(),
+			segment->GetSequence(), segment->GetDuration(), segment->GetUrl().CStr(), segment->GetStartTime(), 
+			ov::Converter::ToISO8601String(tp).CStr());
+
 		// Low Latency Mode
 		if (legacy == false)
 		{

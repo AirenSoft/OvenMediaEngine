@@ -1652,15 +1652,15 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 		return;
 	}
 
-	// Milliseconds
-	auto chunk_duration = static_cast<float>(chunk->GetDuration()) / static_cast<float>(1000.0);
+	// Milliseconds to seconds
+	auto chunk_duration = static_cast<double>(chunk->GetDuration()) / static_cast<double>(1000.0);
 
 	// Human readable timestamp
 	if (_first_chunk == true)
 	{
 		_first_chunk = false;
 
-		auto first_chunk_timestamp_ms = (static_cast<float>(chunk->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
+		auto first_chunk_timestamp_ms = (static_cast<double>(chunk->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
 
 		_wallclock_offset_ms = std::chrono::duration_cast<std::chrono::milliseconds>(GetInputStreamPublishedTime().time_since_epoch()).count() - first_chunk_timestamp_ms;
 
@@ -1670,7 +1670,7 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 		}
 	}
 
-	auto start_timestamp = (static_cast<float>(chunk->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
+	auto start_timestamp = (static_cast<double>(chunk->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
 	start_timestamp += _wallclock_offset_ms;
 
 	auto chunk_info = LLHlsChunklist::SegmentInfo(chunk->GetNumber(), start_timestamp, chunk_duration, chunk->GetSize(),

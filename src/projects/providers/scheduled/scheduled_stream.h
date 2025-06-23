@@ -116,6 +116,7 @@ namespace pvd
 		int64_t _biggest_timestamp = -1LL;
 
         ov::StopWatch _realtime_clock;
+		std::map<uint32_t, int64_t> _global_track_offset_us_map;
         ov::StopWatch _failback_check_clock;
 
         std::map<uint32_t, std::shared_ptr<MediaPacket>> _last_packet_map;

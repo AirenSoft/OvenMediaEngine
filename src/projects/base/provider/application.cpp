@@ -170,6 +170,21 @@ namespace pvd
 			}
 		}
 
+		// Set Timestamp Mode
+		TimestampMode timestamp_mode = TimestampMode::Auto;
+
+		auto cfg_provider_list = GetConfig().GetProviders().GetProviderList();
+		for (const auto &cfg_provider : cfg_provider_list)
+		{
+			if (cfg_provider->GetType() == GetParentProvider()->GetProviderType())
+			{
+				timestamp_mode = cfg_provider->GetTimestampMode();
+				break;
+			}
+		}
+
+		stream->SetTimestampMode(timestamp_mode);
+
 		{
 			std::lock_guard<std::shared_mutex> streams_lock(_streams_guard);
 

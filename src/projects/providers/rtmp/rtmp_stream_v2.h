@@ -83,7 +83,7 @@ namespace pvd::rtmp
 		bool CheckStreamExpired() const;
 		bool ValidatePublishUrl();
 
-		void AdjustTimestamp(int64_t &pts, int64_t &dts);
+		void AdjustTimestamp(uint32_t track_id, int64_t &pts, int64_t &dts);
 
 		// Called by `RtmpChunkHandler`
 		std::shared_ptr<RtmpTrack> AddRtmpTrack(std::shared_ptr<RtmpTrack> rtmp_track);
@@ -100,8 +100,6 @@ namespace pvd::rtmp
 	private:
 		RtmpHandshakeHandler _handshake_handler;
 		RtmpChunkHandler _chunk_handler;
-
-		bool _is_incoming_timestamp_used = false;
 
 		// To make first PTS 0
 		bool _first_frame = true;
