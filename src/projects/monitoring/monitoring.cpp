@@ -412,7 +412,13 @@ namespace mon
 
 	void Monitoring::OnSessionDisconnected(const info::Stream &stream_info, PublisherType type)
 	{
-		auto host_metric = _server_metric->GetHostMetrics(stream_info.GetApplicationInfo().GetHostInfo());
+		auto server_metric = _server_metric;
+		if (server_metric == nullptr)
+		{
+			return;
+		}
+
+		auto host_metric = server_metric->GetHostMetrics(stream_info.GetApplicationInfo().GetHostInfo());
 		if(host_metric == nullptr)
 		{
 			return;
@@ -428,7 +434,7 @@ namespace mon
 			return;
 		}
 
-		_server_metric->OnSessionDisconnected(type);
+		server_metric->OnSessionDisconnected(type);
 		host_metric->OnSessionDisconnected(type);
 		app_metric->OnSessionDisconnected(type);
 		stream_metric->OnSessionDisconnected(type);
@@ -436,6 +442,12 @@ namespace mon
 
 	void Monitoring::OnSessionsDisconnected(const info::Stream &stream_info, PublisherType type, uint64_t number_of_sessions)
 	{
+		auto server_metric = _server_metric;
+		if (server_metric == nullptr)
+		{
+			return;
+		}
+
 		auto host_metric = _server_metric->GetHostMetrics(stream_info.GetApplicationInfo().GetHostInfo());
 		if(host_metric == nullptr)
 		{
