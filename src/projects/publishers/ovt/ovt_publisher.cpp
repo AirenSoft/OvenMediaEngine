@@ -115,10 +115,12 @@ bool OvtPublisher::Stop()
 	auto server_port_list = std::move(_server_port_list);
 	_server_port_list_mutex.unlock();
 
+	auto physical_port_manager = PhysicalPortManager::GetInstance();
+
 	for (auto &server_port : server_port_list)
 	{
 		server_port->RemoveObserver(this);
-		server_port->Close();
+		physical_port_manager->DeletePort(server_port);
 	}
 
 	return Publisher::Stop();
