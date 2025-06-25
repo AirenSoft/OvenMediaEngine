@@ -49,6 +49,9 @@ namespace pvd
         bool PullSourceStreams();
         bool ReleaseSourceStreams();
 
+		bool Publish();
+		bool IsPublished() const;
+
         uint64_t MakeSourceTrackIdUnique(uint32_t tap_id, uint32_t track_id) const;
         uint32_t GetNewTrackId(uint64_t source_track_id) const;
 
@@ -61,5 +64,7 @@ namespace pvd
 
         MuxState _mux_state = MuxState::None;
         ov::String _pulling_state_msg;
+
+		bool _is_published = false;
     };
 }

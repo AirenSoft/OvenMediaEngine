@@ -59,5 +59,7 @@ namespace pvd
 
         std::map<ov::String, std::shared_ptr<MultiplexStream>> _multiplex_streams;
         std::shared_mutex _multiplex_streams_mutex;
+
+		int _packet_silence_timeout_ms = 0;
     };
 }

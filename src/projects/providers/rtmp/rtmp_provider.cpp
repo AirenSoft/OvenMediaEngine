@@ -152,7 +152,7 @@ namespace pvd
 			  GetProviderName(),
 			  ov::String::Join(rtmp_address_string_list, ", ").CStr());
 
-		return Provider::Start();
+		return PushProvider::Start();
 	}
 
 	bool RtmpProvider::Stop()
@@ -166,7 +166,7 @@ namespace pvd
 		}
 		_physical_port_list.clear();
 
-		return Provider::Stop();
+		return PushProvider::Stop();
 	}
 
 	bool RtmpProvider::OnCreateHost(const info::Host &host_info)

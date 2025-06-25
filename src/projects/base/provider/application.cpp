@@ -71,6 +71,18 @@ namespace pvd
 		return last_issued_stream_id++;
 	}
 
+	const std::map<uint32_t, std::shared_ptr<Stream>> Application::GetStreams()
+	{
+		std::shared_lock<std::shared_mutex> lock(_streams_guard);
+		
+		if(_streams.empty())
+		{
+			return {};
+		}
+
+		return _streams;
+	}
+
 	const std::shared_ptr<Stream> Application::GetStreamById(uint32_t stream_id)
 	{
 		std::shared_lock<std::shared_mutex> lock(_streams_guard);

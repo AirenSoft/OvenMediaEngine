@@ -123,7 +123,7 @@ namespace pvd
 				_physical_port_list = std::move(physical_port_list);
 			}
 
-			return Provider::Start();
+			return PushProvider::Start();
 		}
 
 		for (auto &physical_port : physical_port_list)
@@ -149,7 +149,7 @@ namespace pvd
 			physical_port_manager->DeletePort(physical_port);
 		}
 
-		return Provider::Stop();
+		return PushProvider::Stop();
 	}
 
 	bool SrtProvider::OnCreateHost(const info::Host &host_info)
@@ -450,9 +450,9 @@ namespace pvd
 		PushProvider::OnDataReceived(channel_id, data);
 	}
 
-	void SrtProvider::OnTimer(const std::shared_ptr<PushStream> &channel)
+	void SrtProvider::OnTimedOut(const std::shared_ptr<PushStream> &channel)
 	{
-		PushProvider::OnChannelDeleted(channel);
+		
 	}
 
 	void SrtProvider::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,

@@ -40,6 +40,8 @@ namespace pvd
         _multiplex_files_path = ov::GetDirPath(config.GetMuxFilesDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
         _multiplex_file_name_regex = ov::Regex::CompiledRegex(ov::Regex::WildCardRegex(ov::String::FormatString("*.%s", MultiplexFileExtension)));
         
+		_packet_silence_timeout_ms = config.GetPacketSilenceTimeoutMs();
+
         return Application::Start();
     }
 
@@ -120,6 +122,25 @@ namespace pvd
             {
                 found = true;
             }
+			else if (stream != nullptr)
+			{
+				// Check if stream is silent
+				auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
+				if (stream_metrics != nullptr)
+				{
+					auto current = std::chrono::high_resolution_clock::now();
+					auto elapsed_time_from_last_recv = std::chrono::duration_cast<std::chrono::milliseconds>(current - stream_metrics->GetLastRecvTime()).count();
+
+					if (elapsed_time_from_last_recv > _packet_silence_timeout_ms)
+					{
+						found = true;
+						// Delete immediately 
+						multiplex_file_info._deleted_checked_count = 2;
+					
+						logtw("Multiplex stream is silent for %d ms, removing: %s/%s (%s)", _packet_silence_timeout_ms, GetVHostAppName().CStr(), multiplex_file_info._multiplex_profile->GetOutputStreamName().CStr(), multiplex_file_info._file_path.CStr());
+					}
+				}
+			}
 
             if (found == true)
             {

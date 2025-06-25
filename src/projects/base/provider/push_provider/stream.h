@@ -40,11 +40,12 @@ namespace pvd
 		bool IsReadyToReceiveStreamData();
 		bool IsPublished();
 
+		// channel may not yet determined, so we manage the timer separately
 		void UpdateLastReceivedTime();
-		void SetTimeoutSec(time_t seconds);
-		time_t GetElapsedSecSinceLastReceived();
-		bool IsTimedOut();
-
+		void SetPacketSilenceTimeoutMs(time_t timeout_ms);
+		time_t GetPacketSilenceTimeoutMs();
+		time_t GetElapsedMsSinceLastReceived();
+		
 		uint32_t GetNumberOfAttempsToPublish()
 		{
 			return _attemps_publish_count;
@@ -84,8 +85,8 @@ namespace pvd
 		// Published?
 		bool			_is_published = false;
 		// Time elapsed since the last OnDataReceived function was called
-		ov::StopWatch 	_stop_watch;
-		time_t			_timeout_sec = 0;
+		ov::StopWatch 	_packet_silence_timer;
+		time_t			_packet_silence_timeout_ms = 0;
 
 		uint32_t		_attemps_publish_count = 0;
 

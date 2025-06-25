@@ -25,11 +25,13 @@ namespace cfg
 					TimestampMode _timestamp_mode = TimestampMode::Auto;
 					bool _use_incoming_timestamp  = false;	// For backward compatibility
 					ov::String _timestamp_mode_str;
+					int _packet_silence_timeout_ms = 0;	 // Default value for packet silence timeout
 
 				public:
 					virtual ProviderType GetType() const = 0;
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetMaxConnection, _max_connection)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetTimestampMode, _timestamp_mode)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetPacketSilenceTimeoutMs, _packet_silence_timeout_ms)
 
 				protected:
 					void MakeList() override
@@ -62,6 +64,24 @@ namespace cfg
 
 											   _timestamp_mode = _use_incoming_timestamp ? TimestampMode::Original : TimestampMode::Auto;
 
+											   return nullptr;
+										   });
+
+						Register<Optional>("PacketSilenceTimeoutMs", &_packet_silence_timeout_ms, nullptr,
+										   [=]() -> std::shared_ptr<ConfigError> {
+											   switch (GetType())
+											   {
+												   case ProviderType::Rtmp:
+												   case ProviderType::Mpegts:
+												   case ProviderType::WebRTC:
+												   case ProviderType::Srt:
+												   case ProviderType::Multiplex:
+													   // Supported provider types
+													   break;
+
+												   default:
+													   return CreateConfigErrorPtr("PacketSilenceTimeoutMs is not supported for this provider type: %s", StringFromProviderType(GetType()).CStr());
+											   }
 											   return nullptr;
 										   });
 					}

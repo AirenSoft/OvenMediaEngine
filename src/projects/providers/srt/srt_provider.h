@@ -64,7 +64,7 @@ namespace pvd
 		//--------------------------------------------------------------------
 		// Implementation of PushProvider's virtual functions
 		//--------------------------------------------------------------------
-		void OnTimer(const std::shared_ptr<PushStream> &channel) override;
+		void OnTimedOut(const std::shared_ptr<PushStream> &channel) override;
 
 		//--------------------------------------------------------------------
 		// Implementation of PhysicalPortObserver

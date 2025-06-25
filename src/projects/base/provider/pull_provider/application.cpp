@@ -59,13 +59,7 @@ namespace pvd
 		
 		while(!_stop_collector_thread_flag)
 		{
-			// TODO (Getroot): If there is no stream, use semaphore to wait until the stream is added.
-			std::shared_lock<std::shared_mutex> lock(_streams_guard, std::defer_lock);
-			lock.lock();
-			// Copy to prevent performance degradation due to mutex lock in loop
-			auto streams = _streams;
-			lock.unlock();
-
+			auto streams = GetStreams();
 			for (auto const &x : streams)
 			{
 				auto stream = std::dynamic_pointer_cast<PullStream>(x.second);
