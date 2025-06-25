@@ -102,6 +102,8 @@ namespace pvd
 		
 		_is_published = GetProvider()->PublishChannel(GetChannelId(), vhost_app_name, GetSharedPtrAs<PushStream>());
 
+		_packet_silence_timer.Start();
+
 		return _is_published;
 	}
 

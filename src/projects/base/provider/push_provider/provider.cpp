@@ -18,7 +18,9 @@ namespace pvd
     {
 		_run_task_runner = true;
 		_task_runner_thread = std::thread(&PushProvider::ChannelTaskRunner, this);
-		pthread_setname_np(_task_runner_thread.native_handle(), "PProvTimer");
+
+		ov::String thread_name = ov::String::FormatString("PTimer-%s", StringFromProviderType(GetProviderType()).CStr());
+		pthread_setname_np(_task_runner_thread.native_handle(), thread_name.CStr());
 
         return Provider::Start();
     }
@@ -183,6 +185,10 @@ namespace pvd
 					// If the packet silence timeout is 0, it means that the channel is not timed out.
 					continue;
 				}
+
+				logtd("Checking channel %d, elapsed %d ms, timeout %d ms", channel->GetChannelId(), 
+																			channel->GetElapsedMsSinceLastReceived(),
+																			channel->GetPacketSilenceTimeoutMs());
 
 				if (channel->GetElapsedMsSinceLastReceived() > channel->GetPacketSilenceTimeoutMs())
 				{
