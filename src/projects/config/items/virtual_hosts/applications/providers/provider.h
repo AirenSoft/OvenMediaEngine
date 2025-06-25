@@ -21,9 +21,9 @@ namespace cfg
 				struct Provider : public Item
 				{
 				protected:
-					int _max_connection = 0;
+					int _max_connection			  = 0;
 					TimestampMode _timestamp_mode = TimestampMode::Auto;
-					bool _use_incoming_timestamp = false; // For backward compatibility
+					bool _use_incoming_timestamp  = false;	// For backward compatibility
 					ov::String _timestamp_mode_str;
 
 				public:
@@ -36,41 +36,37 @@ namespace cfg
 					{
 						Register<Optional>("MaxConnection", &_max_connection);
 						Register<Optional>("TimestampMode", &_timestamp_mode_str, nullptr,
-										[=]() -> std::shared_ptr<ConfigError>
-										{
-											if (_timestamp_mode_str.UpperCaseString() == "ORIGINAL")
-											{
-												_timestamp_mode = TimestampMode::Original;
-											}
-											else if (_timestamp_mode_str.UpperCaseString() == "ZEROBASED")
-											{
-												_timestamp_mode = TimestampMode::ZeroBased;
-											}
-											else
-											{
-												return CreateConfigErrorPtr("Invalid TimestampMode value: %s (expected : UseIncoming, ZeroBased)", _timestamp_mode_str.CStr());
-											}
-											return nullptr;
-										});
+										   [=]() -> std::shared_ptr<ConfigError> {
+											   auto mode_str = _timestamp_mode_str.UpperCaseString();
+
+											   if (mode_str == "ZEROBASED")
+											   {
+												   _timestamp_mode = TimestampMode::ZeroBased;
+											   }
+											   else if (mode_str == "ORIGINAL")
+											   {
+												   _timestamp_mode = TimestampMode::Original;
+											   }
+											   else
+											   {
+												   return CreateConfigErrorPtr("Invalid TimestampMode value: %s (expected: ZeroBased, Original)", _timestamp_mode_str.CStr());
+											   }
+
+											   return nullptr;
+										   });
 
 						// For backward compatibility
 						Register<Optional>("UseIncomingTimestamp", &_use_incoming_timestamp, nullptr,
-										[=]() -> std::shared_ptr<ConfigError>
-										{
-											logw("Config", "UseIncomingTimestamp is deprecated. Please use TimestampMode instead.");
-											if (_use_incoming_timestamp)
-											{
-												_timestamp_mode = TimestampMode::Original;
-											}
-											else
-											{
-												_timestamp_mode = TimestampMode::Auto;
-											}
-											return nullptr;
-										});
+										   [=]() -> std::shared_ptr<ConfigError> {
+											   logw("Config", "UseIncomingTimestamp is deprecated. Please use TimestampMode instead.");
+
+											   _timestamp_mode = _use_incoming_timestamp ? TimestampMode::Original : TimestampMode::Auto;
+
+											   return nullptr;
+										   });
 					}
 				};
 			}  // namespace pvd
-		}	   // namespace app
-	}		   // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg
