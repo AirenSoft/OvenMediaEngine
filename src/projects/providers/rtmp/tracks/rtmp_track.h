@@ -37,7 +37,7 @@ namespace pvd::rtmp
 			  _time_base(time_base)
 		{
 		}
-		virtual ~RtmpTrack() = default;
+		virtual ~RtmpTrack()						= default;
 
 		virtual cmn::MediaType GetMediaType() const = 0;
 
@@ -103,14 +103,14 @@ namespace pvd::rtmp
 
 	protected:
 		std::shared_ptr<RtmpStreamV2> _stream;
-		uint32_t _track_id = 0;
+		uint32_t _track_id					   = 0;
 		// Whether this track is using E-RTMP
-		bool _from_ex_header = false;
-		cmn::MediaCodecId _codec_id = cmn::MediaCodecId::None;
+		bool _from_ex_header				   = false;
+		cmn::MediaCodecId _codec_id			   = cmn::MediaCodecId::None;
 		cmn::BitstreamFormat _bitstream_format = cmn::BitstreamFormat::Unknown;
 		cmn::Timebase _time_base;
 
-		bool _is_ignored = false;
+		bool _is_ignored  = false;
 
 		int64_t _last_pts = 0;
 

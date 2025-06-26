@@ -102,23 +102,23 @@ namespace pvd::rtmp
 		RtmpChunkHandler _chunk_handler;
 
 		// To make first PTS 0
-		bool _first_frame = true;
+		bool _first_frame		  = true;
 		int64_t _first_pts_offset = 0;
 		int64_t _first_dts_offset = 0;
 
-		uint32_t _rtmp_stream_id = 1;
+		uint32_t _rtmp_stream_id  = 1;
 
 		ov::String _tc_url;
-		info::VHostAppName _vhost_app_name = info::VHostAppName::InvalidVHostAppName();
+		info::VHostAppName _vhost_app_name		  = info::VHostAppName::InvalidVHostAppName();
 
 		// To send data
-		std::shared_ptr<ov::Socket> _remote = nullptr;
+		std::shared_ptr<ov::Socket> _remote		  = nullptr;
 
 		// Received data buffer
 		std::shared_ptr<ov::Data> _remaining_data = nullptr;
 
 		// Signed Policy
-		uint64_t _stream_expired_msec = 0;
+		uint64_t _stream_expired_msec			  = 0;
 
 		// RTMP tracks
 		std::unordered_map<MediaTrackId, std::shared_ptr<RtmpTrack>> _rtmp_track_map;

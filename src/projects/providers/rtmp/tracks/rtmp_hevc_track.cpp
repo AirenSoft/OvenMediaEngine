@@ -39,7 +39,7 @@ namespace pvd::rtmp
 			}
 
 			// CTS = PTS - DTS
-			auto cts = video_data->composition_time_offset;
+			auto cts	= video_data->composition_time_offset;
 			int64_t dts = message->header->completed.timestamp;
 			int64_t pts = cts + dts;
 

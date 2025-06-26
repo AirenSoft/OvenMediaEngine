@@ -89,7 +89,7 @@ namespace pvd::rtmp
 
 		if (IsFromExHeader() == false)
 		{
-			auto &sound_size = audio_data->sound_size;
+			auto &sound_size   = audio_data->sound_size;
 			auto sample_format = cmn::AudioSample::Format::S16;
 
 			if (sound_size.has_value())
