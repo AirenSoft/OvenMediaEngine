@@ -32,6 +32,10 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetMaxConnection, _max_connection)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetTimestampMode, _timestamp_mode)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetPacketSilenceTimeoutMs, _packet_silence_timeout_ms)
+					void SetPacketSilenceTimeoutMs(int timeout_ms)
+					{
+						_packet_silence_timeout_ms = timeout_ms;
+					}
 
 				protected:
 					void MakeList() override
