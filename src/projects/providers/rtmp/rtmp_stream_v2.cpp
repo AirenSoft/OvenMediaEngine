@@ -67,7 +67,7 @@ namespace pvd::rtmp
 
 		// Send Close to Admission Webhooks
 		auto requested_url = GetRequestedUrl();
-		auto final_url = GetFinalUrl();
+		auto final_url	   = GetFinalUrl();
 
 		if (_remote != nullptr)
 		{
@@ -177,8 +177,8 @@ namespace pvd::rtmp
 			return false;
 		}
 
-		_name = url->Stream();
-		_tc_url = tc_url;
+		_name			= url->Stream();
+		_tc_url			= tc_url;
 
 		_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(url->Host(), url->App());
 
@@ -242,7 +242,7 @@ namespace pvd::rtmp
 
 			// When using the RTMP authentication, the stream name may be provided here
 			{
-				auto stream_name = document.Get(3)->GetString();
+				auto stream_name	= document.Get(3)->GetString();
 
 				// Append a query string if it exists
 				auto query_position = stream_name.IndexOf('?');
@@ -267,12 +267,12 @@ namespace pvd::rtmp
 
 	bool RtmpStreamV2::CheckAccessControl()
 	{
-		auto request_url = GetRequestedUrl();
+		auto request_url						   = GetRequestedUrl();
 
 		// Check SignedPolicy
-		auto provider = GetProvider();
+		auto provider							   = GetProvider();
 
-		auto request_info = std::make_shared<ac::RequestInfo>(request_url, nullptr, _remote, nullptr);
+		auto request_info						   = std::make_shared<ac::RequestInfo>(request_url, nullptr, _remote, nullptr);
 
 		auto [signed_policy_result, signed_policy] = provider->VerifyBySignedPolicy(request_info);
 		switch (signed_policy_result)
@@ -357,8 +357,8 @@ namespace pvd::rtmp
 		}
 
 		// Get an information from the final URL
-		auto orchestrator = ocst::Orchestrator::GetInstance();
-		auto vhost_app_name = orchestrator->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
+		auto orchestrator	 = ocst::Orchestrator::GetInstance();
+		auto vhost_app_name	 = orchestrator->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
 		const auto &app_info = orchestrator->GetApplicationInfo(vhost_app_name);
 
 		if (app_info.IsValid() == false)
@@ -445,12 +445,7 @@ namespace pvd::rtmp
 			AddTrack(data_track);
 		}
 
-		if (PublishChannel(_vhost_app_name) == false)
-		{
-			return false;
-		}
-
-		return true;
+		return PublishChannel(_vhost_app_name);
 	}
 
 	bool RtmpStreamV2::SendData(const std::shared_ptr<const ov::Data> &data)
