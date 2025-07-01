@@ -109,15 +109,6 @@ namespace pvd::rtmp
 			return false;
 		}
 
-		// Accumulate processed bytes for acknowledgement
-		if ((_remaining_data != nullptr) && (_remaining_data->GetLength() > MAX_PACKET_SIZE))
-		{
-			logae("The packet is too large - ignored: [%d]), packet size: %zu, threshold: %d",
-				  GetChannelId(), _remaining_data->GetLength(), MAX_PACKET_SIZE);
-
-			return false;
-		}
-
 		if ((_remaining_data == nullptr) || _remaining_data->IsEmpty())
 		{
 			_remaining_data = data->Clone();

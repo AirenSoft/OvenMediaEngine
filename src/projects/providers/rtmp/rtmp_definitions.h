@@ -13,27 +13,28 @@
 namespace pvd::rtmp
 {
 	// control(1) + sequence(1) + offsettime(3)
-	static constexpr const size_t VIDEO_DATA_MIN_SIZE = (sizeof(uint8_t) + sizeof(uint8_t) + (sizeof(uint8_t) * 3));
+	static constexpr const size_t VIDEO_DATA_MIN_SIZE					= (sizeof(uint8_t) + sizeof(uint8_t) + (sizeof(uint8_t) * 3));
 	// control(1) + sequence(1)
-	static constexpr const size_t AUDIO_DATA_MIN_SIZE = (sizeof(uint8_t) + sizeof(uint8_t));
+	static constexpr const size_t AUDIO_DATA_MIN_SIZE					= (sizeof(uint8_t) + sizeof(uint8_t));
 
-	static constexpr const size_t DEFAULT_CHUNK_SIZE = 128;
-	static constexpr const size_t DEFAULT_ACKNOWNLEDGEMENT_SIZE = 2500000;
-	static constexpr const size_t DEFAULT_PEER_BANDWIDTH = 2500000;
+	static constexpr const size_t DEFAULT_CHUNK_SIZE					= 128;
+	static constexpr const size_t DEFAULT_ACKNOWNLEDGEMENT_SIZE			= 2500000;
+	static constexpr const size_t DEFAULT_PEER_BANDWIDTH				= 2500000;
 
 	// The maximum number of messages to wait for other tracks when the stream is temporarily delayed
 	// even though there is audio or video track information in the metadata.
 	static constexpr const size_t MAX_PACKET_COUNT_TO_WAIT_OTHER_TRACKS = 500;
 
-	// 20MB
-	static constexpr const size_t MAX_PACKET_SIZE = (20 * 1024 * 1024);
+	// The maximum number of packets to wait for receiving a sequence header.
+	// If this number is exceeded, the track will be ignored.
+	static constexpr const size_t MAX_PACKET_COUNT_BEFORE_SEQ_HEADER	= 10;
 
 	// Used for legacy RTMP streams
 	// TODO(dimiden): Assigning a sufficiently large temporary value to avoid `track_id` conflicts.
 	// Needs to be changed later.
-	static constexpr const uint32_t TRACK_ID_FOR_VIDEO = 100;
-	static constexpr const uint32_t TRACK_ID_FOR_AUDIO = 200;
-	static constexpr const uint32_t TRACK_ID_FOR_DATA = 300;
+	static constexpr const uint32_t TRACK_ID_FOR_VIDEO					= 100;
+	static constexpr const uint32_t TRACK_ID_FOR_AUDIO					= 200;
+	static constexpr const uint32_t TRACK_ID_FOR_DATA					= 300;
 
 	enum class EncoderType : int32_t
 	{

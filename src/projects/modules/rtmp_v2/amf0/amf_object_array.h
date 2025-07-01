@@ -50,20 +50,61 @@ namespace modules::rtmp
 		// Get the value of the property corresponding to the name.
 		// If the property does not exist or its type is not number, it returns `std::nullopt`.
 		std::optional<double> GetNumber(const char *name) const;
+		template <typename T>
+		std::optional<T> GetNumberAs(const char *name) const
+		{
+			auto number = GetNumber(name);
+			if (number.has_value())
+			{
+				return static_cast<T>(number.value());
+			}
+			return std::nullopt;
+		}
+
 		template <typename... Tkey>
 		std::optional<double> GetNumber(Tkey &&...keys) const
 		{
 			return GetValue<double>(&AmfObjectArray::GetNumber, std::forward<Tkey>(keys)...);
+		}
+		template <typename T, typename... Tkey>
+		std::optional<T> GetNumberAs(Tkey &&...keys) const
+		{
+			auto number = GetValue<double>(&AmfObjectArray::GetNumber, std::forward<Tkey>(keys)...);
+			if (number.has_value())
+			{
+				return static_cast<T>(number.value());
+			}
+			return std::nullopt;
 		}
 
 		// Get the value of the property corresponding to the name.
 		// If the property exists and its type is not number, it converts it to a double,
 		// otherwise it returns `std::nullopt`.
 		std::optional<double> GetAsNumber(const char *name) const;
+		template <typename T>
+		std::optional<T> GetAsNumberAs(const char *name) const
+		{
+			auto number = GetAsNumber(name);
+			if (number.has_value())
+			{
+				return static_cast<T>(number.value());
+			}
+			return std::nullopt;
+		}
 		template <typename... Tkey>
 		std::optional<double> GetAsNumber(Tkey &&...keys) const
 		{
 			return GetValue<double>(&AmfObjectArray::GetAsNumber, std::forward<Tkey>(keys)...);
+		}
+		template <typename T, typename... Tkey>
+		std::optional<T> GetAsNumberAs(Tkey &&...keys) const
+		{
+			auto number = GetValue<double>(&AmfObjectArray::GetAsNumber, std::forward<Tkey>(keys)...);
+			if (number.has_value())
+			{
+				return static_cast<T>(number.value());
+			}
+			return std::nullopt;
 		}
 
 		std::optional<ov::String> GetString(const char *name) const;
@@ -121,6 +162,6 @@ namespace modules::rtmp
 		T _instance;
 	};
 
-	using AmfObjectBuilder = AmfBuilder<AmfObject>;
+	using AmfObjectBuilder	  = AmfBuilder<AmfObject>;
 	using AmfEcmaArrayBuilder = AmfBuilder<AmfEcmaArray>;
 }  // namespace modules::rtmp

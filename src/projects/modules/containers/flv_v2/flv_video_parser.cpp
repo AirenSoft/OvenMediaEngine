@@ -21,16 +21,16 @@ namespace modules
 	{
 		std::shared_ptr<VideoData> VideoParser::ProcessExVideoTagHeader(ov::BitReader &reader, VideoFrameType frame_type, bool *process_video_body)
 		{
-			auto video_data = std::make_shared<VideoData>(frame_type, true);
+			auto video_data				  = std::make_shared<VideoData>(frame_type, true);
 
-			*process_video_body = true;
+			*process_video_body			  = true;
 
 			// Interpret UB[4] bits as VideoPacketType instead of sound rate, size, and type.
 			// videoPacketType = UB[4] as VideoPacketType	// at byte boundary after this read
 			video_data->video_packet_type = reader.ReadAs<VideoPacketType>(4);
 			logap("videoPacketType (4 bits): %s (%d, 0x%04X)", EnumToString(video_data->video_packet_type), video_data->video_packet_type, video_data->video_packet_type);
 
-			uint32_t mod_ex_data_size = 0;
+			uint32_t mod_ex_data_size					= 0;
 			std::shared_ptr<const ov::Data> mod_ex_data = nullptr;
 
 			// Process each ModEx data packet
@@ -50,7 +50,7 @@ namespace modules
 				}
 
 				// Fetch the packet ModEx data based on its determined size
-				mod_ex_data = reader.ReadBytes(mod_ex_data_size);
+				mod_ex_data					  = reader.ReadBytes(mod_ex_data_size);
 
 				// fetch the VideoPacketOptionType
 				// videoPacketModExType = UB[4] as VideoPacketModExType
@@ -92,7 +92,7 @@ namespace modules
 			{
 				// videoCommand = UI8 as VideoCommand
 				{
-					auto video_command = reader.ReadU8As<VideoCommand>();
+					auto video_command		  = reader.ReadU8As<VideoCommand>();
 					video_data->video_command = video_command;
 					logap("videoCommand (8 bits): %s (%d, 0x%02X)", EnumToString(video_command), video_command, video_command);
 				}
@@ -120,7 +120,7 @@ namespace modules
 					// The tracks are encoded with the same codec. Fetch the FOURCC for them
 					// videoFourCc = FOURCC as VideoFourCc
 					{
-						auto video_fourcc = reader.ReadU32BEAs<VideoFourCc>();
+						auto video_fourcc		 = reader.ReadU32BEAs<VideoFourCc>();
 						video_data->video_fourcc = video_fourcc;
 						logap("videoFourCc (32 bits): %s (%08X)", FourCcToString(video_fourcc), video_fourcc);
 					}
@@ -129,7 +129,7 @@ namespace modules
 			else
 			{
 				// videoFourCc = FOURCC as VideoFourCc
-				auto video_fourcc = reader.ReadU32BEAs<VideoFourCc>();
+				auto video_fourcc		 = reader.ReadU32BEAs<VideoFourCc>();
 				video_data->video_fourcc = video_fourcc;
 				logap("videoFourCc (32 bits): %s (%08X)", FourCcToString(video_fourcc), video_fourcc);
 			}
@@ -209,6 +209,22 @@ namespace modules
 			video_data->payload = GetPayload(false, reader, 0, 0);
 			logap("[legacy AVC] payload: %zu bytes", video_data->payload->GetLength());
 
+			if (video_data->video_packet_type == VideoPacketType::SequenceStart)
+			{
+				logap("[legacy AVC] SequenceStart, parsing AVCDecoderConfigurationRecord");
+
+				auto header = std::make_shared<AVCDecoderConfigurationRecord>();
+
+				if (header->Parse(video_data->payload) == false)
+				{
+					logae("[legacy AVC] Failed to parse AVCDecoderConfigurationRecord");
+					return false;
+				}
+
+				video_data->header		= header;
+				video_data->header_data = video_data->payload;
+			}
+
 			video_data->track_id = _track_id_if_legacy;
 
 			return true;
@@ -252,7 +268,7 @@ namespace modules
 
 		std::shared_ptr<VideoData> VideoParser::ProcessExVideoTagBody(ov::BitReader &reader, bool process_video_body, std::shared_ptr<VideoData> video_data)
 		{
-			uint24_t size_of_video_track = 0;
+			uint24_t size_of_video_track	  = 0;
 			size_t size_of_video_track_offset = 0;
 
 			while (process_video_body)
@@ -263,7 +279,7 @@ namespace modules
 					{
 						// Each track has a codec assigned to it. Fetch the FOURCC for the next track.
 						// videoFourCc = FOURCC as VideoFourCc
-						auto video_fourcc = reader.ReadU32BEAs<VideoFourCc>();
+						auto video_fourcc		 = reader.ReadU32BEAs<VideoFourCc>();
 						video_data->video_fourcc = video_fourcc;
 						logap("[MultiTrack/ManyTracksManyCodecs] videoFourCc (32 bits): %s (%08X)", FourCcToString(video_fourcc), video_fourcc);
 					}
@@ -281,7 +297,7 @@ namespace modules
 					// across various applications.
 					// videoTrackId = UI8
 					{
-						auto video_track_id = reader.ReadU8();
+						auto video_track_id	 = reader.ReadU8();
 						video_data->track_id = video_track_id;
 						logap("[MultiTrack] videoTrackId (8 bits): %u", video_track_id);
 					}
@@ -362,14 +378,14 @@ namespace modules
 						// the AVCDecoderConfigurationRecord.
 						// avcHeader = [AVCDecoderConfigurationRecord]
 						logap("[SequenceStart] AVCDecoderConfigurationRecord");
-						video_data->avc_header = ParseAVC(reader);
+						video_data->header = ParseAVC(reader);
 
-						if (video_data->hevc_header != nullptr)
+						if (video_data->header != nullptr)
 						{
-							auto used_bits = (reader.GetBitOffset() - last_bit_offset);
-							auto used_bytes = (used_bits + 7) / 8;
+							auto used_bits			= (reader.GetBitOffset() - last_bit_offset);
+							auto used_bytes			= (used_bits + 7) / 8;
 
-							video_data->avc_header_data = current_data->Subdata(0, used_bytes);
+							video_data->header_data = current_data->Subdata(0, used_bytes);
 						}
 					}
 					else if (video_data->video_fourcc == VideoFourCc::Hevc)
@@ -381,14 +397,14 @@ namespace modules
 						// the HEVCDecoderConfigurationRecord.
 						// hevcHeader = [HEVCDecoderConfigurationRecord]
 						logap("[SequenceStart] HEVCDecoderConfigurationRecord");
-						video_data->hevc_header = ParseHEVC(reader);
+						video_data->header = ParseHEVC(reader);
 
-						if (video_data->hevc_header != nullptr)
+						if (video_data->header != nullptr)
 						{
-							auto used_bits = (reader.GetBitOffset() - last_bit_offset);
-							auto used_bytes = (used_bits + 7) / 8;
+							auto used_bits			= (reader.GetBitOffset() - last_bit_offset);
+							auto used_bytes			= (used_bits + 7) / 8;
 
-							video_data->hevc_header_data = current_data->Subdata(0, used_bytes);
+							video_data->header_data = current_data->Subdata(0, used_bytes);
 						}
 					}
 					else
@@ -582,7 +598,7 @@ namespace modules
 
 					auto video_data = ProcessExVideoTagHeader(reader, video_frame_type, &process_video_body);
 
-					video_data = ProcessExVideoTagBody(reader, process_video_body, video_data);
+					video_data		= ProcessExVideoTagBody(reader, process_video_body, video_data);
 
 					if (video_data == nullptr)
 					{
@@ -600,8 +616,8 @@ namespace modules
 					// version for the proper implementation details.
 					//
 					//   videoCodecId = UB[4] as VideoCodecId
-					auto video_data = std::make_shared<VideoData>(video_frame_type, false);
-					auto video_codec_id = reader.ReadAs<VideoCodecId>(4);
+					auto video_data			   = std::make_shared<VideoData>(video_frame_type, false);
+					auto video_codec_id		   = reader.ReadAs<VideoCodecId>(4);
 					video_data->video_codec_id = video_codec_id;
 
 					if (video_codec_id != VideoCodecId::Avc)

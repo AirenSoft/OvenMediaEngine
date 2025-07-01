@@ -83,6 +83,16 @@ namespace pvd::rtmp
 			_is_ignored = is_ignored;
 		}
 
+		bool HasSequenceHeader() const
+		{
+			return (_sequence_header != nullptr);
+		}
+
+		const auto &GetSequenceHeader() const
+		{
+			return _sequence_header;
+		}
+
 		virtual bool Handle(
 			const std::shared_ptr<const modules::rtmp::Message> &message,
 			const modules::flv::ParserCommon &parser,
@@ -90,7 +100,7 @@ namespace pvd::rtmp
 
 		virtual std::shared_ptr<MediaTrack> CreateMediaTrack(
 			const modules::flv::ParserCommon &parser,
-			const std::shared_ptr<const modules::flv::CommonData> &data) const;
+			const std::shared_ptr<const modules::flv::CommonData> &data);
 
 	protected:
 		void AdjustTimestamp(int64_t &pts, int64_t &dts);
@@ -109,6 +119,8 @@ namespace pvd::rtmp
 		cmn::MediaCodecId _codec_id			   = cmn::MediaCodecId::None;
 		cmn::BitstreamFormat _bitstream_format = cmn::BitstreamFormat::Unknown;
 		cmn::Timebase _time_base;
+
+		std::shared_ptr<DecoderConfigurationRecord> _sequence_header;
 
 		bool _is_ignored  = false;
 

@@ -8,6 +8,7 @@
 //==============================================================================
 #pragma once
 
+#include <base/info/decoder_configuration_record.h>
 #include <base/ovlibrary/ovlibrary.h>
 
 #include "./flv_datastructure.h"
@@ -25,8 +26,17 @@ namespace modules
 
 			virtual ~CommonData() = default;
 
-			bool from_ex_header = false;
-			uint32_t track_id = 0;
+			bool from_ex_header	  = false;
+			uint32_t track_id	  = 0;
+
+			std::shared_ptr<DecoderConfigurationRecord> header;
+
+			// This is used to store the data to re-parse `DecoderConfigurationRecord`
+			// when receiving `cmn::PacketType::SEQUENCE_HEADER`
+			// in `MediaRouterNormalize::Process*()`.
+			// It can be improved to use what is parsed here later.
+			std::shared_ptr<const ov::Data> header_data;
+
 			std::shared_ptr<const ov::Data> payload = nullptr;
 		};
 
@@ -50,7 +60,7 @@ namespace modules
 			{
 				static auto EMPTY_DATA = std::make_shared<ov::Data>();
 
-				size_t payload_size = 0;
+				size_t payload_size	   = 0;
 
 				if ((is_multi_track == false) || (size_of_track == 0))
 				{
@@ -60,7 +70,7 @@ namespace modules
 				{
 					// How many bytes have been read since the sizeOfVideoTrack field
 					auto read_bytes_since_size_of_track = reader.GetByteOffset() - size_of_track_offset;
-					payload_size = size_of_track - read_bytes_since_size_of_track;
+					payload_size						= size_of_track - read_bytes_since_size_of_track;
 				}
 
 				return (payload_size > 0) ? reader.ReadBytes(payload_size) : EMPTY_DATA;
@@ -69,9 +79,9 @@ namespace modules
 		protected:
 			uint32_t _track_id_if_legacy;
 
-			bool _is_ex_header = false;
+			bool _is_ex_header				  = false;
 
-			bool _is_multitrack = false;
+			bool _is_multitrack				  = false;
 			AvMultitrackType _multitrack_type = AvMultitrackType::OneTrack;
 		};
 	}  // namespace flv

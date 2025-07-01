@@ -57,17 +57,42 @@ namespace pvd::rtmp
 			AdjustTimestamp(pts, dts);
 			_last_pts = dts;
 
-			if (audio_data->payload == nullptr)
+			std::shared_ptr<MediaPacket> media_packet;
+
+			if (packet_type == cmn::PacketType::SEQUENCE_HEADER)
 			{
-				OV_ASSERT2(false);
-				return false;
+				if (audio_data->header == nullptr)
+				{
+					logte("%s sequence header is not found", cmn::GetCodecIdString(_codec_id));
+					OV_ASSERT2(false);
+					return false;
+				}
+
+				_sequence_header = audio_data->header;
+
+				media_packet	 = CreateMediaPacket(
+					audio_data->header_data,
+					pts, dts,
+					packet_type,
+					true);
+			}
+			else
+			{
+				if (audio_data->payload == nullptr)
+				{
+					logte("%s payload is not found", cmn::GetCodecIdString(_codec_id));
+					OV_ASSERT2(false);
+					return false;
+				}
+
+				media_packet = CreateMediaPacket(
+					audio_data->payload,
+					pts, dts,
+					packet_type,
+					true);
 			}
 
-			_media_packet_list.push_back(CreateMediaPacket(
-				audio_data->payload,
-				pts, dts,
-				packet_type,
-				true));
+			_media_packet_list.push_back(media_packet);
 		} while (false);
 
 		return true;
@@ -75,7 +100,7 @@ namespace pvd::rtmp
 
 	std::shared_ptr<MediaTrack> RtmpAacTrack::CreateMediaTrack(
 		const modules::flv::ParserCommon &parser,
-		const std::shared_ptr<const modules::flv::CommonData> &data) const
+		const std::shared_ptr<const modules::flv::CommonData> &data)
 	{
 		auto audio_data = std::dynamic_pointer_cast<const modules::flv::AudioData>(data);
 

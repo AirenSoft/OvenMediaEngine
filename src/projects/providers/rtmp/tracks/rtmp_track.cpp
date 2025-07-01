@@ -46,7 +46,7 @@ namespace pvd::rtmp
 
 	std::shared_ptr<MediaTrack> RtmpTrack::CreateMediaTrack(
 		const modules::flv::ParserCommon &parser,
-		const std::shared_ptr<const modules::flv::CommonData> &data) const
+		const std::shared_ptr<const modules::flv::CommonData> &data)
 	{
 		auto media_track = std::make_shared<MediaTrack>();
 

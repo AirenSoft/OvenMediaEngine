@@ -24,19 +24,5 @@ namespace pvd::rtmp
 			: RtmpVideoTrack(std::move(stream), track_id, from_ex_header, cmn::MediaCodecId::H264, cmn::BitstreamFormat::H264_AVCC)
 		{
 		}
-
-		//--------------------------------------------------------------------
-		// Implementation of RtmpTrack
-		//--------------------------------------------------------------------
-		bool Handle(
-			const std::shared_ptr<const modules::rtmp::Message> &message,
-			const modules::flv::ParserCommon &parser,
-			const std::shared_ptr<const modules::flv::CommonData> &data) override;
-
-		std::shared_ptr<MediaTrack> CreateMediaTrack(
-			const modules::flv::ParserCommon &parser,
-			const std::shared_ptr<const modules::flv::CommonData> &data) const override;
-
-	protected:
 	};
 }  // namespace pvd::rtmp

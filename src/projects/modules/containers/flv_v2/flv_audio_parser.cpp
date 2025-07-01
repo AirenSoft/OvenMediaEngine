@@ -8,6 +8,8 @@
 //==============================================================================
 #include "./flv_audio_parser.h"
 
+#include <modules/bitstream/aac/audio_specific_config.h>
+
 #include "./flv_private.h"
 
 namespace modules
@@ -45,6 +47,22 @@ namespace modules
 			audio_data->payload = GetPayload(false, reader, 0, 0);
 			logtp("[legacy AAC] payload size: %zu bytes", audio_data->payload->GetLength());
 
+			if (audio_data->aac_packet_type == AACPacketType::SequenceHeader)
+			{
+				logtp("[legacy AAC] SequenceHeader found, parsing DecoderConfigurationRecord");
+
+				auto header = std::make_shared<AudioSpecificConfig>();
+
+				if (header->Parse(audio_data->payload) == false)
+				{
+					logte("[legacy AAC] Failed to parse AudioSpecificConfig");
+					return false;
+				}
+
+				audio_data->header		= header;
+				audio_data->header_data = audio_data->payload;
+			}
+
 			audio_data->track_id = _track_id_if_legacy;
 
 			return true;
@@ -52,9 +70,9 @@ namespace modules
 
 		std::shared_ptr<AudioData> AudioParser::ProcessExAudioTagHeader(ov::BitReader &reader, SoundFormat sound_format, bool *process_audio_body)
 		{
-			auto audio_data = std::make_shared<AudioData>(sound_format, true);
+			auto audio_data				  = std::make_shared<AudioData>(sound_format, true);
 
-			*process_audio_body = true;
+			*process_audio_body			  = true;
 
 			// Interpret UB[4] bits as AudioPacketType instead of sound rate, size, and type.
 			// audioPacketType = UB[4] as AudioPacketType	// at byte boundary after this read
@@ -64,7 +82,7 @@ namespace modules
 				  audio_data->audio_packet_type.value(),
 				  audio_data->audio_packet_type.value());
 
-			uint32_t mod_ex_data_size = 0;
+			uint32_t mod_ex_data_size					= 0;
 			std::shared_ptr<const ov::Data> mod_ex_data = nullptr;
 
 			// Process each ModEx data packet
@@ -89,7 +107,7 @@ namespace modules
 				// fetch the AudioPacketModExType
 				// audioPacketModExType = UB[4] as AudioPacketModExType
 				{
-					auto audio_packet_mod_ex_type = reader.ReadAs<AudioPacketModExType>(4);
+					auto audio_packet_mod_ex_type		 = reader.ReadAs<AudioPacketModExType>(4);
 					audio_data->audio_packet_mod_ex_type = audio_packet_mod_ex_type;
 					logtp("audioPacketModExType (4 bits): %s (%d, 0x%01X)", EnumToString(audio_packet_mod_ex_type), audio_packet_mod_ex_type, audio_packet_mod_ex_type);
 				}
@@ -115,7 +133,7 @@ namespace modules
 					// - modExData must be at least 3 bytes, storing values up to 999,999 ns.
 					// audioTimestampNanoOffset = bytesToUI24(modExData)
 					{
-						auto audio_timestamp_nano_offset = ov::BE24ToHost(reader.ReadU24());
+						auto audio_timestamp_nano_offset		= ov::BE24ToHost(reader.ReadU24());
 						audio_data->audio_timestamp_nano_offset = audio_timestamp_nano_offset;
 						logtp("audioTimestampNanoOffset (24 bits): %u (0x%06X)", audio_timestamp_nano_offset, audio_timestamp_nano_offset);
 					}
@@ -143,7 +161,7 @@ namespace modules
 					// The tracks are encoded with the same codec. Fetch the FOURCC for them
 					// audioFourCc = FOURCC as AudioFourCc
 					{
-						auto audio_fourcc = reader.ReadU32BEAs<AudioFourCc>();
+						auto audio_fourcc		 = reader.ReadU32BEAs<AudioFourCc>();
 						audio_data->audio_fourcc = audio_fourcc;
 						logtp("audioFourCc (32 bits): %s (0x%08X)", FourCcToString(audio_fourcc), audio_fourcc);
 					}
@@ -152,7 +170,7 @@ namespace modules
 			else
 			{
 				// audioFourCc = FOURCC as AudioFourCc
-				auto audio_fourcc = reader.ReadU32BEAs<AudioFourCc>();
+				auto audio_fourcc		 = reader.ReadU32BEAs<AudioFourCc>();
 				audio_data->audio_fourcc = audio_fourcc;
 				logtp("audioFourCc (32 bits): %s (0x%08X)", FourCcToString(audio_fourcc), audio_fourcc);
 			}
@@ -162,7 +180,7 @@ namespace modules
 
 		std::shared_ptr<AudioData> AudioParser::ProcessExAudioTagBody(ov::BitReader &reader, bool process_audio_body, std::shared_ptr<AudioData> audio_data)
 		{
-			uint24_t size_of_audio_track = 0;
+			uint24_t size_of_audio_track					   = 0;
 			[[maybe_unused]] size_t size_of_audio_track_offset = 0;
 
 			while (process_audio_body)
@@ -173,7 +191,7 @@ namespace modules
 					{
 						// Each track has a codec assigned to it. Fetch the FOURCC for the next track.
 						// audioFourCc = FOURCC as AudioFourCc
-						auto audio_fourcc = reader.ReadU32BEAs<AudioFourCc>();
+						auto audio_fourcc		 = reader.ReadU32BEAs<AudioFourCc>();
 						audio_data->audio_fourcc = audio_fourcc;
 						logtp("[MultiTrack/ManyTracksManyCodecs] audioFourCc (32 bits): %s (0x%08X)", FourCcToString(audio_fourcc), audio_fourcc);
 					}
@@ -191,7 +209,7 @@ namespace modules
 					// across various applications.
 					// audioTrackId = UI8
 					{
-						auto audio_track_id = reader.ReadU8();
+						auto audio_track_id	 = reader.ReadU8();
 						audio_data->track_id = audio_track_id;
 						logtp("[MultiTrack] audioTrackId (8 bits): %u", audio_track_id);
 					}
@@ -225,7 +243,7 @@ namespace modules
 					// set audio channel order
 					// audioChannelOrder = UI8 as AudioChannelOrder
 					{
-						auto audio_channel_order = reader.ReadU8As<AudioChannelOrder>();
+						auto audio_channel_order		= reader.ReadU8As<AudioChannelOrder>();
 						audio_data->audio_channel_order = audio_channel_order;
 						logtp("audioChannelOrder (8 bits): %s (%d, 0x%02X)",
 							  EnumToString(audio_channel_order), audio_channel_order, audio_channel_order);
@@ -233,7 +251,7 @@ namespace modules
 
 					// number of channels
 					// channelCount = UI8
-					auto channel_count = reader.ReadU8();
+					auto channel_count		  = reader.ReadU8();
 					audio_data->channel_count = channel_count;
 
 					if (audio_data->audio_channel_order == AudioChannelOrder::Custom)
@@ -245,7 +263,7 @@ namespace modules
 						// (e.g., second entry for channel 2, third entry for channel 3, etc.).
 						// audioChannelMapping = UI8[channelCount] as AudioChannel
 						{
-							auto audio_channel_mapping = reader.ReadAs<AudioChannel>(channel_count);
+							auto audio_channel_mapping		  = reader.ReadAs<AudioChannel>(channel_count);
 							audio_data->audio_channel_mapping = audio_channel_mapping;
 							logtp("audioChannelMapping (%d bits): %s (%d, 0x%02X)",
 								  channel_count * 8,
@@ -415,7 +433,7 @@ namespace modules
 				// soundFormat = UB[4] as SoundFormat
 				auto sound_format = reader.ReadAs<SoundFormat>(4);
 
-				_is_ex_header = (sound_format == SoundFormat::ExHeader);
+				_is_ex_header	  = (sound_format == SoundFormat::ExHeader);
 
 				if (_is_ex_header)
 				{
@@ -425,7 +443,7 @@ namespace modules
 
 					auto audio_data = ProcessExAudioTagHeader(reader, sound_format, &process_audio_body);
 
-					audio_data = ProcessExAudioTagBody(reader, process_audio_body, audio_data);
+					audio_data		= ProcessExAudioTagBody(reader, process_audio_body, audio_data);
 
 					if (audio_data == nullptr)
 					{
@@ -438,7 +456,7 @@ namespace modules
 				{
 					logtp("Legacy audio header found");
 
-					auto audio_data = std::make_shared<AudioData>(sound_format, false);
+					auto audio_data		   = std::make_shared<AudioData>(sound_format, false);
 
 					// See AudioTagHeader of the legacy [FLV] specification for for detailed format
 					// of the four bits used for soundRate/soundSize/soundType

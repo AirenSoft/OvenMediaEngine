@@ -25,6 +25,58 @@
 
 namespace pvd::rtmp
 {
+	template <typename Tenum>
+	ov::String OptEnumToString(const std::optional<Tenum> &value, const char *(*mapper)(Tenum))
+	{
+		if (value.has_value())
+		{
+			auto value_enum = value.value();
+
+			ov::String str	= mapper(value_enum);
+			str.AppendFormat("(%d)", static_cast<int>(value_enum));
+			return str;
+		}
+
+		return "(N/A)";
+	}
+
+	template <typename Tvalue>
+	ov::String OptNumberToString(const std::optional<Tvalue> &value)
+	{
+		if (value.has_value())
+		{
+			return ov::Converter::ToString(value.value());
+		}
+
+		return "(N/A)";
+	}
+
+	template <>
+	ov::String OptNumberToString(const std::optional<float> &value)
+	{
+		if (value.has_value())
+		{
+			return ov::String::FormatString("%.2f", value.value());
+		}
+
+		return "(N/A)";
+	}
+
+	template <typename Treturn, typename Tvalue>
+	std::optional<Treturn> CastIf(const std::optional<Tvalue> &value)
+	{
+		return value.has_value() ? std::optional<Treturn>(static_cast<Treturn>(value.value())) : std::nullopt;
+	}
+
+	template <typename Tvalue, typename Tsetter = std::function<void(Tvalue)>>
+	void SetIf(const std::optional<Tvalue> &value, Tsetter setter)
+	{
+		if (value.has_value())
+		{
+			setter(value.value());
+		}
+	}
+
 	// Check if the codec is supported when using E-RTMP
 	bool IsSupportedCodecForERTMP(cmn::MediaCodecId codec_id)
 	{
@@ -74,7 +126,7 @@ namespace pvd::rtmp
 			}
 
 			case modules::rtmp::AmfTypeMarker::Number: {
-				auto value = static_cast<modules::flv::SoundFormat>(property.GetNumber());
+				auto value	   = property.GetNumberAs<modules::flv::SoundFormat>();
 				auto str_value = ov::String::FormatString("%u", static_cast<uint32_t>(value));
 
 				switch (value)
@@ -102,9 +154,10 @@ namespace pvd::rtmp
 		{
 			switch (four_cc.value())
 			{
-				OV_CASE_RETURN(modules::flv::VideoFourCc::Vp8, cmn::MediaCodecId::Vp8);
-				OV_CASE_RETURN(modules::flv::VideoFourCc::Vp9, cmn::MediaCodecId::Vp9);
-				OV_CASE_RETURN(modules::flv::VideoFourCc::Av1, cmn::MediaCodecId::Av1);
+				// VP8/VP9/AV1 are not supported yet
+				OV_CASE_RETURN(modules::flv::VideoFourCc::Vp8, cmn::MediaCodecId::None);
+				OV_CASE_RETURN(modules::flv::VideoFourCc::Vp9, cmn::MediaCodecId::None);
+				OV_CASE_RETURN(modules::flv::VideoFourCc::Av1, cmn::MediaCodecId::None);
 				OV_CASE_RETURN(modules::flv::VideoFourCc::Avc, cmn::MediaCodecId::H264);
 				OV_CASE_RETURN(modules::flv::VideoFourCc::Hevc, cmn::MediaCodecId::H265);
 			}
@@ -131,7 +184,7 @@ namespace pvd::rtmp
 			}
 
 			case modules::rtmp::AmfTypeMarker::Number: {
-				auto value = static_cast<uint32_t>(property.GetNumber());
+				auto value	   = static_cast<uint32_t>(property.GetNumber());
 				auto str_value = ov::String::FormatString("%u", value);
 				OV_IF_RETURN(value == 7, std::make_pair(cmn::MediaCodecId::H264, str_value));
 
@@ -232,7 +285,8 @@ namespace pvd::rtmp
 		{
 			OV_CASE_RETURN(modules::flv::SoundFormat::LPcmPlatformEndian, std::nullopt);
 			OV_CASE_RETURN(modules::flv::SoundFormat::AdPcm, std::nullopt);
-			OV_CASE_RETURN(modules::flv::SoundFormat::Mp3, cmn::MediaCodecId::Mp3);
+			// MP3 is not supported yet
+			OV_CASE_RETURN(modules::flv::SoundFormat::Mp3, cmn::MediaCodecId::None);
 			OV_CASE_RETURN(modules::flv::SoundFormat::LPcmLittleEndian, std::nullopt);
 			OV_CASE_RETURN(modules::flv::SoundFormat::Nellymoser16KMono, std::nullopt);
 			OV_CASE_RETURN(modules::flv::SoundFormat::Nellymoser8KMono, std::nullopt);
@@ -261,10 +315,10 @@ namespace pvd::rtmp
 
 	void RtmpChunkHandler::Stats::ResetCheckTime()
 	{
-		last_stream_check_time = ov::Time::GetTimestampInMs();
+		last_stream_check_time		  = ov::Time::GetTimestampInMs();
 
-		video_frame_count = 0;
-		audio_frame_count = 0;
+		video_frame_count			  = 0;
+		audio_frame_count			  = 0;
 		previous_last_video_timestamp = last_video_timestamp;
 		previous_last_audio_timestamp = last_audio_timestamp;
 	}
@@ -286,29 +340,30 @@ namespace pvd::rtmp
 			last_video_timestamp - previous_last_video_timestamp);
 	}
 
-	ov::String RtmpChunkHandler::MediaInfo::ToString() const
+	ov::String RtmpChunkHandler::RtmpMetaDataContext::ToString() const
 	{
 		return ov::String::FormatString(
-			"Audio: %s (%d, raw: %s), layout: %s (%d), bits: %d, samplerate: %d, sampleindex: %d, bitrate: %d\n"
-			"Video: %s (%d, raw: %s), width: %d, height: %d, framerate: %.2f, bitrate: %d",
+			"Encoder: %s(%d) (raw: %s))\n"
+			"Audio: %s (raw: %s), layout: %s, bits: %s, samplerate: %s, sampleindex: %s, bitrate: %s\n"
+			"Video: %s (raw: %s), width: %s, height: %s, framerate: %s, bitrate: %s",
+			// Encoder information
+			EnumToString(encoder_type), static_cast<int>(encoder_type),
+			encoder_name.CStr(),
 			// Audio information
-			audio_codec_id.has_value() ? cmn::GetCodecIdString(audio_codec_id.value()) : "-",
-			audio_codec_id.has_value() ? static_cast<int>(audio_codec_id.value()) : 0,
-			audio_codec_raw.CStr(),
-			audio_channel_layout.has_value() ? cmn::AudioChannel::GetLayoutName(audio_channel_layout.value()) : "-",
-			audio_channel_layout.has_value() ? static_cast<int>(audio_channel_layout.value()) : 0,
-			audio_bits.value_or(0),
-			audio_samplerate.value_or(0),
-			audio_sampleindex.value_or(0),
-			audio_bitrate.value_or(0),
+			OptEnumToString(audio.codec_id, cmn::GetCodecIdString).CStr(),
+			audio.codec_raw.CStr(),
+			OptEnumToString(audio.channel_layout, cmn::AudioChannel::GetLayoutName).CStr(),
+			OptNumberToString(audio.bits).CStr(),
+			OptNumberToString(audio.samplerate).CStr(),
+			OptNumberToString(audio.sampleindex).CStr(),
+			OptNumberToString(audio.bitrate).CStr(),
 			// Video information
-			video_codec_id.has_value() ? cmn::GetCodecIdString(video_codec_id.value()) : "-",
-			video_codec_id.has_value() ? static_cast<int>(video_codec_id.value()) : 0,
-			video_codec_raw.CStr(),
-			video_width,
-			video_height,
-			video_framerate,
-			video_bitrate);
+			OptEnumToString(video.codec_id, cmn::GetCodecIdString).CStr(),
+			video.codec_raw.CStr(),
+			OptNumberToString(video.width).CStr(),
+			OptNumberToString(video.height).CStr(),
+			OptNumberToString(video.framerate).CStr(),
+			OptNumberToString(video.bitrate).CStr());
 	}
 
 	RtmpChunkHandler::RtmpChunkHandler(RtmpStreamV2 *stream)
@@ -539,7 +594,7 @@ namespace pvd::rtmp
 
 	int RtmpChunkHandler::GetWaitingTrackCount() const
 	{
-		return (_waiting_audio_track_count + _waiting_video_track_count);
+		return (_meta_data_context.waiting_audio_track_count + _meta_data_context.waiting_video_track_count);
 	}
 
 	bool RtmpChunkHandler::OnAmfConnect(const std::shared_ptr<const modules::rtmp::ChunkHeader> &header, modules::rtmp::AmfDocument &document, double transaction_id)
@@ -554,7 +609,7 @@ namespace pvd::rtmp
 			return false;
 		}
 
-		auto object = meta_property->GetObject();
+		auto object		= meta_property->GetObject();
 
 		object_encoding = object->GetNumber("objectEncoding").value_or(object_encoding);
 
@@ -597,11 +652,10 @@ namespace pvd::rtmp
 		}
 
 		// Assume that there is one audio track and one video track for now
-		_waiting_audio_track_count = 1;
-		_waiting_video_track_count = 1;
+		_meta_data_context.waiting_audio_track_count = 1;
+		_meta_data_context.waiting_video_track_count = 1;
 
-		_media_info.ignore_audio_packets = false;
-		_media_info.ignore_video_packets = false;
+		_meta_data_context.ignore_packets			 = false;
 
 		return true;
 	}
@@ -624,8 +678,7 @@ namespace pvd::rtmp
 	{
 		logad("OnAmfDeleteStream - Delete Stream");
 
-		_media_info.ignore_audio_packets = true;
-		_media_info.ignore_video_packets = true;
+		_meta_data_context.ignore_packets = true;
 
 		// it will call PhysicalPort::OnDisconnected
 		_stream->_remote->Close();
@@ -756,100 +809,105 @@ namespace pvd::rtmp
 		//     ]
 		// }
 
+		_meta_data_context.Reset();
+
 		// DeviceType (Ex: "Lavf61.1.100")
-		_media_info.encoder_name = object->GetString("videodevice", "encoder").value_or("");
-		_media_info.encoder_type = ToEncoderType(_media_info.encoder_name);
+		_meta_data_context.encoder_name				 = object->GetString("videodevice", "encoder").value_or("");
+		_meta_data_context.encoder_type				 = ToEncoderType(_meta_data_context.encoder_name);
 
-		_waiting_audio_track_count = 0;
-		_waiting_video_track_count = 0;
-
+		//
+		// Setting up for Audio
+		//
+		_meta_data_context.waiting_audio_track_count = 0;
 		// Audio Codec (Ex: 10.0)
-		auto sound_format = SoundFormatFromMetadata(object);
-		if (sound_format.has_value())
-		{
-			_media_info.audio_codec_id = sound_format->first;
-			_media_info.audio_codec_raw = sound_format->second;
+		SetIf(SoundFormatFromMetadata(object), [&](const auto &sound_format_pair) {
+			auto &audio		= _meta_data_context.audio;
 
-			if (_media_info.IsSupportedAudio())
+			audio.codec_id	= sound_format_pair.first;
+			audio.codec_raw = sound_format_pair.second;
+
+			if (audio.IsSupportedCodec())
 			{
-				auto value = _media_info.audio_codec_id.value();
-				if (IsSupportedCodecForERTMP(value) == false)
+				auto value = audio.codec_id.value();
+				if (IsSupportedCodecForERTMP(value))
+				{
+					_meta_data_context.waiting_audio_track_count++;
+				}
+				else
 				{
 					logae("Not supported audio codec: %s(%d) (raw: %s)",
 						  cmn::GetCodecIdString(value), value,
-						  _media_info.audio_codec_raw.CStr());
-					_media_info.audio_codec_id = cmn::MediaCodecId::None;
+						  audio.codec_raw.CStr());
+					audio.codec_id = cmn::MediaCodecId::None;
 				}
 			}
-		}
-		else
+			else
+			{
+				// Codec information was sent, but it is not a supported codec
+			}
+		});
+
+		if (_meta_data_context.audio.HasCodec())
 		{
-			_media_info.audio_codec_id = std::nullopt;
+			// Even if the codec is not supported, we try to collect as much information as possible
+			_meta_data_context.audio.bitrate		= object->GetNumberAs<int32_t>("audiodatarate", "audiobitrate");
+			_meta_data_context.audio.channel_layout = GetAudioChannelsFromMetadata(object);
+			_meta_data_context.audio.bits			= object->GetNumberAs<int32_t>("audiosamplesize");
+			_meta_data_context.audio.samplerate		= object->GetNumberAs<int32_t>("audiosamplerate");
 		}
 
+		//
+		// Setting up for Video
+		//
+		_meta_data_context.waiting_video_track_count = 0;
 		// NOTE: FFmpeg and OBS send AVC codec information in the metadata even when sending HEVC
 		// So, we need to check the actual codec when we receive audio/video data later
 		// Video Codec (Ex: 7.0)
-		auto video_codec_id = VideoCodecIdFromMetadata(object);
-		if (video_codec_id.has_value())
-		{
-			_media_info.video_codec_id = video_codec_id->first;
-			_media_info.video_codec_raw = video_codec_id->second;
+		SetIf(VideoCodecIdFromMetadata(object), [&](const auto &video_codec_id_pair) {
+			auto &video		= _meta_data_context.video;
 
-			if (_media_info.IsSupportedVideo())
+			video.codec_id	= video_codec_id_pair.first;
+			video.codec_raw = video_codec_id_pair.second;
+
+			if (video.IsSupportedCodec())
 			{
-				auto value = _media_info.video_codec_id.value();
-				if (IsSupportedCodecForERTMP(value) == false)
+				auto value = video.codec_id.value();
+				if (IsSupportedCodecForERTMP(value))
 				{
-					logae("Not supported video codec: %s(%d) (raw: %s)", cmn::GetCodecIdString(value), value, _media_info.video_codec_raw.CStr());
-					_media_info.video_codec_id = cmn::MediaCodecId::None;
+					_meta_data_context.waiting_video_track_count++;
+				}
+				else
+				{
+					logae("Not supported video codec: %s(%d) (raw: %s)", cmn::GetCodecIdString(value), value, video.codec_raw.CStr());
+					video.codec_id = cmn::MediaCodecId::None;
 				}
 			}
-		}
-		else
-		{
-			_media_info.video_codec_id = std::nullopt;
-		}
+			else
+			{
+				// Codec information was sent, but it is not a supported codec
+			}
+		});
 
-		if (_media_info.HasAudio())
+		if (_meta_data_context.video.HasCodec())
 		{
 			// Even if the codec is not supported, we try to collect as much information as possible
-			_media_info.audio_bitrate = static_cast<int32_t>(object->GetNumber("audiodatarate", "audiobitrate").value_or(0.0));
-			_media_info.audio_channel_layout = GetAudioChannelsFromMetadata(object);
-			_media_info.audio_bits = static_cast<int32_t>(object->GetNumber("audiosamplesize").value_or(0.0));
-			_media_info.audio_samplerate = static_cast<int32_t>(object->GetNumber("audiosamplerate").value_or(0.0));
-
-			if (_media_info.IsSupportedAudio())
-			{
-				_waiting_audio_track_count++;
-			}
+			_meta_data_context.video.width	   = object->GetNumberAs<int32_t>("width");
+			_meta_data_context.video.height	   = object->GetNumberAs<int32_t>("height");
+			_meta_data_context.video.framerate = object->GetNumberAs<float>("framerate", "videoframerate");
+			_meta_data_context.video.bitrate   = object->GetAsNumberAs<int32_t>("videodatarate", "bitrate", "maxBitrate");
 		}
 
-		if (_media_info.HasVideo())
-		{
-			// Even if the codec is not supported, we try to collect as much information as possible
-			_media_info.video_width = static_cast<int32_t>(object->GetNumber("width").value_or(0.0));
-			_media_info.video_height = static_cast<int32_t>(object->GetNumber("height").value_or(0.0));
-			_media_info.video_framerate = object->GetNumber("framerate", "videoframerate").value_or(0.0);
-			_media_info.video_bitrate = static_cast<int32_t>(object->GetAsNumber("videodatarate", "bitrate", "maxBitrate").value_or(0.0));
-
-			if (_media_info.IsSupportedVideo())
-			{
-				_waiting_video_track_count++;
-			}
-		}
-
-		if (_media_info.IsNoAudioVideo())
+		if (_meta_data_context.HasNoCodec())
 		{
 			logaw("There is no video/audio codec information in the metadata\n%s",
 				  property->ToString().CStr());
 
 			// Assume that there is one audio track and one video track if no information is provided
-			_waiting_audio_track_count = 1;
-			_waiting_video_track_count = 1;
+			_meta_data_context.waiting_audio_track_count = 1;
+			_meta_data_context.waiting_video_track_count = 1;
 		}
 
-		logtd("Media Info: %s", _media_info.ToString().CStr());
+		logti("RTMP onMetadata:\n%s", _meta_data_context.ToString().CStr());
 
 		return true;
 	}
@@ -897,7 +955,7 @@ namespace pvd::rtmp
 			else if (id3v2_event.GetFrameType() == "PRIV")
 			{
 				auto owner = id3v2_event.GetInfo();
-				auto data = id3v2_event.GetData();
+				auto data  = id3v2_event.GetData();
 
 				if (owner == "${TriggerValue}")
 				{
@@ -960,7 +1018,7 @@ namespace pvd::rtmp
 
 		for (const auto &event : _event_generator_config.GetEvents())
 		{
-			auto trigger = event.GetTrigger();
+			auto trigger	  = event.GetTrigger();
 			auto trigger_list = trigger.Split(".");
 
 			// Trigger length must be 3 or more
@@ -1006,7 +1064,7 @@ namespace pvd::rtmp
 								break;
 							}
 
-							auto key = trigger_list.at(size);
+							auto key			= trigger_list.at(size);
 							auto property_value = object_array->GetString(key);
 
 							if (property_value.has_value())
@@ -1090,7 +1148,7 @@ namespace pvd::rtmp
 		// Message Name
 		ov::String message_name = document.GetString(0).value_or("");
 		// Obtain the Message Transaction ID
-		double transaction_id = document.GetNumber(1).value_or(0.0);
+		double transaction_id	= document.GetNumber(1).value_or(0.0);
 
 		switch (modules::rtmp::ToCommand(message_name))
 		{
@@ -1130,7 +1188,7 @@ namespace pvd::rtmp
 
 	bool RtmpChunkHandler::HandleUserControl(const std::shared_ptr<const modules::rtmp::Message> &message)
 	{
-		auto data = message->payload;
+		auto data			   = message->payload;
 
 		// RTMP Spec. v1.0 - 6.2. User Control Messages
 		//
@@ -1138,7 +1196,7 @@ namespace pvd::rtmp
 		// control stream) and, when sent over RTMP Chunk Stream, be sent on
 		// chunk stream ID 2.
 		auto message_stream_id = message->header->completed.stream_id;
-		auto chunk_stream_id = message->header->basic_header.chunk_stream_id;
+		auto chunk_stream_id   = message->header->basic_header.chunk_stream_id;
 		if (
 			(message_stream_id != 0) ||
 			(chunk_stream_id != 2))
@@ -1230,7 +1288,7 @@ namespace pvd::rtmp
 		// Obtain the message name
 		ov::String message_name;
 		auto message_name_property = document.Get(0);
-		auto message_name_type = (message_name_property != nullptr) ? message_name_property->GetType() : modules::rtmp::AmfTypeMarker::Undefined;
+		auto message_name_type	   = (message_name_property != nullptr) ? message_name_property->GetType() : modules::rtmp::AmfTypeMarker::Undefined;
 		if (message_name_type == modules::rtmp::AmfTypeMarker::String)
 		{
 			message_name = message_name_property->GetString();
@@ -1239,14 +1297,14 @@ namespace pvd::rtmp
 		// Obtain the data name
 		ov::String data_name;
 		auto data_name_property = document.Get(1);
-		auto data_name_type = (data_name_property != nullptr) ? data_name_property->GetType() : modules::rtmp::AmfTypeMarker::Undefined;
+		auto data_name_type		= (data_name_property != nullptr) ? data_name_property->GetType() : modules::rtmp::AmfTypeMarker::Undefined;
 		if (data_name_type == modules::rtmp::AmfTypeMarker::String)
 		{
 			data_name = data_name_property->GetString();
 		}
 
 		auto third_property = document.Get(2);
-		auto third_type = (third_property != nullptr) ? third_property->GetType() : modules::rtmp::AmfTypeMarker::Undefined;
+		auto third_type		= (third_property != nullptr) ? third_property->GetType() : modules::rtmp::AmfTypeMarker::Undefined;
 
 		switch (modules::rtmp::ToCommand(message_name))
 		{
@@ -1292,55 +1350,78 @@ namespace pvd::rtmp
 		return true;
 	}
 
-	bool RtmpChunkHandler::HandleAudio(const std::shared_ptr<const modules::rtmp::Message> &message)
+	// Parse Audio/Video packets
+	bool RtmpChunkHandler::ParsePackets(
+		const char *name,
+		const std::shared_ptr<const modules::rtmp::Message> &message,
+		size_t min_size,
+		modules::flv::ParserCommon &parser)
 	{
-		if (_media_info.ignore_audio_packets)
-		{
-			return true;
-		}
-
-		const auto message_length = message->header->message_length;
+		const size_t message_length = message->header->message_length;
 
 		if (message_length == 0)
 		{
 			// Nothing to do
-			logaw("0-byte audio message received");
+			logaw("0-byte %s message received", name);
 			return true;
 		}
 
-		if (ov::InRange(static_cast<size_t>(message_length), AUDIO_DATA_MIN_SIZE, MAX_PACKET_SIZE) == false)
+		if (message_length < min_size)
 		{
-			logae("Invalid audio payload size: %u", message_length);
+			logae("Invalid %s payload size: %zu", name, message_length);
 			return false;
 		}
 
-		modules::flv::AudioParser parser(TRACK_ID_FOR_AUDIO);
 		ov::BitReader reader(message->payload);
 
 		if (parser.Parse(reader) == false)
 		{
-			logae("Could not parse RTMP audio data");
+			logae("Could not parse RTMP %s data", name);
 			return false;
 		}
 
 		if (reader.GetRemainingBits() > 0)
 		{
-			OV_ASSERT(false, "There are remaining bits in the audio message: %zu bytes (%zu bits)",
+			OV_ASSERT(false, "There are remaining bits in the %s message: %zu bytes (%zu bits)",
+					  name,
 					  reader.GetRemainingBytes(),
 					  reader.GetRemainingBits());
 		}
 
+		return true;
+	}
+
+	bool RtmpChunkHandler::HandleAudio(const std::shared_ptr<const modules::rtmp::Message> &message)
+	{
+		if (_meta_data_context.ignore_packets)
+		{
+			return true;
+		}
+
+		modules::flv::AudioParser parser(TRACK_ID_FOR_AUDIO);
+
+		if (ParsePackets("audio", message, AUDIO_DATA_MIN_SIZE, parser) == false)
+		{
+			return false;
+		}
+
 		std::map<int, std::shared_ptr<RtmpTrack>> rtmp_track_to_send_map;
+		const bool is_ex_header = parser.IsExHeader();
 
 		for (auto &parsed_data : parser.GetDataList())
 		{
-			auto track_id = parsed_data->track_id;
+			auto track_id			  = parsed_data->track_id;
+			auto rtmp_track			  = _stream->GetRtmpTrack(track_id);
 
-			auto rtmp_track = _stream->GetRtmpTrack(track_id);
+			bool need_to_create_track = false;
 
-			if (rtmp_track == nullptr)
+			if (rtmp_track != nullptr)
 			{
-				auto media_codec_id = ToMediaCodecId(parsed_data->sound_format).value_or(cmn::MediaCodecId::None);
+				need_to_create_track = rtmp_track->HasSequenceHeader();
+			}
+			else
+			{
+				auto media_codec_id		= ToMediaCodecId(parsed_data->sound_format).value_or(cmn::MediaCodecId::None);
 
 				bool is_supported_codec = IsSupportedCodecForERTMP(media_codec_id);
 
@@ -1353,15 +1434,32 @@ namespace pvd::rtmp
 				}
 
 				// If the track is not found, create a new one
-				rtmp_track = RtmpTrack::Create(_stream->GetSharedPtrAs<RtmpStreamV2>(), track_id, parser.IsExHeader(), media_codec_id);
+				rtmp_track = RtmpTrack::Create(_stream->GetSharedPtrAs<RtmpStreamV2>(), track_id, is_ex_header, media_codec_id);
 				rtmp_track->SetIgnored(is_supported_codec == false);
 
 				_stream->AddRtmpTrack(rtmp_track);
 
-				if (is_supported_codec)
+				// Prevent negative track count when unexpected track is received
+				_meta_data_context.waiting_audio_track_count = std::max(0, _meta_data_context.waiting_audio_track_count - 1);
+
+				if (rtmp_track->IsIgnored())
+				{
+					continue;
+				}
+
+				need_to_create_track = true;
+			}
+
+			if (rtmp_track->Handle(message, parser, parsed_data) == false)
+			{
+				return false;
+			}
+
+			if (rtmp_track->HasSequenceHeader())
+			{
+				if (need_to_create_track)
 				{
 					auto media_track = rtmp_track->CreateMediaTrack(parser, parsed_data);
-
 					if (media_track == nullptr)
 					{
 						logae("Failed to create media track for audio data with track id: %d", track_id);
@@ -1370,29 +1468,30 @@ namespace pvd::rtmp
 
 					if (rtmp_track->IsFromExHeader() == false)
 					{
-						media_track->SetSampleRate(_media_info.audio_samplerate.value_or(0));
-						media_track->SetBitrateByConfig(_media_info.audio_bitrate.value_or(0) * 1000);
-
-						if (_media_info.audio_channel_layout.has_value())
-						{
-							media_track->GetChannel().SetLayout(_media_info.audio_channel_layout.value());
-						}
+						SetIf(_meta_data_context.audio.samplerate, [&](auto samplerate) { media_track->SetSampleRate(samplerate); });
+						SetIf(_meta_data_context.audio.bitrate, [&](auto bitrate) { media_track->SetBitrateByConfig(bitrate * 1000); });
+						SetIf(_meta_data_context.audio.channel_layout, [&](auto channel_layout) { media_track->GetChannel().SetLayout(channel_layout); });
 					}
 
+					logtd("Audio track has been created: %s", media_track->GetInfoString().CStr());
 					_stream->AddTrack(media_track);
 				}
 
-				// Prevent negative track count when unexpected track is received
-				_waiting_audio_track_count = std::max(0, _waiting_audio_track_count - 1);
+				rtmp_track_to_send_map[track_id] = rtmp_track;
 			}
-
-			if (rtmp_track->IsIgnored())
+			else
 			{
-				continue;
-			}
+				if (rtmp_track->GetMediaPacketList().size() > MAX_PACKET_COUNT_BEFORE_SEQ_HEADER)
+				{
+					logtw("Track %u has too many media packets without sequence header, ignoreing the track", track_id);
+					rtmp_track->SetIgnored(true);
+					rtmp_track->ClearMediaPacketList();
 
-			rtmp_track->Handle(message, parser, parsed_data);
-			rtmp_track_to_send_map[track_id] = rtmp_track;
+					// In this case, it is highly likely that the sequence header
+					// was not processed correctly in RtmpTrack.
+					OV_ASSERT2(false);
+				}
+			}
 		}
 
 		if (_stream->IsPublished() == false)
@@ -1410,14 +1509,14 @@ namespace pvd::rtmp
 			// If the publishing is completed, we need to flush the data that has been accumulated so far
 			for (auto &rtmp_track_pair : _stream->_rtmp_track_map)
 			{
-				auto &track = rtmp_track_pair.second;
+				auto &rtmp_track = rtmp_track_pair.second;
 
-				if (track->IsIgnored())
+				if (rtmp_track->IsIgnored() || (rtmp_track->HasSequenceHeader() == false))
 				{
 					continue;
 				}
 
-				rtmp_track_to_send_map[track->GetTrackId()] = track;
+				rtmp_track_to_send_map[rtmp_track->GetTrackId()] = rtmp_track;
 			}
 		}
 
@@ -1452,103 +1551,25 @@ namespace pvd::rtmp
 
 	bool RtmpChunkHandler::HandleVideo(const std::shared_ptr<const modules::rtmp::Message> &message)
 	{
-		if (_media_info.ignore_video_packets)
+		if (_meta_data_context.ignore_packets)
 		{
 			return true;
-		}
-
-		const auto message_length = message->header->message_length;
-
-		if (message_length == 0)
-		{
-			// Nothing to do
-			logaw("0-byte video message received");
-			return true;
-		}
-
-		if (ov::InRange(static_cast<size_t>(message_length), VIDEO_DATA_MIN_SIZE, MAX_PACKET_SIZE) == false)
-		{
-			logae("Invalid video payload size: %u", message_length);
-			return false;
 		}
 
 		modules::flv::VideoParser parser(TRACK_ID_FOR_VIDEO);
-		ov::BitReader reader(message->payload);
 
-		if (parser.Parse(reader) == false)
+		if (ParsePackets("video", message, VIDEO_DATA_MIN_SIZE, parser) == false)
 		{
-			logae("Could not parse RTMP video data");
 			return false;
 		}
 
-		if (reader.GetRemainingBits() > 0)
-		{
-			OV_ASSERT(false, "There are remaining bits in the video message: %zu bytes (%zu bits)",
-					  reader.GetRemainingBytes(),
-					  reader.GetRemainingBits());
-		}
-
 		std::map<int, std::shared_ptr<RtmpTrack>> rtmp_track_to_send_map;
+		const bool is_ex_header = parser.IsExHeader();
 
 		for (auto &parsed_data : parser.GetDataList())
 		{
-			auto track_id = parsed_data->track_id;
-
-			auto rtmp_track = _stream->GetRtmpTrack(track_id);
-
-			if (rtmp_track == nullptr)
-			{
-				auto media_codec_id = (parser.IsExHeader()
-										   ? ToMediaCodecId(parsed_data->video_fourcc)
-										   : ToMediaCodecId(parsed_data->video_codec_id.value()))
-										  .value_or(cmn::MediaCodecId::None);
-
-				bool is_supported_codec = IsSupportedCodecForERTMP(media_codec_id);
-
-				if (is_supported_codec == false)
-				{
-					logaw("Not supported video codec in track: %s(%d) - %u",
-						  cmn::GetCodecIdString(media_codec_id),
-						  ov::ToUnderlyingType(media_codec_id),
-						  track_id);
-				}
-
-				// If the track is not found, create a new one
-				rtmp_track = RtmpTrack::Create(_stream->GetSharedPtrAs<RtmpStreamV2>(), track_id, parser.IsExHeader(), media_codec_id);
-				rtmp_track->SetIgnored(is_supported_codec == false);
-
-				_stream->AddRtmpTrack(rtmp_track);
-
-				if (is_supported_codec)
-				{
-					auto media_track = rtmp_track->CreateMediaTrack(parser, parsed_data);
-
-					if (media_track == nullptr)
-					{
-						logae("Failed to create media track for video data with track id: %d", track_id);
-						return false;
-					}
-
-					if (rtmp_track->IsFromExHeader() == false)
-					{
-						media_track->SetWidth(_media_info.video_width);
-						media_track->SetHeight(_media_info.video_height);
-						media_track->SetFrameRateByConfig(_media_info.video_framerate);
-						media_track->SetBitrateByConfig(_media_info.video_bitrate * 1000);
-					}
-
-					_stream->AddTrack(media_track);
-				}
-
-				// Prevent negative track count when unexpected track is received
-				_waiting_video_track_count = std::max(0, _waiting_video_track_count - 1);
-			}
-
-			if (rtmp_track->IsIgnored())
-			{
-				continue;
-			}
-
+			// Currently, metadata is not handled separately.
+			// If an RTMP client that sends metadata is found later, it will be added.
 #if DEBUG
 			if (parsed_data->video_metadata.has_value())
 			{
@@ -1574,8 +1595,94 @@ namespace pvd::rtmp
 				continue;
 			}
 
-			rtmp_track->Handle(message, parser, parsed_data);
-			rtmp_track_to_send_map[track_id] = rtmp_track;
+			auto track_id			  = parsed_data->track_id;
+			auto rtmp_track			  = _stream->GetRtmpTrack(track_id);
+
+			bool need_to_create_track = false;
+
+			if (rtmp_track != nullptr)
+			{
+				need_to_create_track = rtmp_track->HasSequenceHeader();
+			}
+			else
+			{
+				auto media_codec_id =
+					(is_ex_header
+						 ? ToMediaCodecId(parsed_data->video_fourcc)
+						 : ToMediaCodecId(parsed_data->video_codec_id.value()))
+						.value_or(cmn::MediaCodecId::None);
+
+				bool is_supported_codec = IsSupportedCodecForERTMP(media_codec_id);
+
+				if (is_supported_codec == false)
+				{
+					logaw("Not supported video codec in track: %s(%d) - %u",
+						  cmn::GetCodecIdString(media_codec_id),
+						  ov::ToUnderlyingType(media_codec_id),
+						  track_id);
+				}
+
+				// If the track is not found, create a new one
+				rtmp_track = RtmpTrack::Create(_stream->GetSharedPtrAs<RtmpStreamV2>(), track_id, is_ex_header, media_codec_id);
+				rtmp_track->SetIgnored(is_supported_codec == false);
+
+				_stream->AddRtmpTrack(rtmp_track);
+
+				// Prevent negative track count when unexpected track is received
+				_meta_data_context.waiting_video_track_count = std::max(0, _meta_data_context.waiting_video_track_count - 1);
+
+				if (rtmp_track->IsIgnored())
+				{
+					continue;
+				}
+
+				need_to_create_track = true;
+			}
+
+			if (rtmp_track->Handle(message, parser, parsed_data) == false)
+			{
+				return false;
+			}
+
+			if (rtmp_track->HasSequenceHeader())
+			{
+				if (need_to_create_track)
+				{
+					// This is the first time we receive a sequence header for this track
+					auto media_track = rtmp_track->CreateMediaTrack(parser, parsed_data);
+					if (media_track == nullptr)
+					{
+						logae("Failed to create media track for video data with track id: %d", track_id);
+						return false;
+					}
+
+					if (rtmp_track->IsFromExHeader() == false)
+					{
+						SetIf(_meta_data_context.video.width, [&](auto width) { media_track->SetWidth(width); });
+						SetIf(_meta_data_context.video.height, [&](auto height) { media_track->SetHeight(height); });
+						SetIf(_meta_data_context.video.framerate, [&](auto framerate) { media_track->SetFrameRateByConfig(framerate); });
+						SetIf(_meta_data_context.video.bitrate, [&](auto bitrate) { media_track->SetBitrateByConfig(bitrate * 1000); });
+					}
+
+					logtd("Video track has been created: %s", media_track->GetInfoString().CStr());
+					_stream->AddTrack(media_track);
+				}
+
+				rtmp_track_to_send_map[track_id] = rtmp_track;
+			}
+			else
+			{
+				if (rtmp_track->GetMediaPacketList().size() > MAX_PACKET_COUNT_BEFORE_SEQ_HEADER)
+				{
+					logtw("Track %u has too many media packets without sequence header, ignoreing the track", track_id);
+					rtmp_track->SetIgnored(true);
+					rtmp_track->ClearMediaPacketList();
+
+					// In this case, it is highly likely that the sequence header
+					// was not processed correctly in RtmpTrack.
+					OV_ASSERT2(false);
+				}
+			}
 		}
 
 		if (_stream->IsPublished() == false)
@@ -1593,14 +1700,14 @@ namespace pvd::rtmp
 			// If the publishing is completed, we need to flush the data that has been accumulated so far
 			for (auto &rtmp_track_pair : _stream->_rtmp_track_map)
 			{
-				auto &track = rtmp_track_pair.second;
+				auto &rtmp_track = rtmp_track_pair.second;
 
-				if (track->IsIgnored())
+				if (rtmp_track->IsIgnored() || (rtmp_track->HasSequenceHeader() == false))
 				{
 					continue;
 				}
 
-				rtmp_track_to_send_map[track->GetTrackId()] = track;
+				rtmp_track_to_send_map[rtmp_track->GetTrackId()] = rtmp_track;
 			}
 		}
 
@@ -1634,7 +1741,7 @@ namespace pvd::rtmp
 		// Statistics for debugging
 		if (has_key_frame)
 		{
-			_stats.key_frame_interval = message->header->completed.timestamp - _stats.previous_key_frame_timestamp;
+			_stats.key_frame_interval			= message->header->completed.timestamp - _stats.previous_key_frame_timestamp;
 			_stats.previous_key_frame_timestamp = message->header->completed.timestamp;
 		}
 
@@ -1644,7 +1751,7 @@ namespace pvd::rtmp
 		auto elapsed_ms = _stats.GetElapsedInMs();
 		if (elapsed_ms >= (10 * 1000))
 		{
-			logi("RTMPProvider.Stat", "[%s/%s(%u)] RTMP Info - %s",
+			logi(OV_LOG_TAG ".Stat", "[%s/%s(%u)] RTMP Info - %s",
 				 RTMP_STREAM_DESC,
 				 _stats.GetStatsString(elapsed_ms).CStr());
 
@@ -1704,7 +1811,7 @@ namespace pvd::rtmp
 				break;
 			}
 
-			bool result = true;
+			bool result	 = true;
 			auto type_id = message->header->completed.type_id;
 
 			switch (type_id)
@@ -1734,13 +1841,13 @@ namespace pvd::rtmp
 
 	int32_t RtmpChunkHandler::HandleData(const std::shared_ptr<const ov::Data> &data)
 	{
-		int32_t total_bytes_used = 0;
+		int32_t total_bytes_used					 = 0;
 		std::shared_ptr<const ov::Data> current_data = data;
 
 		while (current_data->IsEmpty() == false)
 		{
 			size_t bytes_used = 0;
-			auto status = _chunk_parser.Parse(current_data, &bytes_used);
+			auto status		  = _chunk_parser.Parse(current_data, &bytes_used);
 
 			total_bytes_used += bytes_used;
 

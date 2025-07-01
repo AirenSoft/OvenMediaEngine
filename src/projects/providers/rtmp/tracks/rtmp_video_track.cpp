@@ -38,4 +38,99 @@ namespace pvd::rtmp
 		OV_ASSERT(false, "Unknown VideoPacketType");
 		return cmn::PacketType::Unknown;
 	}
+
+	bool RtmpVideoTrack::Handle(
+		const std::shared_ptr<const modules::rtmp::Message> &message,
+		const modules::flv::ParserCommon &parser,
+		const std::shared_ptr<const modules::flv::CommonData> &data)
+	{
+		do
+		{
+			auto video_data = std::dynamic_pointer_cast<const modules::flv::VideoData>(data);
+
+			if (video_data == nullptr)
+			{
+				// This should never happen
+				OV_ASSERT2(false);
+				return false;
+			}
+
+			auto packet_type = ToCommonPacketType(video_data->video_packet_type);
+
+			if (packet_type == cmn::PacketType::Unknown)
+			{
+				logtd("Unknown %S packet type: %d",
+					  cmn::GetCodecIdString(_codec_id),
+					  static_cast<int>(video_data->video_packet_type));
+				break;
+			}
+
+			// CTS = PTS - DTS
+			auto cts	= video_data->composition_time_offset;
+			int64_t dts = message->header->completed.timestamp;
+			int64_t pts = cts + dts;
+
+			AdjustTimestamp(pts, dts);
+			_last_pts = dts;
+
+			std::shared_ptr<MediaPacket> media_packet;
+
+			if (packet_type == cmn::PacketType::SEQUENCE_HEADER)
+			{
+				if (video_data->header == nullptr)
+				{
+					logte("%s sequence header is not found", cmn::GetCodecIdString(_codec_id));
+					OV_ASSERT2(false);
+					return false;
+				}
+
+				_sequence_header = video_data->header;
+
+				media_packet	 = CreateMediaPacket(
+					video_data->header_data,
+					pts, dts,
+					packet_type,
+					true);
+			}
+			else
+			{
+				if (video_data->payload == nullptr)
+				{
+					logte("%s payload is not found", cmn::GetCodecIdString(_codec_id));
+					OV_ASSERT2(false);
+					return false;
+				}
+
+				media_packet = CreateMediaPacket(
+					video_data->payload,
+					pts, dts,
+					packet_type,
+					video_data->IsKeyFrame());
+			}
+
+			_media_packet_list.push_back(media_packet);
+		} while (false);
+
+		return true;
+	}
+
+	std::shared_ptr<MediaTrack> RtmpVideoTrack::CreateMediaTrack(
+		const modules::flv::ParserCommon &parser,
+		const std::shared_ptr<const modules::flv::CommonData> &data)
+	{
+		if (std::dynamic_pointer_cast<const modules::flv::VideoData>(data) == nullptr)
+		{
+			OV_ASSERT2(false);
+			return nullptr;
+		}
+
+		auto media_track = RtmpTrack::CreateMediaTrack(parser, data);
+
+		if (media_track != nullptr)
+		{
+			media_track->SetVideoTimestampScale(1.0);
+		}
+
+		return media_track;
+	}
 }  // namespace pvd::rtmp

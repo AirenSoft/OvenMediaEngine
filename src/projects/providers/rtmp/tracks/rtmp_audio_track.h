@@ -32,5 +32,9 @@ namespace pvd::rtmp
 		{
 			return cmn::MediaType::Audio;
 		}
+
+		std::shared_ptr<MediaTrack> CreateMediaTrack(
+			const modules::flv::ParserCommon &parser,
+			const std::shared_ptr<const modules::flv::CommonData> &data) override;
 	};
 }  // namespace pvd::rtmp

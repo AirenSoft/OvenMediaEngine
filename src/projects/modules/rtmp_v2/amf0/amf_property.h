@@ -67,6 +67,12 @@ namespace modules::rtmp
 			return _number;
 		}
 
+		template<typename T>
+		T GetNumberAs() const
+		{
+			return static_cast<T>(_number);
+		}
+
 		bool GetBoolean() const
 		{
 			return _boolean;

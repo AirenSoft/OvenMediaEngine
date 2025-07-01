@@ -921,6 +921,14 @@ namespace cmn
 			}
 		}
 
+		void SetLayout(std::optional<Layout> layout)
+		{
+			if (layout.has_value())
+			{
+				SetLayout(layout.value());
+			}
+		}
+
 		// If it is set as channel count, it is used as the default layout.
 		void SetCount(uint32_t count)
 		{
