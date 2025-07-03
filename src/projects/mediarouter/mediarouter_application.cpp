@@ -494,8 +494,6 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 
 	logti("[%s/%s(%u)] Stream has been prepared %s", _application_info.GetVHostAppName().CStr(), stream->GetStream()->GetName().CStr(), stream->GetStream()->GetId(), stream->GetStream()->GetInfoString().CStr());
 
-	MonitorInstance->OnStreamPrepared(*stream->GetStream());
-
 	for (auto observer : observers)
 	{
 		auto observer_type = observer->GetObserverType();
@@ -526,6 +524,8 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 	}
 
 	stream->OnStreamPrepared(true);
+
+	MonitorInstance->OnStreamPrepared(*stream->GetStream());
 
 	return true;
 }

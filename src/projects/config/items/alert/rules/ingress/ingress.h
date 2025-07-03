@@ -17,6 +17,7 @@ namespace cfg
 			struct Ingress : public Item
 			{
 			protected:
+				bool _stream_status = false;
 				int32_t _min_bitrate = 0;
 				ov::String _min_bitrate_string;
 				int32_t _max_bitrate = 0;
@@ -33,6 +34,7 @@ namespace cfg
 				bool _has_b_frames = false;
 
 			public:
+				CFG_DECLARE_CONST_REF_GETTER_OF(IsStreamStatus, _stream_status)
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetMinBitrate, _min_bitrate)
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetMinBitrateString, _min_bitrate_string)
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetMaxBitrate, _max_bitrate)
@@ -51,6 +53,10 @@ namespace cfg
 			protected:
 				void MakeList() override
 				{
+					Register<Optional>("StreamStatus", &_stream_status, nullptr, [=]() -> std::shared_ptr<ConfigError> {
+						_stream_status = true;
+						return nullptr;
+					});
 					Register<Optional>("MinBitrate", &_min_bitrate_string, nullptr, [=]() -> std::shared_ptr<ConfigError> {
 						auto min_bitrate_string = _min_bitrate_string.UpperCaseString();
 						int multiplier = 1;

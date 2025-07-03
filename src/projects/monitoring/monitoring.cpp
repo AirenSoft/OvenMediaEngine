@@ -212,7 +212,7 @@ namespace mon
 				return false;
 			}
 
-			_alert.SendStreamMessage(alrt::Message::Code::STREAM_CREATED, stream_metrics);
+			_alert.SendStreamMessage(alrt::Message::Code::INGRESS_STREAM_CREATED, stream_metrics);
 		}
 		// Output stream created
 		else
@@ -228,7 +228,13 @@ namespace mon
 
 			// Link output stream to input stream
 			auto output_stream_metric = app_metrics->GetStreamMetrics(stream);
+			if (output_stream_metric == nullptr)
+			{
+				return false;
+			}
 			stream_metrics->LinkOutputStreamMetrics(output_stream_metric);
+
+			_alert.SendStreamMessage(alrt::Message::Code::EGRESS_STREAM_CREATED, output_stream_metric);
 		}
 
 		if(IsAnalyticsOn())
@@ -258,7 +264,7 @@ namespace mon
 					return false;
 			}
 
-			_alert.SendStreamMessage(alrt::Message::Code::STREAM_CREATION_FAILED_DUPLICATE_NAME, stream_metrics);
+			_alert.SendStreamMessage(alrt::Message::Code::INGRESS_STREAM_CREATION_FAILED_DUPLICATE_NAME, stream_metrics);
 		}
 
 		return true;
@@ -266,21 +272,31 @@ namespace mon
 
 	bool Monitoring::OnStreamPrepared(const info::Stream &stream)
 	{
+		auto app_metrics = GetApplicationMetrics(stream.GetApplicationInfo());
+		if (app_metrics == nullptr)
+		{
+			return false;
+		}
+
 		if (stream.IsInputStream())
 		{
-			auto app_metrics = GetApplicationMetrics(stream.GetApplicationInfo());
-			if (app_metrics == nullptr)
-			{
-				return false;
-			}
-
 			auto stream_metrics = app_metrics->GetStreamMetrics(stream);
 			if (stream_metrics == nullptr)
 			{
 				return false;
 			}
 
-			_alert.SendStreamMessage(alrt::Message::Code::STREAM_PREPARED, stream_metrics);
+			_alert.SendStreamMessage(alrt::Message::Code::INGRESS_STREAM_PREPARED, stream_metrics);
+		}
+		else
+		{
+			auto output_stream_metric = app_metrics->GetStreamMetrics(stream);
+			if (output_stream_metric == nullptr)
+			{
+				return false;
+			}
+
+			_alert.SendStreamMessage(alrt::Message::Code::EGRESS_STREAM_PREPARED, output_stream_metric);
 		}
 
 		return true;
@@ -294,24 +310,35 @@ namespace mon
 			return false;
 		}
 
-		auto stream_metrics = app_metrics->GetStreamMetrics(stream);
-		if(stream_metrics == nullptr)
-		{
-			return false;
-		}
-
+		std::shared_ptr<StreamMetrics> stream_metrics = nullptr;
 		//TODO(Getroot): If a session connects or disconnects at the moment the block below is executed, a race condition may occur, so it must be protected with a mutex.
 		{
 			// If there are sessions in the stream, the number of visitors to the app is recalculated.
 			// Calculate connections to application only if it hasn't origin stream to prevent double subtract. 
-			if(stream_metrics->IsInputStream())
+			if(stream.IsInputStream())
 			{
+				stream_metrics = app_metrics->GetStreamMetrics(stream);
+				if(stream_metrics == nullptr)
+				{
+					return false;
+				}
+
 				for(uint8_t type = static_cast<uint8_t>(PublisherType::Unknown); type < static_cast<uint8_t>(PublisherType::NumberOfPublishers); type++)
 				{
 					OnSessionsDisconnected(*stream_metrics, static_cast<PublisherType>(type), stream_metrics->GetConnections(static_cast<PublisherType>(type)));
 				}
 
-				_alert.SendStreamMessage(alrt::Message::Code::STREAM_DELETED, stream_metrics);
+				_alert.SendStreamMessage(alrt::Message::Code::INGRESS_STREAM_DELETED, stream_metrics);
+			}
+			else
+			{
+				auto output_stream_metric = app_metrics->GetStreamMetrics(stream);
+				if (output_stream_metric == nullptr)
+				{
+					return false;
+				}
+
+				_alert.SendStreamMessage(alrt::Message::Code::EGRESS_STREAM_DELETED, output_stream_metric);
 			}
 
 			if(app_metrics->OnStreamDeleted(stream) == false)
