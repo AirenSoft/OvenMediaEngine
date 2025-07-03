@@ -167,13 +167,10 @@ The control server may need to validate incoming http requests for security reas
 
 ### Response
 
-The engine in the closing state does not need any parameter in response. To the query just answer with empty JSON object.
+The engine in the closing state does not need any parameter in response. The response payload is ignored.
 
 ```http
 HTTP/1.1 200 OK
-Content-Length: 5
-Content-Type: application/json
+Content-Length: 0
 Connection: Closed
-{
-}
 ```

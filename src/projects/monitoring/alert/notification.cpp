@@ -56,16 +56,6 @@ namespace mon
 			return _message_body;
 		}
 
-		void Notification::ParseResponse(const std::shared_ptr<const ov::Data> &data)
-		{
-			ov::JsonObject object = ov::Json::Parse(data->ToString());
-			if (object.IsNull())
-			{
-				SetStatus(StatusCode::INVALID_DATA_FORMAT, ov::String::FormatString("Json parsing error : a response in the wrong format was received."));
-				return;
-			}
-		}
-
 		void Notification::Run()
 		{
 			if (_message_body.IsEmpty())
@@ -105,8 +95,6 @@ namespace mon
 				{
 					if (status_code == http::StatusCode::OK)
 					{
-						// Parsing response
-						ParseResponse(data);
 						return;
 					}
 					else

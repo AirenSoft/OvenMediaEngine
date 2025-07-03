@@ -45,8 +45,6 @@ namespace mon
 			ov::String GetMessageBody();
 			void SetStatus(StatusCode code, ov::String reason);
 
-			void ParseResponse(const std::shared_ptr<const ov::Data> &data);
-
 			uint64_t _elapsed_msec = 0;
 
 			// Request
