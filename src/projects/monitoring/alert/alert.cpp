@@ -52,6 +52,9 @@ namespace mon
 
 			_server_config = server_config;
 
+			_rules_updater = std::make_shared<AlertRulesUpdater>(alert);
+			_rules_updater->UpdateIfNeeded();
+
 			_stop_thread_flag = false;
 			_event_worker_thread = std::thread(&Alert::EventWorkerThread, this);
 
@@ -62,7 +65,7 @@ namespace mon
 					MetricWorkerThread();
 					return ov::DelayQueueAction::Repeat;
 				},
-				100);
+				500);
 			_timer.Start();
 
 			return true;
@@ -92,8 +95,7 @@ namespace mon
 
 		void Alert::MetricWorkerThread()
 		{
-			auto alert = _server_config->GetAlert();
-			auto rules = alert.GetRules();
+			auto rules = _rules_updater->GetRules();
 
 			NotificationData::Type type;
 			ov::String messages_key;
@@ -111,7 +113,7 @@ namespace mon
 				const auto &queue_metric_list = MonitorInstance->GetServerMetrics()->GetQueueMetricsList();
 				for (const auto &[queue_key, queue_metric] : queue_metric_list)
 				{
-					if (!VerifyQueueCongestionRules(rules, queue_metric, message_list))
+					if (!VerifyQueueCongestionRules(*rules, queue_metric, message_list))
 					{
 						break;
 					}
@@ -143,7 +145,7 @@ namespace mon
 								messages_key = stream_metric->GetUri();
 								new_messages_keys.push_back(messages_key);
 
-								VerifyIngressMetricRules(rules, stream_metric, message_list);
+								VerifyIngressMetricRules(*rules, stream_metric, message_list);
 
 								if (IsAlertNeeded(messages_key, message_list))
 								{
@@ -158,6 +160,8 @@ namespace mon
 			}
 
 			CleanupReleasedMessages(new_messages_keys);
+
+			_rules_updater->UpdateIfNeeded();
 		}
 
 		void Alert::EventWorkerThread()
@@ -204,10 +208,14 @@ namespace mon
 
 		void Alert::SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric)
 		{
-			auto alert = _server_config->GetAlert();
-			auto rules = alert.GetRules();
+			if (_stop_thread_flag)
+			{
+				return;
+			}
 
-			if (!VerifyStreamEventRule(rules, code))
+			auto rules = _rules_updater->GetRules();
+
+			if (!VerifyStreamEventRule(*rules, code))
 			{
 				return;
 			}

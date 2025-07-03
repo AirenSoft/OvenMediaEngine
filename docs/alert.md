@@ -14,6 +14,7 @@ Alert can be set up on `<Server>`, as shown below.
 		<Url>http://192.168.0.161:9595/alert/notification</Url>
 		<SecretKey>1234</SecretKey>
 		<Timeout>3000</Timeout>
+		<RulesFile>AlertRules.xml</RulesFile>
 		<Rules>
 			<Ingress>
 				<StreamStatus />
@@ -38,26 +39,60 @@ Alert can be set up on `<Server>`, as shown below.
 </Server>
 ```
 
-<table><thead><tr><th width="290">Key</th><th>Description</th></tr></thead><tbody><tr><td>Url</td><td>The HTTP Server to receive the notification. HTTP and HTTPS are available.</td></tr><tr><td>Secretkey</td><td><p>The secret key used when encrypting with HMAC-SHA1</p><p>For more information, see <a href="alert.md#security">Security</a>.</p></td></tr><tr><td>Timeout</td><td>Time to wait for a response after request. (in milliseconds)</td></tr><tr><td>Rules</td><td>Anomalies and patterns of interest to be detected.</td></tr></tbody></table>
+| Key       | Description                                                                                                                  |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Url       | The HTTP Server to receive the notification. HTTP and HTTPS are available.                                                   |
+| Secretkey | The secret key used when encrypting with HMAC-SHA1<br />For more information, see <a href="alert.md#security">Security</a>.  |
+| Timeout   | Time to wait for a response after request. (in milliseconds)                                                                 |
+| RulesFile | (Optional) Manages alert detection rules in a separate external file.                                                        |
+| Rules     | (Optional) Defines anomalies and patterns of interest to be detected. This section is ignored if `<RulesFile>` is set.       |
+
+### Rules File
+
+You can define anomalies and patterns of interest to be detected in a separate file. OvenMediaEngine monitors this file for changes and applies any updates immediately without requiring a restart. If you anticipate needing to modify detection rules during service operation, we recommend using `<RulesFile>`.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Rules>
+	<Ingress>
+		<StreamStatus />
+		<MinBitrate>2000000</MinBitrate>
+		<MaxBitrate>4000000</MaxBitrate>
+		<MinFramerate>15</MinFramerate>
+		<MaxFramerate>60</MaxFramerate>
+		<MinWidth>1280</MinWidth>
+		<MinHeight>720</MinHeight>
+		<MaxWidth>1920</MaxWidth>
+		<MaxHeight>1080</MaxHeight>
+		<MinSamplerate>16000</MinSamplerate>
+		<MaxSamplerate>50400</MaxSamplerate>
+		<LongKeyFrameInterval />
+		<HasBFrames />
+	</Ingress>
+	<Egress>
+		<StreamStatus />
+	</Egress>
+</Rules>
+```
 
 ### Rules
 
-| Key          |                      | Description                                                                           |
-| ------------ | -------------------- | ------------------------------------------------------------------------------------- |
-| Ingress      | StreamStatus         | It detects the creation, failure, readiness, and deletion states of a ingress stream. |
-|              | MinBitrate           | Detects when the ingress stream's bitrate is lower than the set value.                |
-|              | MaxBitrate           | Detects when the ingress stream's bitrate is greater than the set value.              |
-|              | MinFramerate         | Detects when the ingress stream's framerate is lower than the set value.              |
-|              | MaxFramerate         | Detects when the ingress stream's framerate is greater than the set value.            |
-|              | MinWidth             | Detects when the ingress stream's width is lower than the set value.                  |
-|              | MaxWidth             | Detects when the ingress stream's width is greater than the set value.                |
-|              | MinHeight            | Detects when the ingress stream's height is lower than the set value.                 |
-|              | MaxHeight            | Detects when the ingress stream's height is greater than the set value.               |
-|              | MinSamplerate        | Detects when the ingress stream's samplerate is lower than the set value.             |
-|              | MaxSamplerate        | Detects when the ingress stream's samplerate is greater than the set value.           |
-|              | LongKeyFrameInterval | Detects when the ingress stream's keyframe interval is too long (exceeds 4 seconds).  |
-|              | HasBFrames           | Detects when there are B-frames in the ingress stream.                                |
-| Egress       | StreamStatus         | It detects the creation, readiness, and deletion states of a egress stream.           |
+| Key     |                      | Description                                                                           |
+| ------- | -------------------- | ------------------------------------------------------------------------------------- |
+| Ingress | StreamStatus         | It detects the creation, failure, readiness, and deletion states of a ingress stream. |
+|         | MinBitrate           | Detects when the ingress stream's bitrate is lower than the set value.                |
+|         | MaxBitrate           | Detects when the ingress stream's bitrate is greater than the set value.              |
+|         | MinFramerate         | Detects when the ingress stream's framerate is lower than the set value.              |
+|         | MaxFramerate         | Detects when the ingress stream's framerate is greater than the set value.            |
+|         | MinWidth             | Detects when the ingress stream's width is lower than the set value.                  |
+|         | MaxWidth             | Detects when the ingress stream's width is greater than the set value.                |
+|         | MinHeight            | Detects when the ingress stream's height is lower than the set value.                 |
+|         | MaxHeight            | Detects when the ingress stream's height is greater than the set value.               |
+|         | MinSamplerate        | Detects when the ingress stream's samplerate is lower than the set value.             |
+|         | MaxSamplerate        | Detects when the ingress stream's samplerate is greater than the set value.           |
+|         | LongKeyFrameInterval | Detects when the ingress stream's keyframe interval is too long (exceeds 4 seconds).  |
+|         | HasBFrames           | Detects when there are B-frames in the ingress stream.                                |
+| Egress  | StreamStatus         | It detects the creation, readiness, and deletion states of a egress stream.           |
 
 ## Notification
 
@@ -128,14 +163,12 @@ X-OME-Signature: f871jd991jj1929jsjd91pqa0amm1
 
 Here is a detailed explanation of each element of JSON payload:
 
-| Element     | Description                                                                                                                               |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| sourceUri   | URI information of the detected source.<br />`INGRESS`: #&#x3C;vhost>#&#x3C;application>/&#x3C;input_stream><br />`EGRESS`: #&#x3C;vhost>#&#x3C;application>/&#x3C;output_stream>            |
-| messages    | List of messages detected by the Rules.                                                                       |
-| sourceInfo  | Detailed information about the source at the time of detection. It is identical to the response of the REST API's source information query for the detected source.  |
-| type        | It represents the format of the JSON payload. The information of the JSON elements can vary depending on the value of the type.  |
-
-<!-- <table><thead><tr><th width="290">Element</th><th>Description</th></tr></thead><tbody><tr><td>sourceUri</td><td><p>URI information of the detected source.</p><p>It consists of #&#x3C;vhost>#&#x3C;application>/&#x3C;stream>.</p></td></tr><tr><td>messages</td><td>List of messages detected by the Rules.</td></tr><tr><td>sourceInfo</td><td>Detailed information about the source at the time of detection. It is identical to the response of the REST API's source information query for the detected source.</td></tr><tr><td>type</td><td><p>It represents the format of the JSON payload. The information of the JSON elements can vary depending on the value of the type.</p></td></tr></tbody></table> -->
+| Element    | Description                                                                                                                                                                       |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| sourceUri  | URI information of the detected source.<br />`INGRESS`: #&#x3C;vhost>#&#x3C;application>/&#x3C;input_stream><br />`EGRESS`: #&#x3C;vhost>#&#x3C;application>/&#x3C;output_stream> |
+| messages   | List of messages detected by the Rules.                                                                                                                                           |
+| sourceInfo | Detailed information about the source at the time of detection. It is identical to the response of the REST API's source information query for the detected source.               |
+| type       | It represents the format of the JSON payload. The information of the JSON elements can vary depending on the value of the type.                                                   |
 
 #### Messages
 

@@ -14,6 +14,7 @@
 #include "config/config.h"
 #include "message.h"
 #include "notification_data.h"
+#include "alert_rules_updater.h"
 
 namespace mon
 {
@@ -51,6 +52,7 @@ namespace mon
 			std::vector<std::shared_ptr<Message>> GetVerifiedMessages(const ov::String &messages_key);
 
 			std::shared_ptr<const cfg::Server> _server_config = nullptr;
+			std::shared_ptr<AlertRulesUpdater> _rules_updater = nullptr;
 
 			std::map<ov::String, std::vector<std::shared_ptr<Message>>> _last_verified_messages_map;
 
