@@ -16,8 +16,8 @@ namespace modules
 	{
 		struct AudioData : public CommonData
 		{
-			AudioData(SoundFormat sound_format, bool from_ex_header)
-				: CommonData(from_ex_header),
+			AudioData(uint32_t default_track_id, SoundFormat sound_format, bool from_ex_header)
+				: CommonData(default_track_id, from_ex_header),
 				  sound_format(sound_format)
 			{
 			}

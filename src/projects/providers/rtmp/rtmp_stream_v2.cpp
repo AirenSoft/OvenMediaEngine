@@ -400,6 +400,62 @@ namespace pvd::rtmp
 		AdjustTimestampByBase(track_id, pts, dts, std::numeric_limits<int64_t>::max());
 	}
 
+	bool RtmpStreamV2::SetTrackInfo()
+	{
+		for (auto &[track_id, rtmp_track] : _rtmp_track_map)
+		{
+			if (rtmp_track->IsIgnored())
+			{
+				continue;
+			}
+
+			if (rtmp_track->HasSequenceHeader() == false)
+			{
+				rtmp_track->SetIgnored(true);
+				continue;
+			}
+
+			auto media_type = rtmp_track->GetMediaType();
+
+			if (media_type == cmn::MediaType::Audio)
+			{
+				auto media_track = std::make_shared<MediaTrack>();
+
+				_chunk_handler.FillAudioMetadata(media_track);
+				rtmp_track->FillMediaTrackMetadata(media_track);
+
+				AddTrack(media_track);
+				logad("Audio track has been created: %s", media_track->GetInfoString().CStr());
+			}
+			else if (media_type == cmn::MediaType::Video)
+			{
+				auto media_track = std::make_shared<MediaTrack>();
+
+				_chunk_handler.FillVideoMetadata(media_track);
+				rtmp_track->FillMediaTrackMetadata(media_track);
+
+				AddTrack(media_track);
+				logad("Video track has been created: %s", media_track->GetInfoString().CStr());
+			}
+		}
+
+		// Data Track
+		if (GetFirstTrackByType(cmn::MediaType::Data) == nullptr)
+		{
+			auto data_track = std::make_shared<MediaTrack>();
+
+			data_track->SetId(TRACK_ID_FOR_DATA);
+			data_track->SetMediaType(cmn::MediaType::Data);
+			data_track->SetTimeBase(1, 1000);
+			data_track->SetOriginBitstream(cmn::BitstreamFormat::Unknown);
+
+			AddTrack(data_track);
+			logad("Data track has been created: %s", data_track->GetInfoString().CStr());
+		}
+
+		return true;
+	}
+
 	bool RtmpStreamV2::PublishStream()
 	{
 		// Get application config
@@ -423,20 +479,7 @@ namespace pvd::rtmp
 
 		_chunk_handler.SetEventGeneratorConfig(rtmp_provider.GetEventGenerator());
 
-		// Data Track
-		if (GetFirstTrackByType(cmn::MediaType::Data) == nullptr)
-		{
-			auto data_track = std::make_shared<MediaTrack>();
-
-			data_track->SetId(TRACK_ID_FOR_DATA);
-			data_track->SetMediaType(cmn::MediaType::Data);
-			data_track->SetTimeBase(1, 1000);
-			data_track->SetOriginBitstream(cmn::BitstreamFormat::Unknown);
-
-			AddTrack(data_track);
-		}
-
-		return PublishChannel(_vhost_app_name);
+		return SetTrackInfo() && PublishChannel(_vhost_app_name);
 	}
 
 	bool RtmpStreamV2::SendData(const std::shared_ptr<const ov::Data> &data)

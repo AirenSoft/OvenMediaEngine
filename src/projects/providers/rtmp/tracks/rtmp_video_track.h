@@ -38,10 +38,6 @@ namespace pvd::rtmp
 			const modules::flv::ParserCommon &parser,
 			const std::shared_ptr<const modules::flv::CommonData> &data) override;
 
-		std::shared_ptr<MediaTrack> CreateMediaTrack(
-			const modules::flv::ParserCommon &parser,
-			const std::shared_ptr<const modules::flv::CommonData> &data) override;
-
 	protected:
 		static cmn::PacketType ToCommonPacketType(modules::flv::VideoPacketType packet_type);
 	};

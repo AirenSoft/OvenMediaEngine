@@ -21,7 +21,7 @@ namespace modules
 	{
 		std::shared_ptr<VideoData> VideoParser::ProcessExVideoTagHeader(ov::BitReader &reader, VideoFrameType frame_type, bool *process_video_body)
 		{
-			auto video_data				  = std::make_shared<VideoData>(frame_type, true);
+			auto video_data				  = std::make_shared<VideoData>(_default_track_id, frame_type, true);
 
 			*process_video_body			  = true;
 
@@ -224,8 +224,6 @@ namespace modules
 				video_data->header		= header;
 				video_data->header_data = video_data->payload;
 			}
-
-			video_data->track_id = _track_id_if_legacy;
 
 			return true;
 		}
@@ -561,7 +559,7 @@ namespace modules
 				{
 					_data_list.push_back(video_data);
 
-					video_data = std::make_shared<VideoData>(video_data->video_frame_type, true);
+					video_data = std::make_shared<VideoData>(_default_track_id, video_data->video_frame_type, true);
 					continue;
 				}
 
@@ -616,7 +614,7 @@ namespace modules
 					// version for the proper implementation details.
 					//
 					//   videoCodecId = UB[4] as VideoCodecId
-					auto video_data			   = std::make_shared<VideoData>(video_frame_type, false);
+					auto video_data			   = std::make_shared<VideoData>(_default_track_id, video_frame_type, false);
 					auto video_codec_id		   = reader.ReadAs<VideoCodecId>(4);
 					video_data->video_codec_id = video_codec_id;
 

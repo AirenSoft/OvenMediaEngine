@@ -44,21 +44,6 @@ namespace pvd::rtmp
 		_stream->AdjustTimestamp(GetTrackId(), pts, dts);
 	}
 
-	std::shared_ptr<MediaTrack> RtmpTrack::CreateMediaTrack(
-		const modules::flv::ParserCommon &parser,
-		const std::shared_ptr<const modules::flv::CommonData> &data)
-	{
-		auto media_track = std::make_shared<MediaTrack>();
-
-		media_track->SetId(_track_id);
-		media_track->SetMediaType(GetMediaType());
-		media_track->SetCodecId(_codec_id);
-		media_track->SetOriginBitstream(_bitstream_format);
-		media_track->SetTimeBase(_time_base);
-
-		return media_track;
-	}
-
 	std::shared_ptr<MediaPacket> RtmpTrack::CreateMediaPacket(
 		const std::shared_ptr<const ov::Data> &payload,
 		int64_t pts, int64_t dts,
@@ -79,4 +64,14 @@ namespace pvd::rtmp
 
 		return media_packet;
 	}
+
+	void RtmpTrack::FillMediaTrackMetadata(const std::shared_ptr<MediaTrack> &media_track)
+	{
+		media_track->SetId(_track_id);
+		media_track->SetMediaType(GetMediaType());
+		media_track->SetCodecId(_codec_id);
+		media_track->SetOriginBitstream(_bitstream_format);
+		media_track->SetTimeBase(_time_base);
+	}
+
 }  // namespace pvd::rtmp

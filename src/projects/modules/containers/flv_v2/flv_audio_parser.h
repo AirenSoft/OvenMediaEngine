@@ -17,8 +17,8 @@ namespace modules
 		class AudioParser : public ParserCommon
 		{
 		public:
-			AudioParser(int track_id_if_legacy)
-				: ParserCommon(track_id_if_legacy)
+			AudioParser(uint32_t default_track_id)
+				: ParserCommon(default_track_id)
 			{
 			}
 

@@ -63,14 +63,12 @@ namespace modules
 				audio_data->header_data = audio_data->payload;
 			}
 
-			audio_data->track_id = _track_id_if_legacy;
-
 			return true;
 		}
 
 		std::shared_ptr<AudioData> AudioParser::ProcessExAudioTagHeader(ov::BitReader &reader, SoundFormat sound_format, bool *process_audio_body)
 		{
-			auto audio_data				  = std::make_shared<AudioData>(sound_format, true);
+			auto audio_data				  = std::make_shared<AudioData>(_default_track_id, sound_format, true);
 
 			*process_audio_body			  = true;
 
@@ -413,7 +411,7 @@ namespace modules
 				{
 					_data_list.push_back(audio_data);
 
-					audio_data = std::make_shared<AudioData>(audio_data->sound_format, true);
+					audio_data = std::make_shared<AudioData>(_default_track_id, audio_data->sound_format, true);
 					continue;
 				}
 
@@ -456,7 +454,7 @@ namespace modules
 				{
 					logtp("Legacy audio header found");
 
-					auto audio_data		   = std::make_shared<AudioData>(sound_format, false);
+					auto audio_data		   = std::make_shared<AudioData>(_default_track_id, sound_format, false);
 
 					// See AudioTagHeader of the legacy [FLV] specification for for detailed format
 					// of the four bits used for soundRate/soundSize/soundType

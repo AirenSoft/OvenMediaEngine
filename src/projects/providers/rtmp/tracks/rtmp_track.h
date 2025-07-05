@@ -58,6 +58,11 @@ namespace pvd::rtmp
 			return _track_id;
 		}
 
+		const auto GetCodecId() const
+		{
+			return _codec_id;
+		}
+
 		const auto &GetMediaPacketList() const
 		{
 			return _media_packet_list;
@@ -98,9 +103,7 @@ namespace pvd::rtmp
 			const modules::flv::ParserCommon &parser,
 			const std::shared_ptr<const modules::flv::CommonData> &data) = 0;
 
-		virtual std::shared_ptr<MediaTrack> CreateMediaTrack(
-			const modules::flv::ParserCommon &parser,
-			const std::shared_ptr<const modules::flv::CommonData> &data);
+		virtual void FillMediaTrackMetadata(const std::shared_ptr<MediaTrack> &media_track);
 
 	protected:
 		void AdjustTimestamp(int64_t &pts, int64_t &dts);

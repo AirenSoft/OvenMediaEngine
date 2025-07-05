@@ -76,6 +76,8 @@ namespace pvd::rtmp
 		bool SendData(const std::shared_ptr<const ov::Data> &data);
 		bool SendMessage(const std::shared_ptr<const modules::rtmp::ChunkWriteInfo> &chunk_write_info);
 
+		bool SetTrackInfo();
+
 		bool PublishStream();
 		// bool SetTrackInfo(const std::shared_ptr<MediaInfo> &media_info);
 

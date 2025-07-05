@@ -17,8 +17,8 @@ namespace modules
 		class VideoParser : public ParserCommon
 		{
 		public:
-			VideoParser(int track_id_if_legacy)
-				: ParserCommon(track_id_if_legacy)
+			VideoParser(uint32_t default_track_id)
+				: ParserCommon(default_track_id)
 			{
 			}
 

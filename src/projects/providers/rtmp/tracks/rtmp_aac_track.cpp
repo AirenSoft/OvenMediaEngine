@@ -59,6 +59,12 @@ namespace pvd::rtmp
 
 			std::shared_ptr<MediaPacket> media_packet;
 
+			if (audio_data->from_ex_header == false)
+			{
+				auto &sound_size = audio_data->sound_size;
+				_sound_size		 = sound_size.has_value() ? sound_size.value() : _sound_size;
+			}
+
 			if (packet_type == cmn::PacketType::SEQUENCE_HEADER)
 			{
 				if (audio_data->header == nullptr)
@@ -98,37 +104,22 @@ namespace pvd::rtmp
 		return true;
 	}
 
-	std::shared_ptr<MediaTrack> RtmpAacTrack::CreateMediaTrack(
-		const modules::flv::ParserCommon &parser,
-		const std::shared_ptr<const modules::flv::CommonData> &data)
+	void RtmpAacTrack::FillMediaTrackMetadata(const std::shared_ptr<MediaTrack> &media_track)
 	{
-		auto audio_data = std::dynamic_pointer_cast<const modules::flv::AudioData>(data);
+		RtmpTrack::FillMediaTrackMetadata(media_track);
 
-		if (audio_data == nullptr)
+		auto &sound_size   = _sound_size;
+		auto sample_format = cmn::AudioSample::Format::S16;
+
+		if (sound_size.has_value())
 		{
-			OV_ASSERT2(false);
-			return nullptr;
-		}
-
-		auto media_track = RtmpAudioTrack::CreateMediaTrack(parser, data);
-
-		if (IsFromExHeader() == false)
-		{
-			auto &sound_size   = audio_data->sound_size;
-			auto sample_format = cmn::AudioSample::Format::S16;
-
-			if (sound_size.has_value())
+			switch (sound_size.value())
 			{
-				switch (sound_size.value())
-				{
-					OV_CASE_BREAK(modules::flv::SoundSize::_8Bit, sample_format = cmn::AudioSample::Format::U8);
-					OV_CASE_BREAK(modules::flv::SoundSize::_16Bit, sample_format = cmn::AudioSample::Format::S16);
-				}
+				OV_CASE_BREAK(modules::flv::SoundSize::_8Bit, sample_format = cmn::AudioSample::Format::U8);
+				OV_CASE_BREAK(modules::flv::SoundSize::_16Bit, sample_format = cmn::AudioSample::Format::S16);
 			}
-
-			media_track->GetSample().SetFormat(sample_format);
 		}
 
-		return media_track;
+		media_track->GetSample().SetFormat(sample_format);
 	}
 }  // namespace pvd::rtmp

@@ -1407,19 +1407,14 @@ namespace pvd::rtmp
 
 		std::map<int, std::shared_ptr<RtmpTrack>> rtmp_track_to_send_map;
 		const bool is_ex_header = parser.IsExHeader();
+		const bool is_published = _stream->IsPublished();
 
 		for (auto &parsed_data : parser.GetDataList())
 		{
-			auto track_id			  = parsed_data->track_id;
-			auto rtmp_track			  = _stream->GetRtmpTrack(track_id);
+			auto track_id	= parsed_data->track_id;
+			auto rtmp_track = _stream->GetRtmpTrack(track_id);
 
-			bool need_to_create_track = false;
-
-			if (rtmp_track != nullptr)
-			{
-				need_to_create_track = rtmp_track->HasSequenceHeader();
-			}
-			else
+			if (rtmp_track == nullptr)
 			{
 				auto media_codec_id		= ToMediaCodecId(parsed_data->sound_format).value_or(cmn::MediaCodecId::None);
 
@@ -1435,19 +1430,25 @@ namespace pvd::rtmp
 
 				// If the track is not found, create a new one
 				rtmp_track = RtmpTrack::Create(_stream->GetSharedPtrAs<RtmpStreamV2>(), track_id, is_ex_header, media_codec_id);
-				rtmp_track->SetIgnored(is_supported_codec == false);
+
+				if (rtmp_track == nullptr)
+				{
+					logae("Failed to create RTMP track for audio track (id: %u)", track_id);
+					return false;
+				}
+
+				// Ignore tracks that are received after publishing and unsupported codecs.
+				rtmp_track->SetIgnored(is_published || (is_supported_codec == false));
 
 				_stream->AddRtmpTrack(rtmp_track);
 
 				// Prevent negative track count when unexpected track is received
 				_meta_data_context.waiting_audio_track_count = std::max(0, _meta_data_context.waiting_audio_track_count - 1);
+			}
 
-				if (rtmp_track->IsIgnored())
-				{
-					continue;
-				}
-
-				need_to_create_track = true;
+			if (rtmp_track->IsIgnored())
+			{
+				continue;
 			}
 
 			if (rtmp_track->Handle(message, parser, parsed_data) == false)
@@ -1457,33 +1458,14 @@ namespace pvd::rtmp
 
 			if (rtmp_track->HasSequenceHeader())
 			{
-				if (need_to_create_track)
-				{
-					auto media_track = rtmp_track->CreateMediaTrack(parser, parsed_data);
-					if (media_track == nullptr)
-					{
-						logae("Failed to create media track for audio data with track id: %d", track_id);
-						return false;
-					}
-
-					if (rtmp_track->IsFromExHeader() == false)
-					{
-						SetIf(_meta_data_context.audio.samplerate, [&](auto samplerate) { media_track->SetSampleRate(samplerate); });
-						SetIf(_meta_data_context.audio.bitrate, [&](auto bitrate) { media_track->SetBitrateByConfig(bitrate * 1000); });
-						SetIf(_meta_data_context.audio.channel_layout, [&](auto channel_layout) { media_track->GetChannel().SetLayout(channel_layout); });
-					}
-
-					logtd("Audio track has been created: %s", media_track->GetInfoString().CStr());
-					_stream->AddTrack(media_track);
-				}
-
-				rtmp_track_to_send_map[track_id] = rtmp_track;
+				rtmp_track_to_send_map[rtmp_track->GetTrackId()] = rtmp_track;
 			}
 			else
 			{
 				if (rtmp_track->GetMediaPacketList().size() > MAX_PACKET_COUNT_BEFORE_SEQ_HEADER)
 				{
 					logtw("Track %u has too many media packets without sequence header, ignoreing the track", track_id);
+
 					rtmp_track->SetIgnored(true);
 					rtmp_track->ClearMediaPacketList();
 
@@ -1494,7 +1476,7 @@ namespace pvd::rtmp
 			}
 		}
 
-		if (_stream->IsPublished() == false)
+		if (is_published == false)
 		{
 			if (_stream->IsReadyToPublish() == false)
 			{
@@ -1565,6 +1547,7 @@ namespace pvd::rtmp
 
 		std::map<int, std::shared_ptr<RtmpTrack>> rtmp_track_to_send_map;
 		const bool is_ex_header = parser.IsExHeader();
+		const bool is_published = _stream->IsPublished();
 
 		for (auto &parsed_data : parser.GetDataList())
 		{
@@ -1595,16 +1578,10 @@ namespace pvd::rtmp
 				continue;
 			}
 
-			auto track_id			  = parsed_data->track_id;
-			auto rtmp_track			  = _stream->GetRtmpTrack(track_id);
+			auto track_id	= parsed_data->track_id;
+			auto rtmp_track = _stream->GetRtmpTrack(track_id);
 
-			bool need_to_create_track = false;
-
-			if (rtmp_track != nullptr)
-			{
-				need_to_create_track = rtmp_track->HasSequenceHeader();
-			}
-			else
+			if (rtmp_track == nullptr)
 			{
 				auto media_codec_id =
 					(is_ex_header
@@ -1624,19 +1601,25 @@ namespace pvd::rtmp
 
 				// If the track is not found, create a new one
 				rtmp_track = RtmpTrack::Create(_stream->GetSharedPtrAs<RtmpStreamV2>(), track_id, is_ex_header, media_codec_id);
-				rtmp_track->SetIgnored(is_supported_codec == false);
+
+				if (rtmp_track == nullptr)
+				{
+					logae("Failed to create RTMP track for video track (id: %u)", track_id);
+					return false;
+				}
+
+				// Ignore tracks that are received after publishing and unsupported codecs.
+				rtmp_track->SetIgnored(is_published || (is_supported_codec == false));
 
 				_stream->AddRtmpTrack(rtmp_track);
 
 				// Prevent negative track count when unexpected track is received
 				_meta_data_context.waiting_video_track_count = std::max(0, _meta_data_context.waiting_video_track_count - 1);
+			}
 
-				if (rtmp_track->IsIgnored())
-				{
-					continue;
-				}
-
-				need_to_create_track = true;
+			if (rtmp_track->IsIgnored())
+			{
+				continue;
 			}
 
 			if (rtmp_track->Handle(message, parser, parsed_data) == false)
@@ -1646,35 +1629,14 @@ namespace pvd::rtmp
 
 			if (rtmp_track->HasSequenceHeader())
 			{
-				if (need_to_create_track)
-				{
-					// This is the first time we receive a sequence header for this track
-					auto media_track = rtmp_track->CreateMediaTrack(parser, parsed_data);
-					if (media_track == nullptr)
-					{
-						logae("Failed to create media track for video data with track id: %d", track_id);
-						return false;
-					}
-
-					if (rtmp_track->IsFromExHeader() == false)
-					{
-						SetIf(_meta_data_context.video.width, [&](auto width) { media_track->SetWidth(width); });
-						SetIf(_meta_data_context.video.height, [&](auto height) { media_track->SetHeight(height); });
-						SetIf(_meta_data_context.video.framerate, [&](auto framerate) { media_track->SetFrameRateByConfig(framerate); });
-						SetIf(_meta_data_context.video.bitrate, [&](auto bitrate) { media_track->SetBitrateByConfig(bitrate * 1000); });
-					}
-
-					logtd("Video track has been created: %s", media_track->GetInfoString().CStr());
-					_stream->AddTrack(media_track);
-				}
-
-				rtmp_track_to_send_map[track_id] = rtmp_track;
+				rtmp_track_to_send_map[rtmp_track->GetTrackId()] = rtmp_track;
 			}
 			else
 			{
 				if (rtmp_track->GetMediaPacketList().size() > MAX_PACKET_COUNT_BEFORE_SEQ_HEADER)
 				{
 					logtw("Track %u has too many media packets without sequence header, ignoreing the track", track_id);
+
 					rtmp_track->SetIgnored(true);
 					rtmp_track->ClearMediaPacketList();
 
@@ -1685,7 +1647,7 @@ namespace pvd::rtmp
 			}
 		}
 
-		if (_stream->IsPublished() == false)
+		if (is_published == false)
 		{
 			if (_stream->IsReadyToPublish() == false)
 			{
@@ -1880,6 +1842,23 @@ namespace pvd::rtmp
 		}
 
 		return total_bytes_used;
+	}
+
+	void RtmpChunkHandler::FillAudioMetadata(const std::shared_ptr<MediaTrack> &media_track)
+	{
+		SetIf(_meta_data_context.audio.samplerate, [&](auto samplerate) { media_track->SetSampleRate(samplerate); });
+		SetIf(_meta_data_context.audio.bitrate, [&](auto bitrate) { media_track->SetBitrateByConfig(bitrate * 1000); });
+		SetIf(_meta_data_context.audio.channel_layout, [&](auto channel_layout) { media_track->GetChannel().SetLayout(channel_layout); });
+	}
+
+	void RtmpChunkHandler::FillVideoMetadata(const std::shared_ptr<MediaTrack> &media_track)
+	{
+		media_track->SetVideoTimestampScale(1.0);
+
+		SetIf(_meta_data_context.video.width, [&](auto width) { media_track->SetWidth(width); });
+		SetIf(_meta_data_context.video.height, [&](auto height) { media_track->SetHeight(height); });
+		SetIf(_meta_data_context.video.framerate, [&](auto framerate) { media_track->SetFrameRateByConfig(framerate); });
+		SetIf(_meta_data_context.video.bitrate, [&](auto bitrate) { media_track->SetBitrateByConfig(bitrate * 1000); });
 	}
 
 	bool RtmpChunkHandler::OnTextData(const std::shared_ptr<const modules::rtmp::ChunkHeader> &header, const modules::rtmp::AmfDocument &document)

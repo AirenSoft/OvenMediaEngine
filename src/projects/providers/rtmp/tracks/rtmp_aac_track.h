@@ -33,10 +33,9 @@ namespace pvd::rtmp
 			const modules::flv::ParserCommon &parser,
 			const std::shared_ptr<const modules::flv::CommonData> &data) override;
 
-		std::shared_ptr<MediaTrack> CreateMediaTrack(
-			const modules::flv::ParserCommon &parser,
-			const std::shared_ptr<const modules::flv::CommonData> &data) override;
+		void FillMediaTrackMetadata(const std::shared_ptr<MediaTrack> &media_track) override;
 
 	protected:
+		std::optional<modules::flv::SoundSize> _sound_size;
 	};
 }  // namespace pvd::rtmp

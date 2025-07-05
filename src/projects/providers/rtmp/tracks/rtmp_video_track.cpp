@@ -113,24 +113,4 @@ namespace pvd::rtmp
 
 		return true;
 	}
-
-	std::shared_ptr<MediaTrack> RtmpVideoTrack::CreateMediaTrack(
-		const modules::flv::ParserCommon &parser,
-		const std::shared_ptr<const modules::flv::CommonData> &data)
-	{
-		if (std::dynamic_pointer_cast<const modules::flv::VideoData>(data) == nullptr)
-		{
-			OV_ASSERT2(false);
-			return nullptr;
-		}
-
-		auto media_track = RtmpTrack::CreateMediaTrack(parser, data);
-
-		if (media_track != nullptr)
-		{
-			media_track->SetVideoTimestampScale(1.0);
-		}
-
-		return media_track;
-	}
 }  // namespace pvd::rtmp

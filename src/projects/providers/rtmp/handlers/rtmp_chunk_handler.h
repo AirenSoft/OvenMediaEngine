@@ -99,6 +99,9 @@ namespace pvd::rtmp
 			_event_generator_config = event_generator_config;
 		}
 
+		void FillAudioMetadata(const std::shared_ptr<MediaTrack> &media_track);
+		void FillVideoMetadata(const std::shared_ptr<MediaTrack> &media_track);
+
 	private:
 		std::shared_ptr<modules::rtmp::ChunkWriteInfo> CreateUserControlMessage(modules::rtmp::UserControlEventType message_id, size_t payload_length = 0);
 

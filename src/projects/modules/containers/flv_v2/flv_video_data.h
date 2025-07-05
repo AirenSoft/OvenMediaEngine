@@ -20,8 +20,8 @@ namespace modules
 	{
 		struct VideoData : public CommonData
 		{
-			VideoData(VideoFrameType video_frame_type, bool from_ex_header)
-				: CommonData(from_ex_header),
+			VideoData(uint32_t default_track_id, VideoFrameType video_frame_type, bool from_ex_header)
+				: CommonData(default_track_id, from_ex_header),
 				  video_frame_type(video_frame_type)
 			{
 			}

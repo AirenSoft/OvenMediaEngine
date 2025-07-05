@@ -19,15 +19,16 @@ namespace modules
 	{
 		struct CommonData
 		{
-			CommonData(bool from_ex_header)
-				: from_ex_header(from_ex_header)
+			CommonData(uint32_t default_track_id, bool from_ex_header)
+				: from_ex_header(from_ex_header),
+				  track_id(default_track_id)
 			{
 			}
 
 			virtual ~CommonData() = default;
 
-			bool from_ex_header	  = false;
-			uint32_t track_id	  = 0;
+			bool from_ex_header;
+			uint32_t track_id;
 
 			std::shared_ptr<DecoderConfigurationRecord> header;
 
@@ -43,8 +44,8 @@ namespace modules
 		class ParserCommon
 		{
 		public:
-			ParserCommon(int track_id_if_legacy)
-				: _track_id_if_legacy(track_id_if_legacy)
+			ParserCommon(int default_track_id)
+				: _default_track_id(default_track_id)
 			{
 			}
 
@@ -77,7 +78,7 @@ namespace modules
 			}
 
 		protected:
-			uint32_t _track_id_if_legacy;
+			uint32_t _default_track_id;
 
 			bool _is_ex_header				  = false;
 
