@@ -66,12 +66,9 @@ namespace pvd::rtmp
 			}
 
 			// CTS = PTS - DTS
-			auto cts	= video_data->composition_time_offset;
-			int64_t dts = message->header->completed.timestamp;
-			int64_t pts = cts + dts;
-
-			AdjustTimestamp(pts, dts);
-			_last_pts = dts;
+			const auto cts	= video_data->composition_time_offset;
+			const int64_t dts = message->header->completed.timestamp;
+			const int64_t pts = cts + dts;
 
 			std::shared_ptr<MediaPacket> media_packet;
 

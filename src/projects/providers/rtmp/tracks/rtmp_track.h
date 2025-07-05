@@ -106,8 +106,6 @@ namespace pvd::rtmp
 		virtual void FillMediaTrackMetadata(const std::shared_ptr<MediaTrack> &media_track);
 
 	protected:
-		void AdjustTimestamp(int64_t &pts, int64_t &dts);
-
 		std::shared_ptr<MediaPacket> CreateMediaPacket(
 			const std::shared_ptr<const ov::Data> &payload,
 			int64_t pts, int64_t dts,
@@ -125,9 +123,7 @@ namespace pvd::rtmp
 
 		std::shared_ptr<DecoderConfigurationRecord> _sequence_header;
 
-		bool _is_ignored  = false;
-
-		int64_t _last_pts = 0;
+		bool _is_ignored = false;
 
 		std::vector<std::shared_ptr<MediaPacket>> _media_packet_list;
 	};

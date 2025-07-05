@@ -51,11 +51,8 @@ namespace pvd::rtmp
 				break;
 			}
 
-			int64_t dts = message->header->completed.timestamp;
-			int64_t pts = dts;
-
-			AdjustTimestamp(pts, dts);
-			_last_pts = dts;
+			const int64_t dts = message->header->completed.timestamp;
+			const int64_t pts = dts;
 
 			std::shared_ptr<MediaPacket> media_packet;
 

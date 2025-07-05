@@ -395,9 +395,15 @@ namespace pvd::rtmp
 	}
 
 	// Make PTS/DTS of first frame are 0
-	void RtmpStreamV2::AdjustTimestamp(uint32_t track_id, int64_t &pts, int64_t &dts)
+	void RtmpStreamV2::AdjustTimestamp(uint32_t track_id, const std::shared_ptr<MediaPacket> &packet)
 	{
+		auto pts = packet->GetPts();
+		auto dts = packet->GetDts();
+
 		AdjustTimestampByBase(track_id, pts, dts, std::numeric_limits<int64_t>::max());
+
+		packet->SetPts(pts);
+		packet->SetDts(dts);
 	}
 
 	bool RtmpStreamV2::SetTrackInfo()

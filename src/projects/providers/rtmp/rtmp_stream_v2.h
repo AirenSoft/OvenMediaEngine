@@ -85,7 +85,7 @@ namespace pvd::rtmp
 		bool CheckStreamExpired() const;
 		bool ValidatePublishUrl();
 
-		void AdjustTimestamp(uint32_t track_id, int64_t &pts, int64_t &dts);
+		void AdjustTimestamp(uint32_t track_id, const std::shared_ptr<MediaPacket> &packet);
 
 		// Called by `RtmpChunkHandler`
 		std::shared_ptr<RtmpTrack> AddRtmpTrack(std::shared_ptr<RtmpTrack> rtmp_track);

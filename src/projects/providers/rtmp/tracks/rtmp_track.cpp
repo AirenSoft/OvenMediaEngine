@@ -39,11 +39,6 @@ namespace pvd::rtmp
 		return nullptr;
 	}
 
-	void RtmpTrack::AdjustTimestamp(int64_t &pts, int64_t &dts)
-	{
-		_stream->AdjustTimestamp(GetTrackId(), pts, dts);
-	}
-
 	std::shared_ptr<MediaPacket> RtmpTrack::CreateMediaPacket(
 		const std::shared_ptr<const ov::Data> &payload,
 		int64_t pts, int64_t dts,
