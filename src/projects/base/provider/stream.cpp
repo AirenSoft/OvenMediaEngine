@@ -387,17 +387,17 @@ namespace pvd
 		const int64_t num_tb				 = timebase.GetNum();  // e.g., 1
 		const int64_t den_tb				 = timebase.GetDen();  // e.g., 48000
 
-		// NOTE: `timescale_track` is originally supposed to be calculated as `den_tb/num_tb`,
+		// NOTE: `track_scale` is originally supposed to be calculated as `den_tb/num_tb`,
 		// but in `Rescale()`, to improve the accuracy of integer operations,
-		// instead of dividing in `timescale_track`, `num_tb` is multiplied in `timescale_us`.
-		const auto timescale_us				 = AV_TIME_BASE * num_tb;
-		const auto &timescale_track			 = den_tb;	// An alias of `den_tb` for clarity
+		// instead of dividing in `track_scale`, `num_tb` is multiplied in `us_scale`.
+		const auto us_scale					 = AV_TIME_BASE * num_tb;
+		const auto &track_scale				 = den_tb;	// An alias of `den_tb` for clarity
 
 		// 1. Get the start timestamp and base timebase of this stream.
 		if (_start_timestamp_us == -1LL)
 		{
-			_start_timestamp_us = Rescale(dts, timescale_us, timescale_track);
-			_start_timestamp_tb = Rescale(_start_timestamp_us, timescale_track, timescale_us);
+			_start_timestamp_us = Rescale(dts, us_scale, track_scale);
+			_start_timestamp_tb = Rescale(_start_timestamp_us, track_scale, us_scale);
 
 			// for debugging
 			logtd("[%s/%s(%d)] Get start timestamp of stream. track:%d, ts:%lld (%d/%d) (%f us)",
@@ -413,7 +413,7 @@ namespace pvd
 			switch (GetTimestampMode())
 			{
 				case TimestampMode::Original:
-					_base_timestamp_us = Rescale(dts, timescale_us, timescale_track);  // Original timestamp starts from original PTS
+					_base_timestamp_us = Rescale(dts, us_scale, track_scale);  // Original timestamp starts from original PTS
 					break;
 				case TimestampMode::Auto:
 				case TimestampMode::ZeroBased:
@@ -423,7 +423,7 @@ namespace pvd
 			}
 		}
 
-		const int64_t base_ts_tb = Rescale(_base_timestamp_us, timescale_track, timescale_us);
+		const int64_t base_ts_tb = Rescale(_base_timestamp_us, track_scale, us_scale);
 
 		// 3. Calculate PTS/DTS (base_timestamp + (pts - start_timestamp))
 
@@ -498,8 +498,8 @@ namespace pvd
 		origin_pts_map[track_id]		 = pts;
 		origin_dts_map[track_id]		 = dts;
 
-		_last_timestamp_us_map[track_id] = Rescale(final_dts_tb, timescale_us, den_tb);
-		_last_duration_us_map[track_id]	 = Rescale(duration, timescale_us, den_tb);
+		_last_timestamp_us_map[track_id] = Rescale(final_dts_tb, us_scale, track_scale);
+		_last_duration_us_map[track_id]	 = Rescale(duration, us_scale, track_scale);
 
 		pts								 = final_pts_tb;
 		dts								 = final_dts_tb;
