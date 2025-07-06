@@ -33,9 +33,9 @@ namespace pvd::rtmp
 			  _track_id(track_id),
 			  _from_ex_header(from_ex_header),
 			  _codec_id(codec_id),
-			  _bitstream_format(bitstream_format),
-			  _time_base(time_base)
+			  _bitstream_format(bitstream_format)
 		{
+			SetTimebase(time_base);
 		}
 		virtual ~RtmpTrack()						= default;
 
@@ -53,14 +53,29 @@ namespace pvd::rtmp
 			return _stream;
 		}
 
-		const auto GetTrackId() const
+		const auto &GetTrackId() const
 		{
 			return _track_id;
 		}
 
-		const auto GetCodecId() const
+		const auto &GetCodecId() const
 		{
 			return _codec_id;
+		}
+
+		const auto &GetBitstreamFormat() const
+		{
+			return _bitstream_format;
+		}
+
+		const auto &GetTimebase() const
+		{
+			return _time_base;
+		}
+
+		void SetTimebase(const cmn::Timebase &time_base)
+		{
+			_time_base = time_base;
 		}
 
 		const auto &GetMediaPacketList() const
@@ -78,16 +93,6 @@ namespace pvd::rtmp
 			return (_media_packet_list.size() > MAX_PACKET_COUNT_TO_WAIT_OTHER_TRACKS);
 		}
 
-		bool IsIgnored() const
-		{
-			return _is_ignored;
-		}
-
-		void SetIgnored(bool is_ignored)
-		{
-			_is_ignored = is_ignored;
-		}
-
 		bool HasSequenceHeader() const
 		{
 			return (_sequence_header != nullptr);
@@ -96,6 +101,16 @@ namespace pvd::rtmp
 		const auto &GetSequenceHeader() const
 		{
 			return _sequence_header;
+		}
+
+		bool IsIgnored() const
+		{
+			return _is_ignored;
+		}
+
+		void SetIgnored(bool is_ignored)
+		{
+			_is_ignored = is_ignored;
 		}
 
 		virtual bool Handle(
