@@ -278,6 +278,7 @@ namespace pvd
 
 		// Initialized start timestamp
 		_start_timestamp_us = -1LL;
+		_start_timestamp_tb = -1LL;
 
 		_source_timestamp_map.clear();
 	}
@@ -373,26 +374,38 @@ namespace pvd
 	// returns adjusted PTS and parameter PTS and DTS are also adjusted.
 	int64_t Stream::AdjustTimestampByBase(uint32_t track_id, int64_t &pts, int64_t &dts, int64_t max_timestamp, int64_t duration)
 	{
-		auto track = GetTrack(track_id);
-		if (!track)
+		const auto track = GetTrack(track_id);
+
+		if (track == nullptr)
 		{
 			return -1LL;
 		}
 
-		const int64_t tb_num = track->GetTimeBase().GetNum(); // e.g., 1
-		const int64_t tb_den = track->GetTimeBase().GetDen(); // e.g., 48000
 		constexpr const int64_t AV_TIME_BASE = 1000000;
+		const auto wraparound_ts_threshold	 = max_timestamp / 2;
+		const auto &timebase				 = track->GetTimeBase();
+		const int64_t num_tb				 = timebase.GetNum();  // e.g., 1
+		const int64_t den_tb				 = timebase.GetDen();  // e.g., 48000
+
+		// NOTE: `timescale_track` is originally supposed to be calculated as `den_tb/num_tb`,
+		// but in `Rescale()`, to improve the accuracy of integer operations,
+		// instead of dividing in `timescale_track`, `num_tb` is multiplied in `timescale_us`.
+		const auto timescale_us				 = AV_TIME_BASE * num_tb;
+		const auto &timescale_track			 = den_tb;	// An alias of `den_tb` for clarity
 
 		// 1. Get the start timestamp and base timebase of this stream.
 		if (_start_timestamp_us == -1LL)
 		{
-			_start_timestamp_us = Rescale(dts, AV_TIME_BASE * tb_num, tb_den);
+			_start_timestamp_us = Rescale(dts, timescale_us, timescale_track);
+			_start_timestamp_tb = Rescale(_start_timestamp_us, timescale_track, timescale_us);
 
 			// for debugging
-			logtd("[%s/%s(%d)] Get start timestamp of stream. track:%d, ts:%lld (%d/%d) (%f us)", _application->GetVHostAppName().CStr(), GetName().CStr(), GetId(), track_id, dts, track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(), _start_timestamp_us);
+			logtd("[%s/%s(%d)] Get start timestamp of stream. track:%d, ts:%lld (%d/%d) (%f us)",
+				  _application->GetVHostAppName().CStr(), GetName().CStr(), GetId(),
+				  track_id,
+				  dts, num_tb, den_tb,
+				  _start_timestamp_us);
 		}
-
-		int64_t start_ts_tb = Rescale(_start_timestamp_us, tb_den, AV_TIME_BASE * tb_num);
 
 		// 2. Make the base timestamp
 		if (_base_timestamp_us == -1)
@@ -400,73 +413,74 @@ namespace pvd
 			switch (GetTimestampMode())
 			{
 				case TimestampMode::Original:
-					_base_timestamp_us = Rescale(dts, AV_TIME_BASE * tb_num, tb_den); // Original timestamp starts from original PTS
+					_base_timestamp_us = Rescale(dts, timescale_us, timescale_track);  // Original timestamp starts from original PTS
 					break;
 				case TimestampMode::Auto:
 				case TimestampMode::ZeroBased:
 				default:
-					_base_timestamp_us = 0; // Default to 0
+					_base_timestamp_us = 0;	 // Default to 0
 					break;
 			}
 		}
 
-		int64_t base_ts_tb = Rescale(_base_timestamp_us, tb_den, AV_TIME_BASE);
+		const int64_t base_ts_tb = Rescale(_base_timestamp_us, timescale_track, timescale_us);
 
 		// 3. Calculate PTS/DTS (base_timestamp + (pts - start_timestamp))
 
-		int64_t final_pts_tb = base_ts_tb + (pts - start_ts_tb);
-		int64_t final_dts_tb = base_ts_tb + (dts - start_ts_tb);
+		int64_t final_pts_tb	 = base_ts_tb + (pts - _start_timestamp_tb);
+		int64_t final_dts_tb	 = base_ts_tb + (dts - _start_timestamp_tb);
 
 		// 4. Check wrap around and adjust PTS/DTS
 
-		// Initialize wraparound count for PTS
-		if (_wraparound_count_map[0].find(track_id) == _wraparound_count_map[0].end())
-		{
-			_wraparound_count_map[0][track_id] = 0;
-		}
-
-		// Initialize wraparound count for DTS
-		if (_wraparound_count_map[1].find(track_id) == _wraparound_count_map[1].end())
-		{
-			_wraparound_count_map[1][track_id] = 0;
-		}
-
 		// For PTS
-
-		// PTS is not sequential. Therefore, the PTS may wrap around and return again.
-		if (_last_origin_ts_map[0].find(track_id) != _last_origin_ts_map[0].end())
+		auto &origin_pts_map	 = _last_origin_ts_map[0];
 		{
-			// Check if wrap arounded or reverse wrap arounded
-			auto last_origin_pts = _last_origin_ts_map[0][track_id];
-			if (last_origin_pts - pts > max_timestamp / 2)
+			// Initialize wraparound count for PTS
+			auto &pts_wrap			 = _wraparound_count_map[0][track_id];
+
+			// PTS is not sequential. Therefore, the PTS may wrap around and return again.
+			const auto origin_pts_it = origin_pts_map.find(track_id);
+			if (origin_pts_it != origin_pts_map.end())
 			{
-				_wraparound_count_map[0][track_id]++;
-				logti("[PTS] Wrap around detected. track:%d", track_id);
-			}
-			else if (pts - last_origin_pts > max_timestamp / 2)
-			{
-				if (_wraparound_count_map[0][track_id] > 0)
+				// Check if wrap arounded or reverse wrap arounded
+				const auto last_origin_pts = origin_pts_it->second;
+				if ((last_origin_pts - pts) > wraparound_ts_threshold)
 				{
-					_wraparound_count_map[0][track_id]--;
-					logti("[PTS] Reverse wrap around detected. It could be caused by b-frames. track:%d", track_id);
+					pts_wrap++;
+					logti("[PTS] Wrap around detected. track:%d", track_id);
+				}
+				else if ((pts - last_origin_pts) > wraparound_ts_threshold)
+				{
+					if (pts_wrap > 0)
+					{
+						pts_wrap--;
+						logti("[PTS] Reverse wrap around detected. It could be caused by b-frames. track:%d", track_id);
+					}
 				}
 			}
-		}
 
-		final_pts_tb += _wraparound_count_map[0][track_id] * max_timestamp;
+			final_pts_tb += pts_wrap * max_timestamp;
+		}
 
 		// For DTS
-		if (_last_origin_ts_map[1].find(track_id) != _last_origin_ts_map[1].end())
+		auto &origin_dts_map = _last_origin_ts_map[1];
 		{
-			auto last_origin_dts = _last_origin_ts_map[1][track_id];
-			if (last_origin_dts - dts > max_timestamp / 2)
-			{
-				_wraparound_count_map[1][track_id]++;
-				logti("[DTS] Wrap around detected. track:%d", track_id);
-			}
-		}
+			// Initialize wraparound count for DTS
+			auto &dts_wrap			 = _wraparound_count_map[1][track_id];
 
-		final_dts_tb += _wraparound_count_map[1][track_id] * max_timestamp;
+			const auto origin_dts_it = origin_dts_map.find(track_id);
+			if (origin_dts_it != origin_dts_map.end())
+			{
+				const auto last_origin_dts = origin_dts_it->second;
+				if ((last_origin_dts - dts) > wraparound_ts_threshold)
+				{
+					dts_wrap++;
+					logti("[DTS] Wrap around detected. track:%d", track_id);
+				}
+			}
+
+			final_dts_tb += dts_wrap * max_timestamp;
+		}
 
 #if 0
 		// for debugging
@@ -477,18 +491,18 @@ namespace pvd
 				pts, final_pts_tb, pts_s,
 				dts, final_dts_tb, dts_s,
 				track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(),
-				start_ts_tb, _start_timestamp_us, base_ts_tb, _base_timestamp_us);
+				_start_timestamp_tb, _start_timestamp_us, base_ts_tb, _base_timestamp_us);
 #endif
-		
+
 		// 5. Update last timestamp ( Managed in microseconds )
-		_last_origin_ts_map[0][track_id] = pts;
-		_last_origin_ts_map[1][track_id] = dts;
+		origin_pts_map[track_id]		 = pts;
+		origin_dts_map[track_id]		 = dts;
 
-		_last_timestamp_us_map[track_id] = Rescale(final_dts_tb, AV_TIME_BASE * tb_num, tb_den);
-		_last_duration_us_map[track_id] = Rescale(duration, AV_TIME_BASE * tb_num, tb_den);
+		_last_timestamp_us_map[track_id] = Rescale(final_dts_tb, timescale_us, den_tb);
+		_last_duration_us_map[track_id]	 = Rescale(duration, timescale_us, den_tb);
 
-		pts = final_pts_tb;
-		dts = final_dts_tb;
+		pts								 = final_pts_tb;
+		dts								 = final_dts_tb;
 
 		return pts;
 	}
