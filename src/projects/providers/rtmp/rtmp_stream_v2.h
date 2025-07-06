@@ -85,19 +85,11 @@ namespace pvd::rtmp
 		bool CheckStreamExpired() const;
 		bool ValidatePublishUrl();
 
-		void AdjustTimestamp(uint32_t track_id, const std::shared_ptr<MediaPacket> &packet);
+		void AdjustTimestamp(uint32_t track_id, int64_t &pts, int64_t &dts);
 
 		// Called by `RtmpChunkHandler`
 		std::shared_ptr<RtmpTrack> AddRtmpTrack(std::shared_ptr<RtmpTrack> rtmp_track);
 		std::shared_ptr<RtmpTrack> GetRtmpTrack(MediaTrackId track_id) const;
-		template <typename T>
-		std::shared_ptr<T> GetRtmpTrackAs(MediaTrackId track_id) const
-		{
-			return std::dynamic_pointer_cast<T>(GetRtmpTrack(track_id));
-		}
-
-		// Called by `RtmpChunkHandler`
-		bool OnMediaPacket(const std::shared_ptr<MediaPacket> &packet);
 
 	private:
 		RtmpHandshakeHandler _handshake_handler;

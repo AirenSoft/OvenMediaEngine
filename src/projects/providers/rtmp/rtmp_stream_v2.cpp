@@ -389,35 +389,22 @@ namespace pvd::rtmp
 		return nullptr;
 	}
 
-	bool RtmpStreamV2::OnMediaPacket(const std::shared_ptr<MediaPacket> &packet)
+	void RtmpStreamV2::AdjustTimestamp(uint32_t track_id, int64_t &pts, int64_t &dts)
 	{
-		return SendFrame(packet);
-	}
-
-	// Make PTS/DTS of first frame are 0
-	void RtmpStreamV2::AdjustTimestamp(uint32_t track_id, const std::shared_ptr<MediaPacket> &packet)
-	{
-		auto pts = packet->GetPts();
-		auto dts = packet->GetDts();
-
 		AdjustTimestampByBase(track_id, pts, dts, std::numeric_limits<int64_t>::max());
-
-		packet->SetPts(pts);
-		packet->SetDts(dts);
 	}
 
 	bool RtmpStreamV2::SetTrackInfo()
 	{
 		for (auto &[track_id, rtmp_track] : _rtmp_track_map)
 		{
-			if (rtmp_track->IsIgnored())
-			{
-				continue;
-			}
-
 			if (rtmp_track->HasSequenceHeader() == false)
 			{
 				rtmp_track->SetIgnored(true);
+			}
+
+			if (rtmp_track->IsIgnored())
+			{
 				continue;
 			}
 

@@ -1507,11 +1507,18 @@ namespace pvd::rtmp
 		for (auto &rtmp_track_pair : rtmp_track_to_send_map)
 		{
 			auto &rtmp_track = rtmp_track_pair.second;
-			auto track_id = rtmp_track->GetTrackId();
+			auto track_id	 = rtmp_track->GetTrackId();
 
 			for (auto &media_packet : rtmp_track->GetMediaPacketList())
 			{
-				_stream->AdjustTimestamp(track_id, media_packet);
+				auto pts = media_packet->GetPts();
+				auto dts = media_packet->GetDts();
+
+				_stream->AdjustTimestamp(track_id, pts, dts);
+
+				media_packet->SetPts(pts);
+				media_packet->SetDts(dts);
+
 				_stream->SendFrame(media_packet);
 			}
 
@@ -1682,11 +1689,18 @@ namespace pvd::rtmp
 		for (auto &rtmp_track_pair : rtmp_track_to_send_map)
 		{
 			auto &rtmp_track = rtmp_track_pair.second;
-			auto track_id = rtmp_track->GetTrackId();
+			auto track_id	 = rtmp_track->GetTrackId();
 
 			for (auto &media_packet : rtmp_track->GetMediaPacketList())
 			{
-				_stream->AdjustTimestamp(track_id, media_packet);
+				auto pts = media_packet->GetPts();
+				auto dts = media_packet->GetDts();
+
+				_stream->AdjustTimestamp(track_id, pts, dts);
+
+				media_packet->SetPts(pts);
+				media_packet->SetDts(dts);
+
 				_stream->SendFrame(media_packet);
 
 				has_key_frame = has_key_frame || media_packet->IsKeyFrame();
