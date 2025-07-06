@@ -381,18 +381,18 @@ namespace pvd
 
 		const int64_t tb_num = track->GetTimeBase().GetNum(); // e.g., 1
 		const int64_t tb_den = track->GetTimeBase().GetDen(); // e.g., 48000
-		const int64_t AV_TIME_BASE = 1000000;
+		constexpr const int64_t AV_TIME_BASE = 1000000;
 
 		// 1. Get the start timestamp and base timebase of this stream.
 		if (_start_timestamp_us == -1LL)
 		{
-			_start_timestamp_us = rescale(dts, AV_TIME_BASE * tb_num, tb_den);
+			_start_timestamp_us = Rescale(dts, AV_TIME_BASE * tb_num, tb_den);
 
 			// for debugging
 			logtd("[%s/%s(%d)] Get start timestamp of stream. track:%d, ts:%lld (%d/%d) (%f us)", _application->GetVHostAppName().CStr(), GetName().CStr(), GetId(), track_id, dts, track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(), _start_timestamp_us);
 		}
 
-		int64_t start_ts_tb = rescale(_start_timestamp_us, tb_den, AV_TIME_BASE);
+		int64_t start_ts_tb = Rescale(_start_timestamp_us, tb_den, AV_TIME_BASE);
 
 		// 2. Make the base timestamp
 		if (_base_timestamp_us == -1)
@@ -400,7 +400,7 @@ namespace pvd
 			switch (GetTimestampMode())
 			{
 				case TimestampMode::Original:
-					_base_timestamp_us = rescale(dts, AV_TIME_BASE * tb_num, tb_den); // Original timestamp starts from original PTS
+					_base_timestamp_us = Rescale(dts, AV_TIME_BASE * tb_num, tb_den); // Original timestamp starts from original PTS
 					break;
 				case TimestampMode::Auto:
 				case TimestampMode::ZeroBased:
@@ -410,7 +410,7 @@ namespace pvd
 			}
 		}
 
-		int64_t base_ts_tb = rescale(_base_timestamp_us, tb_den, AV_TIME_BASE);
+		int64_t base_ts_tb = Rescale(_base_timestamp_us, tb_den, AV_TIME_BASE);
 
 		// 3. Calculate PTS/DTS (base_timestamp + (pts - start_timestamp))
 
@@ -484,8 +484,8 @@ namespace pvd
 		_last_origin_ts_map[0][track_id] = pts;
 		_last_origin_ts_map[1][track_id] = dts;
 
-		_last_timestamp_us_map[track_id] = rescale(final_dts_tb, AV_TIME_BASE * tb_num, tb_den);
-		_last_duration_us_map[track_id] = rescale(duration, AV_TIME_BASE * tb_num, tb_den);
+		_last_timestamp_us_map[track_id] = Rescale(final_dts_tb, AV_TIME_BASE * tb_num, tb_den);
+		_last_duration_us_map[track_id] = Rescale(duration, AV_TIME_BASE * tb_num, tb_den);
 
 		pts = final_pts_tb;
 		dts = final_dts_tb;

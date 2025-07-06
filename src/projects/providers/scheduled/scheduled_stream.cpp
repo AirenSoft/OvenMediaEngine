@@ -568,9 +568,9 @@ namespace pvd
             // dts = static_cast<double>(dts) * (static_cast<double>(origin_tb.num) / static_cast<double>(origin_tb.den) * track->GetTimeBase().GetTimescale());
             // duration = static_cast<double>(duration) * (static_cast<double>(origin_tb.num) / static_cast<double>(origin_tb.den) * track->GetTimeBase().GetTimescale());
 
-			pts = rescale(pts, track->GetTimeBase().GetDen() * origin_tb.num, origin_tb.den * track->GetTimeBase().GetNum());
-			dts = rescale(dts, track->GetTimeBase().GetDen() * origin_tb.num, origin_tb.den * track->GetTimeBase().GetNum());
-			duration = rescale(duration, track->GetTimeBase().GetDen() * origin_tb.num, origin_tb.den * track->GetTimeBase().GetNum());
+			pts = Rescale(pts, track->GetTimeBase().GetDen() * origin_tb.num, origin_tb.den * track->GetTimeBase().GetNum());
+			dts = Rescale(dts, track->GetTimeBase().GetDen() * origin_tb.num, origin_tb.den * track->GetTimeBase().GetNum());
+			duration = Rescale(duration, track->GetTimeBase().GetDen() * origin_tb.num, origin_tb.den * track->GetTimeBase().GetNum());
 
             if (track_first_packet_map.find(track_id) == track_first_packet_map.end())
             {
@@ -582,7 +582,7 @@ namespace pvd
             AdjustTimestampByBase(track_id, pts, dts, std::numeric_limits<int64_t>::max(), duration);
 			logtd("Scheduled Channel Send Packet : %s/%s: Track %d, origin dts : %lld, pts %lld, dts %lld, duration %lld, tb %f", GetApplicationName(), GetName().CStr(), track_id, single_file_dts, pts, dts, duration, track->GetTimeBase().GetExpr());
 
-			int64_t dts_us = rescale(dts, 1000000 * track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen());
+			int64_t dts_us = Rescale(dts, 1000000 * track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen());
 			if (_global_track_offset_us_map.find(track_id) == _global_track_offset_us_map.end())
 			{
 				_global_track_offset_us_map[track_id] = dts_us;
@@ -1075,9 +1075,9 @@ namespace pvd
 			//duration = static_cast<double>(duration) * (static_cast<double>(origin_tb.GetNum()) / static_cast<double>(origin_tb.GetDen()) * track->GetTimeBase().GetTimescale());
 			
 			// origin timebase to track timebase
-			pts = rescale(pts, track->GetTimeBase().GetDen() * origin_tb.GetNum(), origin_tb.GetDen() * track->GetTimeBase().GetNum());
-			dts = rescale(dts, track->GetTimeBase().GetDen() * origin_tb.GetNum(), origin_tb.GetDen() * track->GetTimeBase().GetNum());
-			duration = rescale(duration, track->GetTimeBase().GetDen() * origin_tb.GetNum(), origin_tb.GetDen() * track->GetTimeBase().GetNum());
+			pts = Rescale(pts, track->GetTimeBase().GetDen() * origin_tb.GetNum(), origin_tb.GetDen() * track->GetTimeBase().GetNum());
+			dts = Rescale(dts, track->GetTimeBase().GetDen() * origin_tb.GetNum(), origin_tb.GetDen() * track->GetTimeBase().GetNum());
+			duration = Rescale(duration, track->GetTimeBase().GetDen() * origin_tb.GetNum(), origin_tb.GetDen() * track->GetTimeBase().GetNum());
 
 			logtd("Scheduled Channel : %s/%s: Track %d, origin dts : %lld, pts %lld, dts %lld, duration %lld, tb %f", GetApplicationName(), GetName().CStr(), track_id, dts, pts, dts, duration, track->GetTimeBase().GetExpr());
 
@@ -1090,7 +1090,7 @@ namespace pvd
 
             AdjustTimestampByBase(track_id, pts, dts, std::numeric_limits<int64_t>::max(), duration);
 
-			int64_t dts_us = rescale(dts, 1000000 * track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen());
+			int64_t dts_us = Rescale(dts, 1000000 * track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen());
 			if (_global_track_offset_us_map.find(track_id) == _global_track_offset_us_map.end())
 			{
 				_global_track_offset_us_map[track_id] = dts_us;
