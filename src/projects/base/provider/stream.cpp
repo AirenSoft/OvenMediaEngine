@@ -392,7 +392,7 @@ namespace pvd
 			logtd("[%s/%s(%d)] Get start timestamp of stream. track:%d, ts:%lld (%d/%d) (%f us)", _application->GetVHostAppName().CStr(), GetName().CStr(), GetId(), track_id, dts, track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(), _start_timestamp_us);
 		}
 
-		int64_t start_ts_tb = Rescale(_start_timestamp_us, tb_den, AV_TIME_BASE);
+		int64_t start_ts_tb = Rescale(_start_timestamp_us, tb_den, AV_TIME_BASE * tb_num);
 
 		// 2. Make the base timestamp
 		if (_base_timestamp_us == -1)
