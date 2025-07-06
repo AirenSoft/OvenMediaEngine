@@ -34,9 +34,9 @@ namespace mdl
 
 	}
 
-	bool Dump::DumpData(const ov::String &file_name, const std::shared_ptr<const ov::Data> &data)
+	bool Dump::DumpData(const ov::String &file_name, const std::shared_ptr<const ov::Data> &data, bool append)
 	{
-		if (DumpToFile(GetOutputPath(), file_name, data) == false)
+		if (DumpToFile(GetOutputPath(), file_name, data, true, append) == false)
 		{
 			logw("DEBUG", "Could not dump data to file: %s/%s", GetOutputPath().CStr(), file_name.CStr());
 			return false;
@@ -140,7 +140,7 @@ namespace mdl
 		return true;
 	}
 
-	bool Dump::DumpToFile(const ov::String &path, const ov::String &file_name, const std::shared_ptr<const ov::Data> &data, bool add_history)
+	bool Dump::DumpToFile(const ov::String &path, const ov::String &file_name, const std::shared_ptr<const ov::Data> &data, bool add_history, bool append)
 	{
 		if (ov::CreateDirectories(path) == false)
 		{
@@ -150,7 +150,7 @@ namespace mdl
 
 		auto file_path_name = ov::PathManager::Combine(path, file_name);
 
-		if (ov::DumpToFile(file_path_name, data) == nullptr)
+		if (ov::DumpToFile(file_path_name, data, 0, append) == nullptr)
 		{
 			logw("DEBUG", "Could not dump data to file: %s", file_path_name.CStr());
 			return false;
