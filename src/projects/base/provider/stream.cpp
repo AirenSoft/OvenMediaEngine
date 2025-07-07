@@ -400,11 +400,11 @@ namespace pvd
 			_start_timestamp_tb = Rescale(_start_timestamp_us, track_scale, us_scale);
 
 			// for debugging
-			logtd("[%s/%s(%d)] Get start timestamp of stream. track:%d, ts:%lld (%d/%d) (%f us)",
+			logtd("[%s/%s(%d)] Get start timestamp of stream. track:%u, ts:%lld (%lld/%lld) (%lld us, %lld tb)",
 				  _application->GetVHostAppName().CStr(), GetName().CStr(), GetId(),
 				  track_id,
 				  dts, num_tb, den_tb,
-				  _start_timestamp_us);
+				  _start_timestamp_us, _start_timestamp_tb);
 		}
 
 		// 2. Make the base timestamp
