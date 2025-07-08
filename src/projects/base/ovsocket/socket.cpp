@@ -1611,6 +1611,14 @@ namespace ov
 						case ENOTCONN:
 							// Transport endpoint is not connected
 							break;
+						
+						case ETIMEDOUT:
+							// Even though the socket is non-blocking and MSG_DONTWAIT is used,
+							// the kernel may still return ETIMEDOUT if the connection is deemed broken.
+							// This can happen when the TCP session was previously established,
+							// but the peer has not responded for a long time (e.g., due to network issues,
+							// a dropped connection, or an unresponsive peer behind a firewall or NAT).
+							break;
 
 						case EAGAIN:
 							// Timed out
