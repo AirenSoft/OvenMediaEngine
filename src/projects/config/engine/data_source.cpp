@@ -190,22 +190,22 @@ namespace cfg
 		return false;
 	}
 
-	Variant Process(
+	Variant ProcessNode(
 		const ov::String &current_file_path,
 		const pugi::xml_node &node,
 		const std::function<Variant(const ov::String &value)> converter,
 		const bool resolve_path,
 		Json::Value *original_value)
 	{
+		if (NeedToIgnore(current_file_path, node, resolve_path))
+		{
+			return {};
+		}
+
 		if (node.empty())
 		{
 			// Nothing to do
 			*original_value = Json::nullValue;
-			return {};
-		}
-
-		if (NeedToIgnore(current_file_path, node, resolve_path))
-		{
 			return {};
 		}
 
@@ -217,6 +217,52 @@ namespace cfg
 		return (converter != nullptr) ? converter(preprocessed) : preprocessed;
 	}
 
+	Variant ProcessNodes(
+		const ov::String &current_file_path,
+		const pugi::xml_object_range<pugi::xml_named_node_iterator> &nodes,
+		const std::function<Variant(const ov::String &value)> converter,
+		const bool resolve_path,
+		Json::Value *original_value)
+	{
+		for (auto &node : nodes)
+		{
+			if (NeedToIgnore(current_file_path, node, resolve_path))
+			{
+				continue;
+			}
+
+			if (node.empty())
+			{
+				// Nothing to do
+				*original_value = Json::nullValue;
+				break;
+			}
+
+			const auto &child_value = node.child_value();
+			SET_ORIGINAL_VALUE_IF_NOT_NULL(child_value);
+
+			auto preprocessed = Preprocess(current_file_path, child_value, resolve_path);
+
+			return (converter != nullptr) ? converter(preprocessed) : preprocessed;
+		}
+
+		return {};
+	}
+
+	Variant Process(
+		const ov::String &current_file_path,
+		const bool is_child,
+		const pugi::xml_node &node,
+		const ov::String &name,
+		const std::function<Variant(const ov::String &value)> converter,
+		const bool resolve_path,
+		Json::Value *original_value)
+	{
+		return is_child
+				   ? ProcessNodes(current_file_path, node.children(name), converter, resolve_path, original_value)
+				   : ProcessNode(current_file_path, node, converter, resolve_path, original_value);
+	}
+
 	Variant DataSource::GetValueFromXml(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, Json::Value *original_value) const
 	{
 		switch (value_type)
@@ -226,34 +272,19 @@ namespace cfg
 				return {};
 
 			case ValueType::String:
-				return Process(
-					_current_file_path, is_child ? _node.child(name) : _node,
-					nullptr,
-					resolve_path, original_value);
+				return Process(_current_file_path, is_child, _node, name, nullptr, resolve_path, original_value);
 
 			case ValueType::Integer:
-				return Process(
-					_current_file_path, is_child ? _node.child(name) : _node,
-					[](const ov::String &value) { return ov::Converter::ToInt32(value); },
-					resolve_path, original_value);
+				return Process(_current_file_path, is_child, _node, name, [](const ov::String &value) { return ov::Converter::ToInt32(value); }, resolve_path, original_value);
 
 			case ValueType::Long:
-				return Process(
-					_current_file_path, is_child ? _node.child(name) : _node,
-					[](const ov::String &value) { return ov::Converter::ToInt64(value); },
-					resolve_path, original_value);
+				return Process(_current_file_path, is_child, _node, name, [](const ov::String &value) { return ov::Converter::ToInt64(value); }, resolve_path, original_value);
 
 			case ValueType::Boolean:
-				return Process(
-					_current_file_path, is_child ? _node.child(name) : _node,
-					[](const ov::String &value) { return ov::Converter::ToBool(value); },
-					resolve_path, original_value);
+				return Process(_current_file_path, is_child, _node, name, [](const ov::String &value) { return ov::Converter::ToBool(value); }, resolve_path, original_value);
 
 			case ValueType::Double:
-				return Process(
-					_current_file_path, is_child ? _node.child(name) : _node,
-					[](const ov::String &value) { return ov::Converter::ToDouble(value); },
-					resolve_path, original_value);
+				return Process(_current_file_path, is_child, _node, name, [](const ov::String &value) { return ov::Converter::ToDouble(value); }, resolve_path, original_value);
 
 			case ValueType::Attribute: {
 				if (NeedToIgnore(_current_file_path, _node, resolve_path) == false)
@@ -273,10 +304,7 @@ namespace cfg
 			}
 
 			case ValueType::Text:
-				return Process(
-					_current_file_path, is_child ? _node.child(name) : _node,
-					nullptr,
-					resolve_path, original_value);
+				return Process(_current_file_path, is_child, _node, name, nullptr, resolve_path, original_value);
 
 			case ValueType::Item: {
 				if (
