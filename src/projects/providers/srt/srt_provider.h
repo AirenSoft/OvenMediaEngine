@@ -11,6 +11,7 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovsocket/ovsocket.h>
 #include <orchestrator/orchestrator.h>
+#include <modules/srt/srt.h>
 #include <stdint.h>
 #include <unistd.h>
 
@@ -80,27 +81,9 @@ namespace pvd
 							const std::shared_ptr<const ov::Error> &error) override;
 
 	private:
-		struct StreamMap
-		{
-			StreamMap(int port, const ov::String &stream_path)
-				: port(port), stream_path(stream_path)
-			{
-			}
-
-			int port;
-			ov::String stream_path;
-		};
-
-	private:
-		std::shared_ptr<StreamMap> GetStreamMap(int port);
-		std::shared_ptr<ov::Url> GetStreamUrlForRemote(const std::shared_ptr<ov::Socket> &remote, bool *is_vhost_form);
-
-	private:
 		std::mutex _physical_port_list_mutex;
 		std::vector<std::shared_ptr<PhysicalPort>> _physical_port_list;
 
-		std::shared_mutex _stream_map_mutex;
-		// Key: port, Value: StreamMap
-		std::map<int, std::shared_ptr<StreamMap>> _stream_map;
+		modules::srt::StreamUrlResolver _stream_url_resolver;
 	};
 }  // namespace pvd
