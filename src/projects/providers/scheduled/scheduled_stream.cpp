@@ -219,7 +219,7 @@ namespace pvd
 
 			if (item->file == true)
 			{
-				item->duration_ms = GetFileItemDurationMS(item);
+				item->duration_ms = GetFileItemDurationMS(item) - item->start_time_ms_conf;
 				total_duration_ms += item->duration_ms;
 			}
 			else
@@ -925,21 +925,23 @@ namespace pvd
         }
 
         // Seek to start position
-        if (item->start_time_ms_conf > 0)
+        if (item->start_time_ms > 0)
         {
-            int64_t seek_target = item->start_time_ms_conf * 1000;
+			// if stream_index is -1, in AV_TIME_BASE units
+			// #define AV_TIME_BASE 1000000
+            int64_t seek_target = item->start_time_ms * 1000; // Convert to microseconds
             int64_t seek_min = 0;
             int64_t seek_max = total_duration_ms * 1000;
 
             int seek_ret = ::avformat_seek_file(format_context, -1, seek_min, seek_target, seek_max, 0);
             if (seek_ret < 0)
             {
-                logte("%s/%s: Failed to seek to start position %d, err:%d", GetApplicationName(), GetName().CStr(), item->start_time_ms_conf, seek_ret);
+                logte("%s/%s: Failed to seek to start position %d, err:%d", GetApplicationName(), GetName().CStr(), item->start_time_ms, seek_ret);
             }
         }
 
 		logti("Scheduled Channel : %s/%s: File %s prepared. Start time %lld ms, Duration %lld ms",
-			GetApplicationName(), GetName().CStr(), item->file_path.CStr(), item->start_time_ms_conf, item->duration_ms);
+			GetApplicationName(), GetName().CStr(), item->file_path.CStr(), item->start_time_ms, item->duration_ms);
 
         if (UpdateStream() == false)
         {

@@ -23,19 +23,19 @@ namespace pvd
 		}
 
 		auto now = std::chrono::system_clock::now();
-		auto time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - scheduled_time).count();
-		int64_t position = time_elapsed;
+		auto time_elapsed_ms_from_scheduled = std::chrono::duration_cast<std::chrono::milliseconds>(now - scheduled_time).count();
+		int64_t position_ms = time_elapsed_ms_from_scheduled;
 
 		if (unlimited_duration == false)
 		{
 			// if position is less than 1 second, it is considered as processing time difference and not seeked
-			if (position < 1000)
+			if (position_ms < 1000)
 			{
-				position = 0;
+				position_ms = 0;
 			}
 			else
 			{
-				position = time_elapsed % total_item_duration_ms;
+				position_ms = time_elapsed_ms_from_scheduled % total_item_duration_ms;
 			}
 		} 
 
@@ -43,7 +43,7 @@ namespace pvd
 		logti("GetFirstItem: Now: %lld ms, Scheduled: %lld ms, Elapsed: %lld ms, Position: %lld ms", 
 			std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count(),
 			std::chrono::duration_cast<std::chrono::milliseconds>(scheduled_time.time_since_epoch()).count(),
-			time_elapsed, position);
+			time_elapsed_ms_from_scheduled, position_ms);
 
 		int64_t current_position = 0;
 		for (const auto &item : items)
@@ -51,15 +51,15 @@ namespace pvd
 			current_item_index ++;
 
 			if (item->duration_ms <= 0 ||  // it means unlimited duration like live stream with no duration set
-				(current_position <= position && position < current_position + item->duration_ms))
+				(current_position <= position_ms && position_ms < current_position + item->duration_ms))
 			{
-				// Copy item and set start_time_ms_conf
+				// Copy item and set start_time_ms
 				auto first_item = std::make_shared<Item>(*item);
-				first_item->start_time_ms_conf = position - current_position;
-				first_item->duration_ms = item->duration_ms - first_item->start_time_ms_conf;
+				first_item->start_time_ms = first_item->start_time_ms_conf + (position_ms - current_position);
+				first_item->duration_ms = item->duration_ms - (position_ms - current_position);
 
 				logti("Item : %s - GetFirstItem: Found item at position: %lld ms, Item start time: %lld ms, Item duration: %lld ms", 
-					item->url.CStr(), position, first_item->start_time_ms_conf, first_item->duration_ms);
+					item->url.CStr(), position_ms, first_item->start_time_ms, first_item->duration_ms);
 
 				return first_item;
 			}
