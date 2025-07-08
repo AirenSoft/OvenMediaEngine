@@ -2,7 +2,7 @@
 
 OvenMediaEngine supports playback of streams delivered via RTMP, WebRTC, SRT, MPEG-2 TS, and RTSP using SRT-compatible players or integration with other SRT-enabled systems.
 
-<table><thead><tr><th width="290">Title</th><th>Functions</th></tr></thead><tbody><tr><td>Container</td><td>MPEG-2 TS</td></tr><tr><td>Transport</td><td>SRT</td></tr><tr><td>Codec</td><td>H.264, H.265, AAC</td></tr><tr><td>Additional Features</td><td>Simulcast</td></tr><tr><td>Default URL Pattern</td><td>srt://&#x3C;host>[:port]?streamid=&#x3C;vhost>/&#x3C;app>/&#x3C;stream>/<strong>master</strong></td></tr></tbody></table>
+<table><thead><tr><th width="290">Title</th><th>Functions</th></tr></thead><tbody><tr><td>Container</td><td>MPEG-2 TS</td></tr><tr><td>Transport</td><td>SRT</td></tr><tr><td>Codec</td><td>H.264, H.265, AAC</td></tr><tr><td>Additional Features</td><td>Simulcast</td></tr><tr><td>Default URL Pattern</td><td>srt://&#x3C;host>[:port]?streamid=&#x3C;host>/&#x3C;app>/&#x3C;stream>/<strong>master</strong></td></tr></tbody></table>
 
 Currently, OvenMediaEngine supports H.264, H.265, AAC codecs for SRT playback, ensuring the same compatibility as its [SRT provider functionality](../live-source/srt.md).
 
@@ -52,11 +52,27 @@ You can control whether to enable SRT playback for each application. To activate
 
 ## SRT client and `streamid`
 
-As with using [SRT as a live source](../live-source/srt.md#encoders-and-streamid), multiple streams can be serviced on a single port. To distinguish each stream, you must set the `streamid` in the format `<virtual host>/<app>/<stream>/<playlist>`.
+As with using [SRT as a live source](../live-source/srt.md#encoders-and-streamid), multiple streams can be serviced on a single port. To distinguish each stream, you must set the `streamid` in the format `<host>/<app>/<stream>/<playlist>`.
 
-> streamid = "\<virtual host name>/\<app name>/\<stream name>/\<playlist name>"
+> `streamid` = `<host name>/<app name>/<stream name>/<playlist name>`
 
-SRT clients such as FFmpeg, OBS Studio, and `srt-live-transmit` allow you to specify the `streamid` as a query string appended to the SRT URL. For example, you can specify the `streamid` in the SRT URL like this to play a specific SRT stream: `srt://host:port?streamid=default/app/stream/playlist`.
+SRT clients such as FFmpeg, OBS Studio, and `srt-live-transmit` allow you to specify the `streamid` as a query string appended to the SRT URL. For example, you can specify the `streamid` in the SRT URL like this to play a specific SRT stream: `srt://host:port?streamid=host/app/stream/playlist`.
+
+Here, the `<host name>` refers to one of the patterns listed under `VirtualHost.Host.Names.Name`. In other words, if you configure it as shown below, you can use values such as `a.airensoft.com`, `test.com`, and `test.airensoft.com` as the `<host name>`.
+
+```html
+<Server>
+    <VirtualHosts>
+        <VirtualHost>
+            <Name>default</Name>
+            <Host>
+                <Names>
+                    <Name>*.airensoft.com</Name>
+                    <Name>test.com</Name>
+                </Names>
+            </Host>
+...
+```
 
 ## Playback
 
@@ -65,14 +81,14 @@ To ensure that SRT streaming works correctly, you can use tools like FFmpeg or O
 The SRT URL to be used in the player is structured as follows:
 
 ```
-srt://<OME Host>:<SRT Publisher Port>?streamid=<vhost name>/<app name>/<stream name>/<playlist name>
+srt://<OME Host>:<SRT Publisher Port>?streamid=<host name>/<app name>/<stream name>/<playlist name>
 ```
 
 SRT Publisher creates a default playlist named `master` with the first track from each of the audio tracks and video tracks, and all data tracks.
 
-For example, to playback the `default/app/stream` stream with the default playlist from OME listening on port `9998` at `192.168.0.160`, use the following SRT URL:
+For example, to playback the `host/app/stream` stream with the default playlist from OME listening on port `9998` at `192.168.0.160`, use the following SRT URL:
 
-> `srt://192.168.0.160:9998?streamid=default/app/stream/master`
+> `srt://192.168.0.160:9998?streamid=host/app/stream/master`
 
 You can input the SRT URL as shown above into your SRT client. Below, we provide instructions on how to input the SRT URL for each client.
 
@@ -81,13 +97,13 @@ You can input the SRT URL as shown above into your SRT client. Below, we provide
 If you want to test SRT with FFplay, FFmpeg, or FFprobe, simply enter the SRT URL next to the command. For example, with FFplay, you can use the following command:
 
 ```
-$ ffplay "srt://192.168.0.160:9998?streamid=default/app/stream/master"
+$ ffplay "srt://192.168.0.160:9998?streamid=host/app/stream/master"
 ```
 
 If you have multiple audio tracks, you can choose one with `-ast` parameter
 
 ```
-$ ffplay "srt://192.168.0.160:9998?streamid=default/app/stream/master" -ast 1
+$ ffplay "srt://192.168.0.160:9998?streamid=host/app/stream/master" -ast 1
 ```
 
 <figure><img src="../.gitbook/assets/{BEF5152C-6311-4A4E-A715-22FDB1DDC9C3}.png" alt=""><figcaption></figcaption></figure>
@@ -161,7 +177,7 @@ Since SRT is packaged in the MPEG-TS, the `EnableTsPackaging` option must be set
 		</Video>
 	</Encodes>
 
-	<!-- SRT URL: srt://<host>:<port>?streamid=default/app/stream/360p -->
+	<!-- SRT URL: srt://<host>:<port>?streamid=host/app/stream/360p -->
 	<Playlist>
 		<Name>Low</Name>
 		<FileName>360p</FileName>

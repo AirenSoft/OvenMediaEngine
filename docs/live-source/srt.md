@@ -43,13 +43,29 @@ OvenMediaEngine classifies each stream using SRT's streamid. This means that unl
 
 Therefore, in order for the SRT encoder to transmit a stream to OvenMediaEngine, the following information must be included in the streamid as [percent encoded](https://tools.ietf.org/html/rfc3986#section-2.1).
 
-> streamid = {vhost name}/{app name}/{stream name}
+> `streamid` = `{host name}/{app name}/{stream name}`
+
+Here, the `{host name}` refers to one of the patterns listed under `VirtualHost.Host.Names.Name`. In other words, if you configure it as shown below, you can use values such as `a.airensoft.com`, `test.com`, and `test.airensoft.com` as the `{host name}`.
+
+```html
+<Server>
+    <VirtualHosts>
+        <VirtualHost>
+            <Name>default</Name>
+            <Host>
+                <Names>
+                    <Name>*.airensoft.com</Name>
+                    <Name>test.com</Name>
+                </Names>
+            </Host>
+...
+```
 
 ### OBS Studio
 
 OBS Studio 25.0 or later supports SRT. Please refer to the [OBS official documentation](https://obsproject.com/wiki/Streaming-With-SRT-Protocol) for more information. Enter the address of OvenMediaEngine in OBS Studio's Server as follows: When using SRT in OBS, leave the Stream Key blank.
 
-`srt://{full domain or IP address}:port?streamid={vhost name}/{app name}/{stream name}`
+`srt://{full domain or IP address}:port?streamid={host name}/{app name}/{stream name}`
 
 <figure><img src="../.gitbook/assets/image (61).png" alt=""><figcaption></figcaption></figure>
 
