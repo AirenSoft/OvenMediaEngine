@@ -433,8 +433,42 @@ bool HlsStream::IsConcluded() const
 	return _concluded;
 }
 
+bool HlsStream::CheckIfAllPlaylistReady() const
+{
+	if (_ready_to_play == true)
+	{
+		return true;
+	}
+
+	std::shared_lock<std::shared_mutex> lock(_media_playlists_guard);
+
+	int min_segments_for_ready = std::min(_ts_config.GetSegmentCount(), 2);
+
+	for (const auto &[variant_name, playlist] : _media_playlists)
+	{
+		if (playlist == nullptr)
+		{
+			continue;
+		}
+
+		if (playlist->GetSegmentCount() < static_cast<std::size_t>(min_segments_for_ready))
+		{
+			return false;
+		}
+	}
+
+	logti("HLS Stream(%s/%s) - All playlists are ready to play", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
+
+	return true;
+}
+
 void HlsStream::OnSegmentCreated(const ov::String &packager_id, const std::shared_ptr<mpegts::Segment> &segment)
 {
+	if (CheckIfAllPlaylistReady() == true)
+	{
+		_ready_to_play = true;
+	}
+
 	auto playlist = GetMediaPlaylist(packager_id);
 	if (playlist == nullptr)
 	{

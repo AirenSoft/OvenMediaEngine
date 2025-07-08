@@ -81,6 +81,9 @@ private:
 	bool AppendMediaPacket(const std::shared_ptr<MediaPacket> &media_packet);
 	void BufferMediaPacketUntilReadyToPlay(const std::shared_ptr<MediaPacket> &media_packet);
 	bool SendBufferedPackets();
+
+	bool CheckIfAllPlaylistReady() const;
+
 	ov::Queue<std::shared_ptr<MediaPacket>> _initial_media_packet_buffer;
 
 	//////////////////////////
@@ -112,10 +115,13 @@ private:
 
 	// variant name : Media playlist
 	std::map<ov::String, std::shared_ptr<HlsMediaPlaylist>> _media_playlists;
-	std::shared_mutex _media_playlists_guard;
+	mutable std::shared_mutex _media_playlists_guard;
 
 	// ConcludeLive
 	// Append #EXT-X-ENDLIST all chunklists, and no more update segment and chunklist
 	bool _concluded = false;
 	mutable std::shared_mutex _concluded_lock;
+
+
+	bool _ready_to_play = false; // true if the stream is ready to play, all playlists are ready and have enough segments
 };
