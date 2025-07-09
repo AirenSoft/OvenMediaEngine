@@ -8,31 +8,30 @@ Multiplex Channel takes tracks from other local streams and organizes them into 
 
 ## Configuration
 
-To use this feature, enable Multiplex Provider in Server.xml.
+To use this feature, enable Multiplex Provider in `Server.xml`.
 
+```xml
+<!-- /Server/VirtualHosts/VirtualHost/Applications/Application -->
+<Providers>
+    ...
+    <Multiplex>
+        <MuxFilesDir>mux_files</MuxFilesDir>
+    </Multiplex>
+    ...
+</Providers>
 ```
-<VirtualHost>
-    <Applications>
-	<Providers>
-		...
-		<Multiplex>
-			<MuxFilesDir>mux_files</MuxFilesDir>
-		</Multiplex>
-	</Providers>
-```
 
-Multiplex Channels are created through .mux files or API. MuxFilesDir is the path where the .mux files are located and can be set to an absolute system path or relative to the path where the Server.xml configuration is located.
+Multiplex Channels are created through `.mux` files or API. `<MuxFilesDir>` is the path where the .mux files are located and can be set to an absolute system path or relative to the path where the `Server.xml` configuration is located.
 
-The Multiplex Provider monitors the MuxFilesDir path, and when a mux file is created, it parses the file and creates a multiplex channel. When the mux file is modified, the channel is deleted and created again, and when the mux file is deleted, the channel is deleted.
+The Multiplex Provider monitors the `<MuxFilesDir>` path, and when a mux file is created, it parses the file and creates a multiplex channel. When the mux file is modified, the channel is deleted and created again, and when the mux file is deleted, the channel is deleted.
 
 ## Mux file format
 
 mux files can be created or deleted while the system is running. This works dynamically. The mux file has the format below.&#x20;
 
-```
+```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <Multiplex>
-    
     <OutputStream>
         <Name>stream</Name>
     </OutputStream>
@@ -100,13 +99,13 @@ mux files can be created or deleted while the system is running. This works dyna
 ```
 
 **OutputStream**\
-This is information about the stream to be newly created. It must be the same as the file name. `<stream name>.mux`
+This is information about the stream to be newly created. It must be the same as the file name. `{Stream Name}.mux`
 
 **SourceStreams**\
-Specifies the internal stream to be muxed. You can also load streams from other VHosts or applications in the format `stream://<vhost name>/<app name>/<stream name>`. Because multiple streams are muxed into one stream, track names may be duplicated. Therefore, it is necessary to change the Track name for each SourceStream through `<TrackMap>`. `<SourceTrackName>` is either `<OutputProfile><Encodes><Video><Name>` or `<OutputProfile><Encodes><Audio><Name>`.
+Specifies the internal stream to be muxed. You can also load streams from other VHosts or applications in the format `stream://{VHost Name}/{App Name}/{Stream Name}`. Because multiple streams are muxed into one stream, track names may be duplicated. Therefore, it is necessary to change the Track name for each `<SourceStream>` through `<TrackMap``>/<SourceTrackName>` is either `<OutputProfile>/<Encodes>/<Video>/<Name>` or `<OutputProfile>/<Encodes>/<Audio>/<Name>`.
 
 **Playlist**\
-The same format as `<OutputProfile>` must be used, and the Playlist must be constructed using the newly mapped Track name in SourceStreams' TrackMap. The Playlist configured here exists only in this stream. The Playlist's FileName must be unique throughout the application.
+The same format as `<OutputProfile>` must be used, and the Playlist must be constructed using the newly mapped Track name in `<TrackMap>`  of `<SourceStreams>`. The Playlist configured here exists only in this stream. The `<Playlist>` 's `<FileName>` must be unique throughout the application.
 
 ## REST API
 

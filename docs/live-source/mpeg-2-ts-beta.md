@@ -14,52 +14,47 @@ To use multiple streams, it is necessary to bind multiple ports, so we provide a
 
 ### Stream mapping
 
-First, name the stream and map the port bound above. The macro `${Port}` is provided to map multiple streams at once. Check out the example below.
+First, name the stream and map the port bound above. The macro `${Port}`is provided to map multiple streams at once. Check out the example below.
 
 {% code overflow="wrap" %}
 ```xml
-<Server>
+<!-- /Server/Bind -->
+<Providers>
     ...
-    <Bind>
-        <Providers>
-            <MPEGTS>
-                <!--
-                    Listen on port 4000,4001,4004,4005
-                    This is just a demonstration to show that 
-                    you can configure the port in several ways
-                -->
-                <Port>4000-4001,4004,4005/udp</Port>
-            </MPEGTS>
-        </Providers>
-    </Bind>
+    <MPEGTS>
+        <!--
+            Listen on port 4000,4001,4004,4005
+            This is just a demonstration to show that
+            you can configure the port in several ways
+        -->
+        <Port>4000-4001,4004,4005/udp</Port>
+        ...
+    </MPEGTS>
+</providers>
+
+<!-- /Server/VirtualHosts/VirtualHost/Applications/Application -->
+<Providers>
     ...
-    <VirtualHosts>
-        <VirtualHost>
-            <Application>
-                <Providers>
-                    <MPEGTS>
-                        <StreamMap>
-                            <!--
-                                Set the stream name of the client connected to the 
-                                port to "stream_${Port}"
-                                For example, if a client connets to port 4000, 
-                                OME creates a "stream_4000" stream
-                            -->
-                            <Stream>
-                                <Name>stream_${Port}</Name>
-                                <Port>4000-4001,4004</Port>
-                            </Stream>
-                            <Stream>
-                                <Name>stream_name_for_4005_port</Name>
-                                <Port>4005</Port>
-                            </Stream>
-                        </StreamMap>
-                    </MPEGTS>
-                </Providers>
-            <Application>
-        </VirtualHost>
-    </VirtualHosts>
-</Server>
+    <MPEGTS>
+        <StreamMap>
+            <!--
+                Set the stream name of the client connected to the
+                port to "stream_${Port}"
+                For example, if a client connets to port 4000,
+                OME creates a "stream_4000" stream
+            -->
+            <Stream>
+                <Name>stream_${Port}</Name>
+                <Port>4000-4001,4004</Port>
+            </Stream>
+            <Stream>
+                <Name>stream_name_for_4005_port</Name>
+                <Port>4005</Port>
+            </Stream>
+            ...
+        </StreamMap>
+    </MPEGTS>
+</Providers>
 ```
 {% endcode %}
 

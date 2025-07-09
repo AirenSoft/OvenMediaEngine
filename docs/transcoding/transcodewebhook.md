@@ -2,10 +2,9 @@
 
 **TranscodeWebhook** allows OvenMediaEngine to use OutputProfiles from the Control Server's response instead of the OutputProfiles in the local configuration (Server.xml). OvenMediaEngine requests OutputProfiles from the Control Server when streams are created, enabling the specification of different profiles for each individual stream.
 
-\
+\\
 
-
-<figure><img src="../.gitbook/assets/image (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 ## Configuration
 
@@ -28,25 +27,25 @@
 ```
 
 **Enable (required)**\
-&#x20;   You can enable or disable TranscodeWebhook settings.
+You can enable or disable TranscodeWebhook settings.
 
 **ControlServerUrl (required)**\
-&#x20;   It's the URL of the Control Server, and it supports both HTTP and HTTPS.
+It's the URL of the Control Server, and it supports both HTTP and HTTPS.
 
 **SecretKey (optional)**\
-&#x20;   This is the Secret Key used to pass authentication for the Control Server. To pass security authentication, an HMAC-SHA1 encrypted value of the HTTP Payload is added to the HTTP Header's X-OME-Signature. This Key is used for generating this value.
+This is the Secret Key used to pass authentication for the Control Server. To pass security authentication, an HMAC-SHA1 encrypted value of the HTTP Payload is added to the HTTP Header's X-OME-Signature. This Key is used for generating this value.
 
 **Timeout (optional, default: 1500)**\
-&#x20;   This is the Timeout value used when connecting to the Control Server.
+This is the Timeout value used when connecting to the Control Server.
 
 **UseLocalProfilesOnConnectionFailure(optional, default: true)**\
-&#x20;   This determines whether to use the OutputProfiles from Local settings in case of communication failure with the Control Server. If it's set to "false," a communication failure with the Control Server will result in a failure to create the Output stream.
+This determines whether to use the OutputProfiles from Local settings in case of communication failure with the Control Server. If it's set to "false," a communication failure with the Control Server will result in a failure to create the Output stream.
 
 **UseLocalProfilesOnServerDisallow (optional, default: false)**\
-&#x20;   When the Control Server responds with a 200 OK, but "allowed" is set to "false," this policy is followed.
+When the Control Server responds with a 200 OK, but "allowed" is set to "false," this policy is followed.
 
 **UseLocalProfilesOnErrorResponse (optional, default: false)**\
-&#x20;   When the Control Server responds with error status codes such as 400 Bad Request, 404 Not Found, 500 Internal Error, OvenMediaEngine follows this policy.
+When the Control Server responds with error status codes such as 400 Bad Request, 404 Not Found, 500 Internal Error, OvenMediaEngine follows this policy.
 
 ## Protocol
 
@@ -287,4 +286,3 @@ The `outputProfiles` section in the JSON structure mirrors the configuration in 
   ]
 }
 ```
-

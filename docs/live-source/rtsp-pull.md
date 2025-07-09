@@ -19,44 +19,25 @@ If OriginMapStore is configured and Redis Server provides an rtsp URL, OvenMedia
 RTSP Pull is provided through OriginMap configuration. OriginMap is the rule that the Edge server pulls the stream of the Origin server. Edge server can pull a stream of origin with RTSP and OVT (protocol defined by OvenMediaEngine for Origin-Edge) protocol. See the [Clustering](../origin-edge-clustering.md) section for more information about OVT.
 
 ```markup
-<VirtualHosts>
-    <VirtualHost include="VHost*.xml" />
-    <VirtualHost>
-        <Name>default</Name>
+<!-- /Server/VirtualHosts -->
+<VirtualHost>
+    ...
+    <Name>default</Name>
 
-        <Host>
-            <Names>
-                <!-- Host names
-                    <Name>stream1.airensoft.com</Name>
-                    <Name>stream2.airensoft.com</Name>
-                    <Name>*.sub.airensoft.com</Name>
-                    <Name>192.168.0.1</Name>
-                -->
-                <Name>*</Name>
-            </Names>
-            <!--
-            <TLS>
-                <CertPath>path/to/file.crt</CertPath>
-                <KeyPath>path/to/file.key</KeyPath>
-                <ChainCertPath>path/to/file.crt</ChainCertPath>
-            </TLS>
-            -->
-        </Host>
-        
-        <Origins>
-            <Origin>
-                <Location>/app_name/rtsp_stream_name</Location>
-                <Pass>
-                    <Scheme>rtsp</Scheme>
-                    <Urls><Url>192.168.0.200:554/</Url></Urls>
-                </Pass>
-            </Origin>
-        </Origins>
-    </VirtualHost>
-</VirtualHosts>
+    <Origins>
+        <Origin>
+            <Location>/app_name/rtsp_stream_name</Location>
+            <Pass>
+                <Scheme>rtsp</Scheme>
+                <Urls><Url>192.168.0.200:554/</Url></Urls>
+            </Pass>
+        </Origin>
+    </Origins>
+    ...
+</VirtualHost>
 ```
 
-For example, in the above setup, when a player requests "ws://ome.com/**app\_name/rtsp\_stream\_name"** to stream WebRTC, it pulls the stream from "rtsp://**192.168.0.200:554"** and publishes it to WebRTC.
+For example, in the above setup, when a player requests `ws://{OvenMediaEngine Host}[:{Signaling Port}]/}App Name}/{RTSP Stream Name}` to stream WebRTC, it pulls the stream from `rtsp://192.168.0.200:554` and publishes it to WebRTC.
 
 {% hint style="warning" %}
 If the app name set in Location isn't created, OvenMediaEngine creates the app with default settings. The default generated app doesn't have an OPUS encoding profile, so to use WebRTC streaming, you need to add the app to your configuration.
@@ -68,8 +49,5 @@ Pulling type providers are activated by streaming requests from publishers. And 
 
 When a playback request comes in from the following URL, RTSP pull starts working according to Origins settings.
 
-| Protocol | URL                                                                 |
-| -------- | ------------------------------------------------------------------- |
-| WebRTC   | ws\[s]:://host.com\[:port]/app\_name/rtsp\_stream\_name             |
-| LLHLS    | http\[s]://host.com\[:port]/app\_name/rtsp\_stream\_name/llhls.m3u8 |
+<table data-header-hidden><thead><tr><th width="147">Protocol</th><th>URL</th></tr></thead><tbody><tr><td>Protocol</td><td>URL</td></tr><tr><td>WebRTC</td><td><code>ws[s]:://{OvenMediaEngine Host}[:{Signaling Port}]/{App Name}/{RTSP Stream Name}</code></td></tr><tr><td>LLHLS</td><td><code>http[s]://{OvenMediaEngine Host}[:{LLHLS Port}]/{App Name}/{RTSP Stream Name}/llhls.m3u8</code></td></tr></tbody></table>
 
