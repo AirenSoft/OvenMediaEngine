@@ -19,8 +19,8 @@ namespace cfg
 				struct Decoder : public Item
 				{
 				protected:
-					bool 		_enable = false;
-					ov::String 	_modules = "";
+					bool _enable		= false;
+					ov::String _modules = "";
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsEnable, _enable);
@@ -34,6 +34,6 @@ namespace cfg
 					}
 				};
 			}  // namespace oprf
-		} // namespace app
-	} // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

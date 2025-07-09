@@ -28,13 +28,13 @@ namespace cfg
 			MAY_THROWS(cfg::ConfigError)
 			void SetPort(const ov::String &str)
 			{
-				_port = str;
+				_port		 = str;
 				_socket_type = ov::SocketType::Unknown;
-				_port_value = ov::Converter::ToInt32(_port.Trim());
+				_port_value	 = ov::Converter::ToInt32(_port.Trim());
 
 				if (IsValidPort(_port_value))
 				{
-					auto tokens = _port.Split("/");
+					auto tokens	 = _port.Split("/");
 
 					// Default: TCP
 					_socket_type = (tokens.size() != 2) ? ov::SocketType::Tcp : GetSocketType(tokens[1]);

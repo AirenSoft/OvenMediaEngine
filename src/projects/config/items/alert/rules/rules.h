@@ -8,8 +8,8 @@
 //==============================================================================
 #pragma once
 
-#include "ingress/ingress.h"
 #include "egress/egress.h"
+#include "ingress/ingress.h"
 
 namespace cfg
 {
@@ -42,5 +42,5 @@ namespace cfg
 				}
 			};
 		}  // namespace rule
-	}	   // namespace alrt
+	}  // namespace alrt
 }  // namespace cfg

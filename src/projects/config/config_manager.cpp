@@ -48,7 +48,7 @@ namespace cfg
 	{
 		// LastConfig was used <= 0.12.10, but later version changed to <API><Storage>.
 		// Inform the user that LastConfig is no longer used and throws an exception so that OME can be terminated.
-		bool is_last_config_found = ov::PathManager::IsFile(ov::PathManager::Combine(config_path, CFG_LAST_CONFIG_FILE_NAME));
+		bool is_last_config_found		 = ov::PathManager::IsFile(ov::PathManager::Combine(config_path, CFG_LAST_CONFIG_FILE_NAME));
 		bool is_legacy_last_config_found = ov::PathManager::IsFile(ov::PathManager::Combine(config_path, CFG_LAST_CONFIG_FILE_NAME_LEGACY));
 
 		if (is_last_config_found || is_legacy_last_config_found)
@@ -102,7 +102,7 @@ namespace cfg
 			fs.close();
 
 			line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
-			
+
 			_license_key = line.c_str();
 		}
 
@@ -174,7 +174,7 @@ namespace cfg
 
 	void ConfigManager::LoadLoggerConfig(const ov::String &config_path)
 	{
-		struct stat value = {0};
+		struct stat value			  = {0};
 
 		ov::String logger_config_path = ov::PathManager::Combine(config_path, CFG_LOG_FILE_NAME);
 
@@ -249,7 +249,7 @@ namespace cfg
 
 	void ConfigManager::LoadServerConfig(const ov::String &config_path)
 	{
-		const char *XML_ROOT_NAME = "Server";
+		const char *XML_ROOT_NAME	  = "Server";
 		ov::String server_config_path = ov::PathManager::Combine(config_path, CFG_MAIN_FILE_NAME);
 
 		logti("Trying to load configurations... (%s)", server_config_path.CStr());

@@ -290,8 +290,8 @@ namespace cfg
 		// _last_target != this: The list is refreshed
 		const void *_last_target = nullptr;
 
-		bool _is_parsed = false;
-		bool _is_read_only = true;
+		bool _is_parsed			 = false;
+		bool _is_read_only		 = true;
 
 		ItemName _item_name;
 

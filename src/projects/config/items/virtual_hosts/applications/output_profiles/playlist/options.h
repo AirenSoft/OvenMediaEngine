@@ -19,10 +19,10 @@ namespace cfg
 				struct Options : public Item
 				{
 				protected:
-					bool _webrtc_auto_abr = true;
-					
+					bool _webrtc_auto_abr		  = true;
+
 					// If this option is true, ts publisher will use this playlist
-					bool _enable_ts_packaging = false;
+					bool _enable_ts_packaging	  = false;
 
 					// -1(default) : absolute - /app/stream/chunklist.m3u8
 					// 0 : relative file - chunklist.m3u8
@@ -43,7 +43,7 @@ namespace cfg
 						Register<Optional>("EnableTsPackaging", &_enable_ts_packaging);
 					}
 				};
-			} // namespace oprf
-		} // namespace app
-	} // namespace vhost
+			}  // namespace oprf
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

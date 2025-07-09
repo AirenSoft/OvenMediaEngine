@@ -23,7 +23,7 @@ namespace cfg
 			P2P(bool enable) : ModuleTemplate(enable)
 			{
 			}
-			
+
 			CFG_DECLARE_CONST_REF_GETTER_OF(GetMaxClientPeersPerHostPeer, _max_client_peers_per_host_peer)
 
 		protected:

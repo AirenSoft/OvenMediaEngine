@@ -9,11 +9,11 @@
 #pragma once
 
 #include <base/info/playlist.h>
+
+#include "../encodes/encodes.h"
+#include "options.h"
 #include "rendition.h"
 #include "rendition_template.h"
-#include "options.h"
-#include "../encodes/encodes.h"
-
 
 namespace cfg
 {
@@ -65,12 +65,12 @@ namespace cfg
 						bool audio_found = false;
 						for (auto &rendition : _renditions)
 						{
-							video_found = false;
-							audio_found = false;
+							video_found		   = false;
+							audio_found		   = false;
 
 							bool video_enabled = false;
-							auto video_name = rendition.GetVideoName(&video_enabled);
-							
+							auto video_name	   = rendition.GetVideoName(&video_enabled);
+
 							if (video_enabled)
 							{
 								for (const auto &encode : encodes.GetVideoProfileList())
@@ -84,7 +84,7 @@ namespace cfg
 							}
 
 							bool audio_enabled = false;
-							auto audio_name = rendition.GetAudioName(&audio_enabled);
+							auto audio_name	   = rendition.GetAudioName(&audio_enabled);
 
 							if (audio_enabled)
 							{
@@ -127,30 +127,28 @@ namespace cfg
 						Register("FileName", &_file_name);
 						Register<Optional>("Options", &_options);
 
-						Register<Optional>({"Rendition", "renditions"}, &_renditions, nullptr, 
-							[=]() -> std::shared_ptr<ConfigError> {
-								
-								std::map<ov::String, bool> rendition_names;
+						Register<Optional>({"Rendition", "renditions"}, &_renditions, nullptr,
+										   [=]() -> std::shared_ptr<ConfigError> {
+											   std::map<ov::String, bool> rendition_names;
 
-								// Check if there are duplicate renditions
-								for (auto &rendition : _renditions)
-								{
-									auto name = rendition.GetName();
-									if (rendition_names.find(name) != rendition_names.end())
-									{
-										return CreateConfigErrorPtr("Duplicate rendition name: %s", name.CStr());
-									}
-									rendition_names[name] = true;
-								}
-								
-								return nullptr;
-							}
-						);
+											   // Check if there are duplicate renditions
+											   for (auto &rendition : _renditions)
+											   {
+												   auto name = rendition.GetName();
+												   if (rendition_names.find(name) != rendition_names.end())
+												   {
+													   return CreateConfigErrorPtr("Duplicate rendition name: %s", name.CStr());
+												   }
+												   rendition_names[name] = true;
+											   }
+
+											   return nullptr;
+										   });
 
 						Register<Optional>({"RenditionTemplate", "rendition_templates"}, &_rendition_templates);
 					}
 				};
 			}  // namespace oprf
-		}	   // namespace app
-	}		   // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

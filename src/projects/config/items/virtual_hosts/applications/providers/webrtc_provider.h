@@ -40,6 +40,6 @@ namespace cfg
 					int _timeout = 30000;
 				};
 			}  // namespace pvd
-		}	   // namespace app
-	}		   // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

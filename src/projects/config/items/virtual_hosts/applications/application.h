@@ -9,14 +9,14 @@
 #pragma once
 
 #include "decodes/decodes.h"
+#include "event_generator/event_generator.h"
 #include "origin.h"
 #include "output_profiles/output_profiles.h"
+#include "persistent_streams/persistent_streams.h"
 #include "providers/providers.h"
 #include "publishers/publishers.h"
-#include "web_console/web_console.h"
-#include "persistent_streams/persistent_streams.h"
 #include "transcode_webhook/transcode_webhook.h"
-#include "event_generator/event_generator.h"
+#include "web_console/web_console.h"
 
 namespace cfg
 {
@@ -99,5 +99,5 @@ namespace cfg
 				}
 			};
 		}  // namespace app
-	}	   // namespace vhost
+	}  // namespace vhost
 }  // namespace cfg

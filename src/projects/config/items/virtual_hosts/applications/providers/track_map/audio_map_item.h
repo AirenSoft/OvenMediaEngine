@@ -25,7 +25,7 @@ namespace cfg
 					ov::String _language;
 					ov::String _characteristics;
 					int _index = -1;
-					
+
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetLanguage, _language);
@@ -36,7 +36,7 @@ namespace cfg
 					{
 						_index = index;
 					}
-					
+
 				protected:
 					void MakeList() override
 					{
@@ -45,7 +45,7 @@ namespace cfg
 						Register<Optional>("Characteristics", &_characteristics);
 					}
 				};
-			}  // namespace pub
-		} // namespace app
-	} // namespace vhost
+			}  // namespace pvd
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

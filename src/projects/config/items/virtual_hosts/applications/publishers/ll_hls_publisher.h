@@ -22,8 +22,8 @@ namespace cfg
 				struct LLHlsPublisher : public HlsPublisher
 				{
 				protected:
-					double _chunk_duration = 0.5;
-					double _part_hold_back = 0; // it will be set to 3 * chunk_duration automatically
+					double _chunk_duration	  = 0.5;
+					double _part_hold_back	  = 0;	// it will be set to 3 * chunk_duration automatically
 					bool _enable_preload_hint = true;
 					Drm _drm;
 
@@ -50,6 +50,6 @@ namespace cfg
 					}
 				};
 			}  // namespace pub
-		} // namespace app
-	} // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

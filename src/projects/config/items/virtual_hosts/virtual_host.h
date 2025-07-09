@@ -8,13 +8,13 @@
 //==============================================================================
 #pragma once
 
-#include "../common/host/host.h"
 #include "../common/cross_domain_support.h"
+#include "../common/host/host.h"
 #include "access_control/admission_webhooks.h"
 #include "access_control/signed_policy.h"
 #include "applications/applications.h"
-#include "origins/origins.h"
 #include "origin_map_store/origin_map_store.h"
+#include "origins/origins.h"
 
 namespace cfg
 {
@@ -77,7 +77,7 @@ namespace cfg
 				Register<Optional>("OriginMapStore", &_origin_map_store);
 
 				Register<Optional>("CrossDomains", &_cross_domains);
-				
+
 				Register<Optional>("Applications", &_applications);
 			}
 		};

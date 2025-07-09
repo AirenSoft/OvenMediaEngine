@@ -32,5 +32,5 @@ namespace cfg
 				}
 			};
 		}  // namespace rule
-	}	   // namespace alrt
+	}  // namespace alrt
 }  // namespace cfg

@@ -21,8 +21,8 @@ namespace cfg
 				struct HWAccels : public Item
 				{
 				protected:
-					Decoder 	_decoder;
-					Encoder 	_encoder;
+					Decoder _decoder;
+					Encoder _encoder;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetDecoder, _decoder);
@@ -36,6 +36,6 @@ namespace cfg
 					}
 				};
 			}  // namespace oprf
-		} // namespace app
-	} // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

@@ -58,7 +58,7 @@ namespace cfg
 	{
 	public:
 		using Tlist_item = Ttype;
-		using ListType = std::vector<Tlist_item>;
+		using ListType	 = std::vector<Tlist_item>;
 
 		List(const ItemName &item_name, const ov::String &type_name,
 			 Optional is_optional, cfg::ResolvePath resolve_path, cfg::OmitJsonName omit_json_name,
@@ -126,7 +126,7 @@ namespace cfg
 
 			const auto &another_item_list = *(from_list->_item_list);
 
-			*_item_list = another_item_list;
+			*_item_list					  = another_item_list;
 		}
 
 		ov::String GetListItemTypeName() const override
@@ -146,7 +146,7 @@ namespace cfg
 			}
 
 			auto list_item_type = GetListItemType();
-			auto item_name = _item_name.GetName(DataType::Xml);
+			auto item_name		= _item_name.GetName(DataType::Xml);
 
 			if (list_item_type == ValueType::Item)
 			{
@@ -178,7 +178,7 @@ namespace cfg
 				// Copy rest items (dynamic data, these data have appended programmatically)
 				while (list_item != list_target.end())
 				{
-					auto item = *list_item;
+					auto item	   = *list_item;
 					auto new_child = node.append_child(item_name);
 					CopyValueToXmlNode(new_child, item_name, &item, include_default_values);
 
@@ -205,7 +205,7 @@ namespace cfg
 			}
 
 			auto list_item_type = GetListItemType();
-			auto child_name = GetItemName().GetName(DataType::Json);
+			auto child_name		= GetItemName().GetName(DataType::Json);
 
 			if (list_item_type == ValueType::Item)
 			{
@@ -260,8 +260,8 @@ namespace cfg
 			}
 
 			const auto &list_target = *_item_list;
-			size_t index = 0;
-			ov::String indent = MakeIndentString(indent_count);
+			size_t index			= 0;
+			ov::String indent		= MakeIndentString(indent_count);
 			ov::String description;
 			bool is_item = (GetListItemType() == ValueType::Item);
 

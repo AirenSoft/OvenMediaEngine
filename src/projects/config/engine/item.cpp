@@ -48,9 +48,9 @@ namespace cfg
 		ov::String extra;
 
 		ov::String child_name = child->GetItemName().ToString();
-		auto value_type = child->GetType();
+		auto value_type		  = child->GetType();
 
-		ov::String comma = (index < (child_count - 1)) ? "," : "";
+		ov::String comma	  = (index < (child_count - 1)) ? "," : "";
 
 #if CFG_VERBOSE_STRING
 		extra.Format(
@@ -144,21 +144,21 @@ namespace cfg
 
 	Item::Item(const Item &item)
 	{
-		_last_target = nullptr;
+		_last_target	   = nullptr;
 
-		_is_parsed = item._is_parsed;
-		_is_read_only = item._is_read_only;
+		_is_parsed		   = item._is_parsed;
+		_is_read_only	   = item._is_read_only;
 
-		_item_name = item._item_name;
+		_item_name		   = item._item_name;
 
-		_children = item._children;
-		_children_for_xml = item._children_for_xml;
+		_children		   = item._children;
+		_children_for_xml  = item._children_for_xml;
 		_children_for_json = item._children_for_json;
 	}
 
 	Item::Item(Item &&item)
 	{
-		_last_target = nullptr;
+		_last_target	  = nullptr;
 		item._last_target = nullptr;
 
 		std::swap(_is_parsed, item._is_parsed);
@@ -173,15 +173,15 @@ namespace cfg
 
 	Item &Item::operator=(const Item &item)
 	{
-		_last_target = nullptr;
+		_last_target	   = nullptr;
 
-		_is_parsed = item._is_parsed;
-		_is_read_only = item._is_read_only;
+		_is_parsed		   = item._is_parsed;
+		_is_read_only	   = item._is_read_only;
 
-		_item_name = item._item_name;
+		_item_name		   = item._item_name;
 
-		_children = item._children;
-		_children_for_xml = item._children_for_xml;
+		_children		   = item._children;
+		_children_for_xml  = item._children_for_xml;
 		_children_for_json = item._children_for_json;
 
 		RebuildListIfNeeded();
@@ -364,7 +364,7 @@ namespace cfg
 		// Check omit rule for children
 		for (const auto &child : _children)
 		{
-			auto omit_json = child->OmitJsonName();
+			auto omit_json	= child->OmitJsonName();
 			auto child_type = child->GetType();
 
 			if (omit_json)
@@ -428,9 +428,9 @@ namespace cfg
 	{
 		RebuildListIfNeeded();
 
-		ov::String indent = MakeIndentString(indent_count);
+		ov::String indent  = MakeIndentString(indent_count);
 
-		auto item_name = _item_name.ToString();
+		auto item_name	   = _item_name.ToString();
 		size_t child_count = _children.size();
 
 		ov::String description;
@@ -510,7 +510,7 @@ namespace cfg
 			else
 			{
 				Json::Value attribute_object = Json::objectValue;
-				attribute_object["$"] = value;
+				attribute_object["$"]		 = value;
 				object.append(attribute_object);
 			}
 		}
@@ -596,7 +596,7 @@ namespace cfg
 			else
 			{
 				Json::Value attribute_object = Json::objectValue;
-				attribute_object["$"] = member_value;
+				attribute_object["$"]		 = member_value;
 				object.append(attribute_object);
 			}
 		}
@@ -626,7 +626,7 @@ namespace cfg
 		{
 			if (include_default_values || child->IsParsed())
 			{
-				auto value_type = child->GetType();
+				auto value_type	 = child->GetType();
 
 				auto &child_name = child->GetItemName().GetName(DataType::Json);
 
@@ -733,9 +733,9 @@ namespace cfg
 		{
 			if (include_default_values || child->IsParsed())
 			{
-				auto value_type = child->GetType();
+				auto value_type		 = child->GetType();
 
-				auto &child_name = child->GetItemName().GetName(DataType::Xml);
+				auto &child_name	 = child->GetItemName().GetName(DataType::Xml);
 				auto &original_value = child->GetOriginalValue();
 
 				switch (value_type)
@@ -834,7 +834,7 @@ namespace cfg
 						current_path.CStr(), pattern.CStr(), include_files.size());
 				}
 
-				auto &include_file = include_files[0];
+				auto &include_file	 = include_files[0];
 				auto new_data_source = data_source.NewDataSource(include_file, _item_name);
 				FromDataSourceInternal(item_path, new_data_source, allow_optional);
 			}

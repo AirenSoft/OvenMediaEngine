@@ -28,11 +28,11 @@ namespace cfg
 
 	void ListInterface::CopyFrom(const std::shared_ptr<const ListInterface> &another_list)
 	{
-		_item_name = another_list->_item_name;
+		_item_name			 = another_list->_item_name;
 
-		_is_parsed = another_list->_is_parsed;
+		_is_parsed			 = another_list->_is_parsed;
 
-		_original_value = another_list->_original_value;
+		_original_value		 = another_list->_original_value;
 		_original_value_list = another_list->_original_value_list;
 	}
 
@@ -77,9 +77,9 @@ namespace cfg
 	{
 		std::vector<DataSource> new_data_sources;
 		const auto &item_name = GetItemName();
-		auto list_item_type = GetListItemType();
-		auto resolve_path = ResolvePath();
-		auto omit_json = OmitJsonName();
+		auto list_item_type	  = GetListItemType();
+		auto resolve_path	  = ResolvePath();
+		auto omit_json		  = OmitJsonName();
 
 		Clear();
 

@@ -33,14 +33,14 @@ namespace cfg
 						Register<Optional>({"Path", "path"}, &_path);
 
 						// RecordInfo is Deprecated
-						Register<Optional>({"RecordInfo", "recordInfo"}, &_path, nullptr, 
-							[=]() -> std::shared_ptr<ConfigError> {
-								logw("Config", "Publishers.FILE.Record.RecordInfo will be deprecated. Please use Publishers.FILE.StreamMap.Path instead");
-								return nullptr;
-							});							
+						Register<Optional>({"RecordInfo", "recordInfo"}, &_path, nullptr,
+										   [=]() -> std::shared_ptr<ConfigError> {
+											   logw("Config", "Publishers.FILE.Record.RecordInfo will be deprecated. Please use Publishers.FILE.StreamMap.Path instead");
+											   return nullptr;
+										   });
 					}
 				};
 			}  // namespace pub
-		}	   // namespace app
-	}		   // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

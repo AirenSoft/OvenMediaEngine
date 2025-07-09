@@ -8,8 +8,8 @@
 //==============================================================================
 #pragma once
 
-#include "../encodes/video_profile.h"
 #include "../encodes/audio_profile.h"
+#include "../encodes/video_profile.h"
 
 namespace cfg
 {
@@ -28,10 +28,11 @@ namespace cfg
 					bool _video_enabled = false;
 					ov::String _audio_name;
 					AudioProfile _audio_profile;
-					bool _audio_enabled = false;
+					bool _audio_enabled	  = false;
 
 					int _video_index_hint = -1;
 					int _audio_index_hint = -1;
+
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetVideoName, _video_name);
@@ -66,6 +67,6 @@ namespace cfg
 					}
 				};
 			}  // namespace oprf
-		}	   // namespace app
-	}		   // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

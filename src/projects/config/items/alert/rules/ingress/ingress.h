@@ -17,21 +17,21 @@ namespace cfg
 			struct Ingress : public Item
 			{
 			protected:
-				bool _stream_status = false;
+				bool _stream_status	 = false;
 				int32_t _min_bitrate = 0;
 				ov::String _min_bitrate_string;
 				int32_t _max_bitrate = 0;
 				ov::String _max_bitrate_string;
-				double _min_framerate = 0.0;
-				double _max_framerate = 0.0;
-				int32_t _min_width = 0;
-				int32_t _max_width = 0;
-				int32_t _min_height = 0;
-				int32_t _max_height = 0;
-				int32_t _min_samplerate = 0;
-				int32_t _max_samplerate = 0;
+				double _min_framerate		  = 0.0;
+				double _max_framerate		  = 0.0;
+				int32_t _min_width			  = 0;
+				int32_t _max_width			  = 0;
+				int32_t _min_height			  = 0;
+				int32_t _max_height			  = 0;
+				int32_t _min_samplerate		  = 0;
+				int32_t _max_samplerate		  = 0;
 				bool _long_key_frame_interval = false;
-				bool _has_b_frames = false;
+				bool _has_b_frames			  = false;
 
 			public:
 				CFG_DECLARE_CONST_REF_GETTER_OF(IsStreamStatus, _stream_status)
@@ -59,7 +59,7 @@ namespace cfg
 					});
 					Register<Optional>("MinBitrate", &_min_bitrate_string, nullptr, [=]() -> std::shared_ptr<ConfigError> {
 						auto min_bitrate_string = _min_bitrate_string.UpperCaseString();
-						int multiplier = 1;
+						int multiplier			= 1;
 						if (min_bitrate_string.HasSuffix("K"))
 						{
 							multiplier = 1024;
@@ -75,7 +75,7 @@ namespace cfg
 					});
 					Register<Optional>("MaxBitrate", &_max_bitrate_string, nullptr, [=]() -> std::shared_ptr<ConfigError> {
 						auto max_bitrate_string = _max_bitrate_string.UpperCaseString();
-						int multiplier = 1;
+						int multiplier			= 1;
 						if (max_bitrate_string.HasSuffix("K"))
 						{
 							multiplier = 1024;
@@ -108,5 +108,5 @@ namespace cfg
 				}
 			};
 		}  // namespace rule
-	}	   // namespace alrt
+	}  // namespace alrt
 }  // namespace cfg

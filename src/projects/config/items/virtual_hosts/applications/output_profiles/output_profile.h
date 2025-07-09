@@ -41,31 +41,30 @@ namespace cfg
 						Register<Optional>("Encodes", &_encodes);
 
 						Register<Optional>({"Playlist", "playlists"}, &_playlists, nullptr,
-							[=]() -> std::shared_ptr<ConfigError> {
-								std::map<ov::String, bool> playlist_file_names;
+										   [=]() -> std::shared_ptr<ConfigError> {
+											   std::map<ov::String, bool> playlist_file_names;
 
-								for (auto &playlist : _playlists)
-								{
-									// Check if there is duplicate playlist file name
-									auto file_name = playlist.GetFileName();
-									if (playlist_file_names.find(file_name) != playlist_file_names.end())
-									{
-										return CreateConfigErrorPtr("Duplicate playlist file name: %s", file_name.CStr());
-									}
-									playlist_file_names[file_name] = true;
+											   for (auto &playlist : _playlists)
+											   {
+												   // Check if there is duplicate playlist file name
+												   auto file_name = playlist.GetFileName();
+												   if (playlist_file_names.find(file_name) != playlist_file_names.end())
+												   {
+													   return CreateConfigErrorPtr("Duplicate playlist file name: %s", file_name.CStr());
+												   }
+												   playlist_file_names[file_name] = true;
 
-									// Check if there is unavailable encodes names in playlist
-									if (playlist.SetEncodes(_encodes) == false)
-									{
-										return CreateConfigErrorPtr("Playlist Error");
-									}
-								}
-								return nullptr;
-							}
-						);
+												   // Check if there is unavailable encodes names in playlist
+												   if (playlist.SetEncodes(_encodes) == false)
+												   {
+													   return CreateConfigErrorPtr("Playlist Error");
+												   }
+											   }
+											   return nullptr;
+										   });
 					}
 				};
 			}  // namespace oprf
-		}	   // namespace app
-	}		   // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

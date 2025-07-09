@@ -22,28 +22,27 @@ namespace cfg
 				{
 				protected:
 					std::vector<AudioMapItem> _audio_map_items;
-					
+
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetAudioMapItems, _audio_map_items);
-					
+
 				protected:
 					void MakeList() override
 					{
-						Register("Item", &_audio_map_items, nullptr, 
-							[=]() -> std::shared_ptr<ConfigError> {
-								
-								int i = 0;
-								for (auto &audio_map_item : _audio_map_items)
-								{
-									audio_map_item.SetIndex(i);
-									i ++;
-								}
+						Register("Item", &_audio_map_items, nullptr,
+								 [=]() -> std::shared_ptr<ConfigError> {
+									 int i = 0;
+									 for (auto &audio_map_item : _audio_map_items)
+									 {
+										 audio_map_item.SetIndex(i);
+										 i++;
+									 }
 
-								return nullptr;
-						});
+									 return nullptr;
+								 });
 					}
 				};
-			}  // namespace pub
-		} // namespace app
-	} // namespace vhost
+			}  // namespace pvd
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg
