@@ -121,11 +121,14 @@ namespace ov
 	{
 		switch(algorithm)
 		{
+			case CryptoAlgorithm::Unknown:
+				break;
+
 			case CryptoAlgorithm::Md5:
 				return MD5_DIGEST_LENGTH;
 
 			case CryptoAlgorithm::Sha1:
-				return SHA_DIGEST_LENGTH;;
+				return SHA_DIGEST_LENGTH;
 
 			case CryptoAlgorithm::Sha224:
 				return SHA224_DIGEST_LENGTH;
@@ -139,11 +142,14 @@ namespace ov
 			case CryptoAlgorithm::Sha512:
 				return SHA512_DIGEST_LENGTH;
 
-			default:
-				OV_ASSERT(false, "Invalid algorithm: %d", algorithm);
-				break;
+			case CryptoAlgorithm::Sha512_224:
+				return SHA224_DIGEST_LENGTH;
+
+			case CryptoAlgorithm::Sha512_256:
+				return SHA256_DIGEST_LENGTH;
 		}
 
+		OV_ASSERT(false, "Invalid algorithm: %d", algorithm);
 		return 0;
 	}
 
