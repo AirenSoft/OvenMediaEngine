@@ -74,6 +74,14 @@ namespace ov
 				EVP_DigestInit_ex(context, EVP_sha512(), nullptr);
 				break;
 
+			case CryptoAlgorithm::Sha512_224:
+				EVP_DigestInit_ex(context, EVP_sha512_224(), nullptr);
+				break;
+
+			case CryptoAlgorithm::Sha512_256:
+				EVP_DigestInit_ex(context, EVP_sha512_256(), nullptr);
+				break;
+
 			default:
 				logtw("Could not create MessageDigest for algorithm: %d", algorithm);
 				Destroy();
