@@ -37,7 +37,7 @@ namespace info
 
 	ov::String Host::GetUUID() const
 	{
-		return ov::String::FormatString("%s/%s", _server_id.CStr(), GetName().CStr());
+		return ov::String::FormatString("%s/#%s#", _server_id.CStr(), GetName().Replace("#", "_").CStr());
 	}
 
 }  // namespace info
