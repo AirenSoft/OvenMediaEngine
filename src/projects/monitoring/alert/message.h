@@ -17,21 +17,25 @@ namespace mon
 		class Message
 		{
 		public:
-		 	constexpr static const uint16_t INGRESS_CODE_MASK = 0x1100;
-			constexpr static const uint16_t EGRESS_CODE_MASK = 0x1200;
-			constexpr static const uint16_t INTERNAL_QUEUE_CODE_MASK = 0x1400;
+		 	constexpr static const uint32_t INGRESS_CODE_MASK = 0x110000;
+		 	constexpr static const uint32_t INGRESS_CODE_STATUS_MASK = INGRESS_CODE_MASK | 0x001000;
+		 	constexpr static const uint32_t INGRESS_CODE_METRIC_MASK = INGRESS_CODE_MASK | 0x002000;
+			constexpr static const uint32_t EGRESS_CODE_MASK = 0x120000;
+			constexpr static const uint32_t EGRESS_CODE_STATUS_MASK = EGRESS_CODE_MASK | 0x001000;
+			constexpr static const uint32_t EGRESS_CODE_READY_MASK = EGRESS_CODE_MASK | 0x002000;
+			constexpr static const uint32_t INTERNAL_QUEUE_CODE_MASK = 0x140000;
 
-			enum class Code : uint16_t
+			enum class Code : uint32_t
 			{
 				OK,
 
 				// Ingress Codes
-				INGRESS_STREAM_CREATED = INGRESS_CODE_MASK,
+				INGRESS_STREAM_CREATED = INGRESS_CODE_STATUS_MASK,
 				INGRESS_STREAM_PREPARED,
 				INGRESS_STREAM_DELETED ,
 				INGRESS_STREAM_CREATION_FAILED_DUPLICATE_NAME,
 
-				INGRESS_BITRATE_LOW ,
+				INGRESS_BITRATE_LOW = INGRESS_CODE_METRIC_MASK,
 				INGRESS_BITRATE_HIGH,
 				INGRESS_FRAMERATE_LOW,
 				INGRESS_FRAMERATE_HIGH,
@@ -45,9 +49,12 @@ namespace mon
 				INGRESS_HAS_BFRAME,
 
 				// Egress Codes
-				EGRESS_STREAM_CREATED = EGRESS_CODE_MASK,
+				EGRESS_STREAM_CREATED = EGRESS_CODE_STATUS_MASK,
 				EGRESS_STREAM_PREPARED,
 				EGRESS_STREAM_DELETED,
+
+				EGRESS_LLHLS_READY = EGRESS_CODE_READY_MASK,
+				EGRESS_HLS_READY,
 
 				// Internal Codes
 				INTERNAL_QUEUE_CONGESTION = INTERNAL_QUEUE_CODE_MASK
@@ -100,6 +107,9 @@ namespace mon
 					OV_CASE_RETURN(Code::EGRESS_STREAM_CREATED, "EGRESS_STREAM_CREATED");
 					OV_CASE_RETURN(Code::EGRESS_STREAM_PREPARED, "EGRESS_STREAM_PREPARED");
 					OV_CASE_RETURN(Code::EGRESS_STREAM_DELETED, "EGRESS_STREAM_DELETED");
+
+					OV_CASE_RETURN(Code::EGRESS_LLHLS_READY, "EGRESS_LLHLS_READY");
+					OV_CASE_RETURN(Code::EGRESS_HLS_READY, "EGRESS_HLS_READY");
 
 					OV_CASE_RETURN(Code::INTERNAL_QUEUE_CONGESTION, "INTERNAL_QUEUE_CONGESTION");
 				}
@@ -155,6 +165,9 @@ namespace mon
 					OV_CASE_RETURN(Code::EGRESS_STREAM_CREATED, "A new egress stream has been created");
 					OV_CASE_RETURN(Code::EGRESS_STREAM_PREPARED, "A egress stream has been prepared");
 					OV_CASE_RETURN(Code::EGRESS_STREAM_DELETED, "A egress stream has been deleted");
+
+					OV_CASE_RETURN(Code::EGRESS_LLHLS_READY, "LLHLS stream is ready to play - initial segment(s) have been generated");
+					OV_CASE_RETURN(Code::EGRESS_HLS_READY, "HLS stream is ready to play - initial segment(s) have been generated");
 
 					OV_CASE_RETURN(Code::INTERNAL_QUEUE_CONGESTION,
 										ov::String::FormatString("Internal queue(s) is currently congested"));

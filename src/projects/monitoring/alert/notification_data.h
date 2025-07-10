@@ -65,6 +65,8 @@ namespace mon
 					case Message::Code::EGRESS_STREAM_CREATED:
 					case Message::Code::EGRESS_STREAM_PREPARED:
 					case Message::Code::EGRESS_STREAM_DELETED:
+					case Message::Code::EGRESS_LLHLS_READY:
+					case Message::Code::EGRESS_HLS_READY:
 						return Type::EGRESS;
 					case Message::Code::INTERNAL_QUEUE_CONGESTION:
 					default:

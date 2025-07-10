@@ -12,7 +12,11 @@ namespace mon
 	{
 		OV_SAFE_RESET(_server_metric, nullptr, _server_metric->Release(), _server_metric);
 		_forwarder.Stop();
-		_alert.Stop();
+
+		if (_alert != nullptr)
+		{
+			_alert->Stop();
+		}
 	}
 
 	std::shared_ptr<ServerMetrics> Monitoring::GetServerMetrics()
@@ -55,8 +59,22 @@ namespace mon
 			return nullptr;
 		}
 
-		auto stream_metric = app_metric->GetStreamMetrics(stream);
-		return stream_metric;
+		if (stream.IsInputStream())
+		{
+			auto stream_metric = app_metric->GetStreamMetrics(stream);
+			return stream_metric;
+		}
+		else
+		{
+			auto stream_metric = app_metric->GetStreamMetrics(stream);
+			if (stream_metric == nullptr)
+			{
+				return nullptr;
+			}
+
+			auto output_stream_metric = app_metric->GetStreamMetrics(stream);
+			return output_stream_metric;
+		}
 	}
 
 	void Monitoring::SetLogPath(const ov::String &log_path)
@@ -70,7 +88,8 @@ namespace mon
 		_server_metric = std::make_shared<ServerMetrics>(server_config);
 		_is_analytics_on = _server_metric->GetConfig()->GetAnalytics().IsParsed();
 
-		_alert.Start(server_config);
+		_alert = std::make_shared<alrt::Alert>();
+		_alert->Start(server_config);
 
 		logti("%s(%s) ServerMetric has been started for monitoring - %s",
 			server_config->GetName().CStr(), server_config->GetID().CStr(),
@@ -212,7 +231,7 @@ namespace mon
 				return false;
 			}
 
-			_alert.SendStreamMessage(alrt::Message::Code::INGRESS_STREAM_CREATED, stream_metrics);
+			_alert->SendStreamMessage(alrt::Message::Code::INGRESS_STREAM_CREATED, stream_metrics);
 		}
 		// Output stream created
 		else
@@ -234,7 +253,7 @@ namespace mon
 			}
 			stream_metrics->LinkOutputStreamMetrics(output_stream_metric);
 
-			_alert.SendStreamMessage(alrt::Message::Code::EGRESS_STREAM_CREATED, output_stream_metric);
+			_alert->SendStreamMessage(alrt::Message::Code::EGRESS_STREAM_CREATED, output_stream_metric);
 		}
 
 		if(IsAnalyticsOn())
@@ -264,7 +283,7 @@ namespace mon
 					return false;
 			}
 
-			_alert.SendStreamMessage(alrt::Message::Code::INGRESS_STREAM_CREATION_FAILED_DUPLICATE_NAME, stream_metrics);
+			_alert->SendStreamMessage(alrt::Message::Code::INGRESS_STREAM_CREATION_FAILED_DUPLICATE_NAME, stream_metrics);
 		}
 
 		return true;
@@ -286,7 +305,7 @@ namespace mon
 				return false;
 			}
 
-			_alert.SendStreamMessage(alrt::Message::Code::INGRESS_STREAM_PREPARED, stream_metrics);
+			_alert->SendStreamMessage(alrt::Message::Code::INGRESS_STREAM_PREPARED, stream_metrics);
 		}
 		else
 		{
@@ -296,7 +315,7 @@ namespace mon
 				return false;
 			}
 
-			_alert.SendStreamMessage(alrt::Message::Code::EGRESS_STREAM_PREPARED, output_stream_metric);
+			_alert->SendStreamMessage(alrt::Message::Code::EGRESS_STREAM_PREPARED, output_stream_metric);
 		}
 
 		return true;
@@ -328,7 +347,7 @@ namespace mon
 					OnSessionsDisconnected(*stream_metrics, static_cast<PublisherType>(type), stream_metrics->GetConnections(static_cast<PublisherType>(type)));
 				}
 
-				_alert.SendStreamMessage(alrt::Message::Code::INGRESS_STREAM_DELETED, stream_metrics);
+				_alert->SendStreamMessage(alrt::Message::Code::INGRESS_STREAM_DELETED, stream_metrics);
 			}
 			else
 			{
@@ -338,7 +357,7 @@ namespace mon
 					return false;
 				}
 
-				_alert.SendStreamMessage(alrt::Message::Code::EGRESS_STREAM_DELETED, output_stream_metric);
+				_alert->SendStreamMessage(alrt::Message::Code::EGRESS_STREAM_DELETED, output_stream_metric);
 			}
 
 			if(app_metrics->OnStreamDeleted(stream) == false)
@@ -495,6 +514,11 @@ namespace mon
 		host_metric->OnSessionsDisconnected(type, number_of_sessions);
 		app_metric->OnSessionsDisconnected(type, number_of_sessions);
 		stream_metric->OnSessionsDisconnected(type, number_of_sessions);
+	}
+
+	std::shared_ptr<alrt::Alert> Monitoring::GetAlert()
+	{
+		return _alert;
 	}
 
 }  // namespace mon

@@ -433,7 +433,7 @@ bool HlsStream::IsConcluded() const
 	return _concluded;
 }
 
-bool HlsStream::CheckIfAllPlaylistReady() const
+bool HlsStream::CheckIfAllPlaylistReady()
 {
 	if (_ready_to_play == true)
 	{
@@ -458,6 +458,11 @@ bool HlsStream::CheckIfAllPlaylistReady() const
 	}
 
 	logti("HLS Stream(%s/%s) - All playlists are ready to play", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
+
+	auto alert = MonitorInstance->GetAlert();
+	auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pub::Stream::GetSharedPtr()));
+
+	alert->SendStreamMessage(mon::alrt::Message::Code::EGRESS_HLS_READY, stream_metrics);
 
 	return true;
 }

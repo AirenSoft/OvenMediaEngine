@@ -82,7 +82,7 @@ private:
 	void BufferMediaPacketUntilReadyToPlay(const std::shared_ptr<MediaPacket> &media_packet);
 	bool SendBufferedPackets();
 
-	bool CheckIfAllPlaylistReady() const;
+	bool CheckIfAllPlaylistReady();
 
 	ov::Queue<std::shared_ptr<MediaPacket>> _initial_media_packet_buffer;
 

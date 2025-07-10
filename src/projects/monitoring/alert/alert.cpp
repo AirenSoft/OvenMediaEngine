@@ -226,7 +226,7 @@ namespace mon
 
 		bool Alert::VerifyStreamEventRule(const cfg::alrt::rule::Rules &rules, Message::Code code)
 		{
-			if (OV_CHECK_FLAG(ov::ToUnderlyingType(code), Message::INGRESS_CODE_MASK))
+			if (OV_CHECK_FLAG(ov::ToUnderlyingType(code), Message::INGRESS_CODE_STATUS_MASK))
 			{
 				auto ingress = rules.GetIngress();
 				if (ingress.IsParsed() == false || ingress.IsStreamStatus() == false)
@@ -236,10 +236,28 @@ namespace mon
 
 				return true;
 			}
-			else if (OV_CHECK_FLAG(ov::ToUnderlyingType(code), Message::EGRESS_CODE_MASK))
+			else if (OV_CHECK_FLAG(ov::ToUnderlyingType(code), Message::EGRESS_CODE_STATUS_MASK))
 			{
 				auto egress = rules.GetEgress();
 				if (egress.IsParsed() == false || egress.IsStreamStatus() == false)
+				{
+					return false;
+				}
+
+				return true;
+			}
+			else if (OV_CHECK_FLAG(ov::ToUnderlyingType(code), Message::EGRESS_CODE_READY_MASK))
+			{
+				auto egress = rules.GetEgress();
+				if (egress.IsParsed() == false)
+				{
+					return false;
+				}
+				if (code == Message::Code::EGRESS_LLHLS_READY && egress.IsLLHLSReady() == false)
+				{
+					return false;
+				}
+				else if (code == Message::Code::EGRESS_HLS_READY && egress.IsHLSReady() == false)
 				{
 					return false;
 				}

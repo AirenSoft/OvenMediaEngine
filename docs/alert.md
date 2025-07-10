@@ -33,6 +33,8 @@ Alert can be set up on `<Server>`, as shown below.
 			</Ingress>
 			<Egress>
 				<StreamStatus />
+				<LLHLSReady />
+				<HLSReady />
 			</Egress>
 		</Rules>
 	</Alert>
@@ -71,6 +73,8 @@ You can define anomalies and patterns of interest to be detected in a separate f
 	</Ingress>
 	<Egress>
 		<StreamStatus />
+		<LLHLSReady />
+		<HLSReady />
 	</Egress>
 </Rules>
 ```
@@ -93,6 +97,8 @@ You can define anomalies and patterns of interest to be detected in a separate f
 |         | LongKeyFrameInterval | Detects when the ingress stream's keyframe interval is too long (exceeds 4 seconds).  |
 |         | HasBFrames           | Detects when there are B-frames in the ingress stream.                                |
 | Egress  | StreamStatus         | It detects the creation, readiness, and deletion states of a egress stream.           |
+|         | LLHLSReady           | Detects the point in time when Low-Latency HLS playback becomes available.            |
+|         | HLSReady             | Detects the point in time when HLS playback becomes available.                        |
 
 ## Notification
 
@@ -193,6 +199,8 @@ Here is a detailed explanation of each element of JSON payload:
 | EGRESS  | EGRESS\_STREAM\_CREATED                            | A new egress stream has been created                                                                                             |
 |         | EGRESS\_STREAM\_PREPARED                           | A egress stream has been prepared                                                                                                |
 |         | EGRESS\_STREAM\_DELETED                            | A egress stream has been deleted                                                                                                 |
+|         | EGRESS\_LLHLS\_READY                               | LLHLS stream is ready to play - initial segment(s) have been generated                                                           |
+|         | EGRESS\_HLS\_READY                                 | HLS stream is ready to play - initial segment(s) have been generated                                                             |
 
 #### Security
 
