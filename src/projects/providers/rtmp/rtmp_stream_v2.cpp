@@ -84,6 +84,8 @@ namespace pvd::rtmp
 			}
 		}
 
+		_is_post_published = false;
+
 		return PushStream::Stop();
 	}
 
@@ -220,6 +222,12 @@ namespace pvd::rtmp
 
 	bool RtmpStreamV2::PostPublish(const modules::rtmp::AmfDocument &document)
 	{
+		if (_is_post_published)
+		{
+			logtw("PostPublish has already been called for stream: %s", GetName().CStr());
+			return true;
+		}
+
 		auto requested_url = GetRequestedUrl();
 
 		if (requested_url == nullptr)
@@ -253,7 +261,9 @@ namespace pvd::rtmp
 			SetFinalUrl(url);
 		}
 
-		return CheckAccessControl() && ValidatePublishUrl();
+		_is_post_published = CheckAccessControl() && ValidatePublishUrl();
+
+		return _is_post_published;
 	}
 
 	bool RtmpStreamV2::CheckAccessControl()

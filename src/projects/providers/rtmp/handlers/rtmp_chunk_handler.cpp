@@ -705,12 +705,12 @@ namespace pvd::rtmp
 
 				return false;
 			}
+		}
 
-			if (_stream->PostPublish(document) == false)
-			{
-				logae("OnAmfPublish - Failed to post publish for stream: %s", _stream->GetName().CStr());
-				return false;
-			}
+		if (_stream->PostPublish(document) == false)
+		{
+			logae("OnAmfPublish - Failed to post publish for stream: %s", _stream->GetName().CStr());
+			return false;
 		}
 
 		if (SendStreamBegin(_stream->_rtmp_stream_id) == false)
@@ -758,11 +758,9 @@ namespace pvd::rtmp
 
 				return false;
 			}
-
-			return _stream->PostPublish(document);
 		}
 
-		return true;
+		return _stream->PostPublish(document);
 	}
 
 	bool RtmpChunkHandler::OnAmfMetadata(const std::shared_ptr<const modules::rtmp::ChunkHeader> &header, const modules::rtmp::AmfProperty *property)

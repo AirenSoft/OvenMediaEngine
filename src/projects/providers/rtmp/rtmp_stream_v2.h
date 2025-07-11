@@ -95,6 +95,8 @@ namespace pvd::rtmp
 		RtmpHandshakeHandler _handshake_handler;
 		RtmpChunkHandler _chunk_handler;
 
+		bool _is_post_published = false;
+
 		// To make first PTS 0
 		bool _first_frame		  = true;
 		int64_t _first_pts_offset = 0;
