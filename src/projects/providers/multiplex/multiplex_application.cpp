@@ -124,20 +124,23 @@ namespace pvd
             }
 			else if (stream != nullptr)
 			{
-				// Check if stream is silent
-				auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
-				if (stream_metrics != nullptr)
+				if (_packet_silence_timeout_ms > 0)
 				{
-					auto current = std::chrono::high_resolution_clock::now();
-					auto elapsed_time_from_last_recv = std::chrono::duration_cast<std::chrono::milliseconds>(current - stream_metrics->GetLastRecvTime()).count();
-
-					if (elapsed_time_from_last_recv > _packet_silence_timeout_ms)
+					// Check if stream is silent
+					auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(stream));
+					if (stream_metrics != nullptr)
 					{
-						found = true;
-						// Delete immediately 
-						multiplex_file_info._deleted_checked_count = 2;
-					
-						logtw("Multiplex stream is silent for %d ms, removing: %s/%s (%s)", _packet_silence_timeout_ms, GetVHostAppName().CStr(), multiplex_file_info._multiplex_profile->GetOutputStreamName().CStr(), multiplex_file_info._file_path.CStr());
+						auto current = std::chrono::high_resolution_clock::now();
+						auto elapsed_time_from_last_recv = std::chrono::duration_cast<std::chrono::milliseconds>(current - stream_metrics->GetLastRecvTime()).count();
+
+						if (elapsed_time_from_last_recv > _packet_silence_timeout_ms)
+						{
+							found = true;
+							// Delete immediately 
+							multiplex_file_info._deleted_checked_count = 2;
+						
+							logtw("Multiplex stream is silent for %d ms, removing: %s/%s (%s)", _packet_silence_timeout_ms, GetVHostAppName().CStr(), multiplex_file_info._multiplex_profile->GetOutputStreamName().CStr(), multiplex_file_info._file_path.CStr());
+						}
 					}
 				}
 			}
