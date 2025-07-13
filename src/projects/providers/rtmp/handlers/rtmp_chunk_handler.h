@@ -15,6 +15,7 @@
 namespace pvd::rtmp
 {
 	class RtmpStreamV2;
+	class RtmpTrack;
 
 	// This is a partial class of `RtmpStream`, which is separated to prevent
 	// the `RtmpStream` class from becoming too large.
@@ -140,6 +141,8 @@ namespace pvd::rtmp
 						  const std::shared_ptr<const modules::rtmp::Message> &message,
 						  size_t min_size,
 						  modules::flv::ParserCommon &parser);
+		// Sends the media packets queued in `rtmp_track_map`, and returns whether it contains a key frame.
+		bool SendFrames(std::map<int, std::shared_ptr<pvd::rtmp::RtmpTrack>> &rtmp_track_map);
 		bool HandleAudio(const std::shared_ptr<const modules::rtmp::Message> &message);
 		bool HandleVideo(const std::shared_ptr<const modules::rtmp::Message> &message);
 

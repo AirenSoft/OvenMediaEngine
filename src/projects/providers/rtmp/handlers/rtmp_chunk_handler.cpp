@@ -1389,6 +1389,36 @@ namespace pvd::rtmp
 		return true;
 	}
 
+	bool RtmpChunkHandler::SendFrames(std::map<int, std::shared_ptr<pvd::rtmp::RtmpTrack>> &rtmp_track_map)
+	{
+		auto has_key_frame = false;
+
+		for (auto &rtmp_track_pair : rtmp_track_map)
+		{
+			auto &rtmp_track = rtmp_track_pair.second;
+			auto track_id	 = rtmp_track->GetTrackId();
+
+			for (auto &media_packet : rtmp_track->GetMediaPacketList())
+			{
+				auto pts = media_packet->GetPts();
+				auto dts = media_packet->GetDts();
+
+				_stream->AdjustTimestamp(track_id, pts, dts);
+
+				media_packet->SetPts(pts);
+				media_packet->SetDts(dts);
+
+				_stream->SendFrame(media_packet);
+
+				has_key_frame = has_key_frame || media_packet->IsKeyFrame();
+			}
+
+			rtmp_track->ClearMediaPacketList();
+		}
+
+		return has_key_frame;
+	}
+
 	bool RtmpChunkHandler::HandleAudio(const std::shared_ptr<const modules::rtmp::Message> &message)
 	{
 		if (_meta_data_context.ignore_packets)
@@ -1502,26 +1532,7 @@ namespace pvd::rtmp
 
 		OV_ASSERT2(_stream->IsPublished());
 
-		for (auto &rtmp_track_pair : rtmp_track_to_send_map)
-		{
-			auto &rtmp_track = rtmp_track_pair.second;
-			auto track_id	 = rtmp_track->GetTrackId();
-
-			for (auto &media_packet : rtmp_track->GetMediaPacketList())
-			{
-				auto pts = media_packet->GetPts();
-				auto dts = media_packet->GetDts();
-
-				_stream->AdjustTimestamp(track_id, pts, dts);
-
-				media_packet->SetPts(pts);
-				media_packet->SetDts(dts);
-
-				_stream->SendFrame(media_packet);
-			}
-
-			rtmp_track->ClearMediaPacketList();
-		}
+		SendFrames(rtmp_track_to_send_map);
 
 		if (_last_audio_pts_clock.IsStart() == false)
 		{
@@ -1682,30 +1693,7 @@ namespace pvd::rtmp
 
 		OV_ASSERT2(_stream->IsPublished());
 
-		bool has_key_frame = false;
-
-		for (auto &rtmp_track_pair : rtmp_track_to_send_map)
-		{
-			auto &rtmp_track = rtmp_track_pair.second;
-			auto track_id	 = rtmp_track->GetTrackId();
-
-			for (auto &media_packet : rtmp_track->GetMediaPacketList())
-			{
-				auto pts = media_packet->GetPts();
-				auto dts = media_packet->GetDts();
-
-				_stream->AdjustTimestamp(track_id, pts, dts);
-
-				media_packet->SetPts(pts);
-				media_packet->SetDts(dts);
-
-				_stream->SendFrame(media_packet);
-
-				has_key_frame = has_key_frame || media_packet->IsKeyFrame();
-			}
-
-			rtmp_track->ClearMediaPacketList();
-		}
+		auto has_key_frame = SendFrames(rtmp_track_to_send_map);
 
 		if (_last_video_pts_clock.IsStart() == false)
 		{
