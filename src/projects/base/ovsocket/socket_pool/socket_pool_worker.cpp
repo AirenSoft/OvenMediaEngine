@@ -52,9 +52,9 @@ namespace ov
 		}
 
 		_stop_epoll_thread = false;
-		_epoll_thread = std::thread(&SocketPoolWorker::ThreadProc, this);
+		_epoll_thread	   = std::thread(&SocketPoolWorker::ThreadProc, this);
 
-		auto name = _pool->GetName();
+		auto name		   = _pool->GetName();
 		name.Prepend("SP");
 		name = name.Replace(" ", "");
 		name.SetLength(15);
@@ -287,7 +287,7 @@ namespace ov
 
 				for (int index = 0; index < count; index++)
 				{
-					auto &event = _epoll_events[index];
+					auto &event		 = _epoll_events[index];
 
 					auto socket_data = reinterpret_cast<Socket *>(event.data.ptr);
 
@@ -298,9 +298,9 @@ namespace ov
 						continue;
 					}
 
-					auto socket = socket_data->GetSharedPtr();
+					auto socket			= socket_data->GetSharedPtr();
 					auto event_callback = socket_data->GetSharedPtrAs<SocketPoolEventInterface>();
-					auto events = event.events;
+					auto events			= event.events;
 
 					OV_ASSERT2(socket != nullptr);
 					OV_ASSERT2(event_callback != nullptr);
@@ -317,20 +317,6 @@ namespace ov
 						// So the socket can't receive the epoll events.
 						logad("Epoll events are ignored - this event might occurs immediately after close/error");
 						continue;
-					}
-
-					if (OV_CHECK_FLAG(events, EPOLLRDHUP) || OV_CHECK_FLAG(events, EPOLLHUP))
-					{
-						if (socket->GetState() != SocketState::Error)
-						{
-							// Remote has closed the connection
-							// (or closed the write stream (half-close))
-							socket->SetEndOfStream();
-						}
-						else
-						{
-							// The socket is already in error state, so ignore this event
-						}
 					}
 
 					// Normal socket generates (EPOLLOUT | EPOLLHUP) events as soon as it is added to epoll
@@ -350,7 +336,21 @@ namespace ov
 						OV_ASSERT(false, "EPOLLOUT event expected, but %s received", StringFromEpollEvent(event).CStr());
 					}
 
-					bool need_to_close = false;
+					if (OV_CHECK_FLAG(events, EPOLLRDHUP) || OV_CHECK_FLAG(events, EPOLLHUP))
+					{
+						if (socket->GetState() != SocketState::Error)
+						{
+							// Remote has closed the connection
+							// (or closed the write stream (half-close))
+							socket->SetEndOfStream();
+						}
+						else
+						{
+							// The socket is already in error state, so ignore this event
+						}
+					}
+
+					bool need_to_close	  = false;
 					SocketState new_state = SocketState::Closed;
 
 					if (OV_CHECK_FLAG(events, EPOLLOUT))
@@ -404,7 +404,7 @@ namespace ov
 										break;
 
 									case PostProcessMethod::Error:
-										new_state = SocketState::Error;
+										new_state	  = SocketState::Error;
 										need_to_close = true;
 										break;
 								}
@@ -448,7 +448,7 @@ namespace ov
 							}
 #endif	// DEBUG
 
-							new_state = SocketState::Error;
+							new_state	  = SocketState::Error;
 							need_to_close = true;
 						}
 
@@ -528,7 +528,7 @@ namespace ov
 				// EPOLLPRI: for urgent data (OOB)
 				// EPOLLRDHUP : Disconnected or half-closing
 				// EPOLLET: Edge trigger
-				event.events = EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDHUP | EPOLLET;
+				event.events   = EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDHUP | EPOLLET;
 				event.data.ptr = socket.get();
 
 				logad("Trying to add socket #%d to epoll...", native_handle);
@@ -608,7 +608,7 @@ namespace ov
 					{
 						// Interruption of system calls and library functions by signal handlers
 						event_count = 0;
-						error = nullptr;
+						error		= nullptr;
 					}
 					else
 					{
@@ -666,11 +666,11 @@ namespace ov
 
 	void SocketPoolWorker::ConvertSrtEventToEpollEvent(const SRT_EPOLL_EVENT &srt_event, epoll_event *event)
 	{
-		SRTSOCKET srt_socket = srt_event.fd;
+		SRTSOCKET srt_socket  = srt_event.fd;
 		SRT_SOCKSTATUS status = ::srt_getsockstate(srt_socket);
 
-		event->data.ptr = _socket_map[srt_socket].get();
-		event->events = 0;
+		event->data.ptr		  = _socket_map[srt_socket].get();
+		event->events		  = 0;
 
 		if (OV_CHECK_FLAG(srt_event.events, SRT_EPOLL_IN))
 		{
