@@ -62,7 +62,7 @@ void DecoderAAC::CodecThread()
 	while (!_kill_flag)
 	{
 		/////////////////////////////////////////////////////////////////////
-		// Sending a packet to decoder
+		// Send to Decoder
 		/////////////////////////////////////////////////////////////////////
 		if (_cur_pkt == nullptr && (_input_buffer.IsEmpty() == false || no_data_to_encode == true))
 		{

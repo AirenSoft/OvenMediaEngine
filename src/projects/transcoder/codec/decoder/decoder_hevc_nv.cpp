@@ -109,57 +109,67 @@ void DecoderHEVCxNV::CodecThread()
 		return;
 	}
 	
+
+	ffmpeg::compat::PadedAlignedBuffer buffer;
+
 	while (!_kill_flag)
 	{
 		auto obj = _input_buffer.Dequeue();
 		if (obj.has_value() == false)
 		{
-			// logte("An error occurred while dequeue : no data");
 			continue;
 		}
 
-		auto buffer = std::move(obj.value());
-		auto packet_data = buffer->GetData();
+		auto media_packet = std::move(obj.value());
 
-		off_t offset = 0LL;
-		int64_t remained = packet_data->GetLength();
-		int64_t pts = (buffer->GetPts() == -1LL) ? AV_NOPTS_VALUE : buffer->GetPts();
-		int64_t dts = (buffer->GetDts() == -1LL) ? AV_NOPTS_VALUE : buffer->GetDts();
-		[[maybe_unused]] int64_t duration = (buffer->GetDuration() == -1LL) ? AV_NOPTS_VALUE : buffer->GetDuration();
-		auto data = packet_data->GetDataAs<uint8_t>();
+		buffer.CopyFrom(media_packet, media_packet->GetData());
 
-		while (remained > 0)
+		///////////////////////////////
+		// Send to decoder
+		///////////////////////////////
+		while (buffer.GetRemainedSize() > 0)
 		{
 			::av_packet_unref(_pkt);
 
-			int parsed_size = ::av_parser_parse2(_parser, _codec_context, &_pkt->data, &_pkt->size, data + offset, static_cast<int>(remained), pts, dts, 0);
+			int parsed_size = ::av_parser_parse2(
+				_parser,
+				_codec_context,
+				&_pkt->data, &_pkt->size,
+				buffer.DataAtCurrentOffset(),
+				buffer.GetRemainedSize(),
+				buffer.GetPts(),
+				buffer.GetDts(), 0);
 			if (parsed_size < 0)
 			{
 				logte("An error occurred while parsing: %d", parsed_size);
 				break;
 			}
 
-			if (ReinitCodecIfNeed() == false)
-			{
-				break;
-			}
+			buffer.Advance(parsed_size);
+
+			// If parsed frame is not same as the previous frame, update the codec context.
+			// if (ReinitCodecIfNeed() == false)
+			// {
+			// 	break;
+			// }
 
 			if (_pkt->size > 0)
 			{
-				_pkt->pts = _parser->pts;
-				_pkt->dts = _parser->dts;
-				_pkt->flags = (_parser->key_frame == 1) ? AV_PKT_FLAG_KEY : 0;
+				_pkt->pts	   = _parser->pts;
+				_pkt->dts	   = _parser->dts;
+				_pkt->flags	   = (_parser->key_frame == 1) ? AV_PKT_FLAG_KEY : 0;
 				_pkt->duration = _pkt->dts - _parser->last_dts;
+
 				if (_pkt->duration <= 0LL)
 				{
 					// It may not be the exact packet duration.
 					// However, in general, this method is applied under the assumption that the duration of all packets is similar.
-					_pkt->duration = duration;
+					_pkt->duration = buffer.GetDuration();
 				}
 
 				// Keyframe Decode Only
 				// If set to decode only key frames, non-keyframe packets are dropped.
-				if(GetRefTrack()->IsKeyframeDecodeOnly() == true)
+				if (GetRefTrack()->IsKeyframeDecodeOnly() == true)
 				{
 					// Drop non-keyframe packets
 					if (!(_pkt->flags & AV_PKT_FLAG_KEY))
@@ -175,10 +185,11 @@ void DecoderHEVCxNV::CodecThread()
 				}
 				else if (ret == AVERROR_INVALIDDATA)
 				{
-					// If only SPS/PPS Nalunit is entered in the decoder, an invalid data error occurs.
-					// There is no particular problem.
+					// If a failure occurs due to the absence of a decoder configuration, 
+					// an Empty frame is created and transmitted. 
+					// This is used to replace a failed frame.
 					auto empty_frame = std::make_shared<MediaFrame>();
-					empty_frame->SetPts(dts);
+					empty_frame->SetPts(buffer.GetDts());
 					empty_frame->SetMediaType(cmn::MediaType::Video);
 
 					Complete(TranscodeResult::NoData, std::move(empty_frame));
@@ -191,17 +202,11 @@ void DecoderHEVCxNV::CodecThread()
 					break;
 				}
 			}
-
-			OV_ASSERT(
-				remained >= parsed_size,
-				"Current data size MUST greater than parsed_size, but data size: %ld, parsed_size: %ld",
-				remained, parsed_size);
-
-			offset += parsed_size;
-			remained -= parsed_size;
 		}
 
-		/////////////////////////////////////////////////////////////////////////////////////////////////////////
+		///////////////////////////////
+		// Receive from decoder
+		///////////////////////////////	
 		while (!_kill_flag)
 		{
 			// Check the decoded frame is available
