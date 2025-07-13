@@ -456,9 +456,9 @@ namespace ffmpeg
 				av_write_trailer(av_format_ptr);
 			}
 
-			if (need_to_close)
+			if (need_to_close && av_format_ptr->pb != nullptr)
 			{
-				avformat_close_input(&av_format_ptr);
+				avio_closep(&av_format_ptr->pb);
 			}
 			
 			avformat_free_context(av_format_ptr);
