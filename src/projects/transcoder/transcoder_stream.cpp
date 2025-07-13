@@ -1238,7 +1238,7 @@ bool TranscoderStream::CreateFilter(MediaTrackId filter_id, std::shared_ptr<Medi
 {
 	if(GetFilter(filter_id) != nullptr)
 	{
-		logtw("%s Filter already exists. Filter(%d)", _log_prefix.CStr(), filter_id);
+		logtd("%s filters that have already been created. Filter(%d)", _log_prefix.CStr(), filter_id);
 		return true;
 	}
 
