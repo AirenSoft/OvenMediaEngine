@@ -132,7 +132,6 @@ namespace pvd
 		std::map<uint32_t, int64_t>			_wraparound_count_map[2]; // 0 : pts 1: dts
 
 		int64_t								_start_timestamp_us = -1LL; // Make first timestamp to zero
-		int64_t								_start_timestamp_tb = -1LL;
 
 		std::chrono::time_point<std::chrono::system_clock>	_last_pkt_received_time = std::chrono::time_point<std::chrono::system_clock>::min();
 

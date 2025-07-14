@@ -278,7 +278,6 @@ namespace pvd
 
 		// Initialized start timestamp
 		_start_timestamp_us = -1LL;
-		_start_timestamp_tb = -1LL;
 
 		_source_timestamp_map.clear();
 	}
@@ -397,15 +396,16 @@ namespace pvd
 		if (_start_timestamp_us == -1LL)
 		{
 			_start_timestamp_us = Rescale(dts, us_scale, track_scale);
-			_start_timestamp_tb = Rescale(_start_timestamp_us, track_scale, us_scale);
 
 			// for debugging
-			logtd("[%s/%s(%d)] Get start timestamp of stream. track:%u, ts:%lld (%lld/%lld) (%lld us, %lld tb)",
+			logti("[%s/%s(%d)] Get start timestamp of stream. track:%u, ts:%lld (%lld/%lld) (%lld us)",
 				  _application->GetVHostAppName().CStr(), GetName().CStr(), GetId(),
 				  track_id,
 				  dts, num_tb, den_tb,
-				  _start_timestamp_us, _start_timestamp_tb);
+				  _start_timestamp_us);
 		}
+
+		int64_t start_timestamp_tb = Rescale(_start_timestamp_us, track_scale, us_scale);
 
 		// 2. Make the base timestamp
 		if (_base_timestamp_us == -1)
@@ -427,8 +427,8 @@ namespace pvd
 
 		// 3. Calculate PTS/DTS (base_timestamp + (pts - start_timestamp))
 
-		int64_t final_pts_tb	 = base_ts_tb + (pts - _start_timestamp_tb);
-		int64_t final_dts_tb	 = base_ts_tb + (dts - _start_timestamp_tb);
+		int64_t final_pts_tb	 = base_ts_tb + (pts - start_timestamp_tb);
+		int64_t final_dts_tb	 = base_ts_tb + (dts - start_timestamp_tb);
 
 		// 4. Check wrap around and adjust PTS/DTS
 
@@ -491,7 +491,7 @@ namespace pvd
 				pts, final_pts_tb, pts_s,
 				dts, final_dts_tb, dts_s,
 				track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen(),
-				_start_timestamp_tb, _start_timestamp_us, base_ts_tb, _base_timestamp_us);
+				start_timestamp_tb, _start_timestamp_us, base_ts_tb, _base_timestamp_us);
 #endif
 
 		// 5. Update last timestamp ( Managed in microseconds )
