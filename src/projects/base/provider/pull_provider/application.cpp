@@ -118,7 +118,7 @@ namespace pvd
 								logtd("%s/%s(%u) Attempt to connect to verify that the primary stream is available. url(%s)", stream->GetApplicationInfo().GetVHostAppName().CStr(), stream->GetName().CStr(), stream->GetId(), failback_url.CStr());
 							
 								auto ping_props = std::make_shared<pvd::PullStreamProperties>();
-								ping_props->SetRetryConnectCount(0);
+								ping_props->SetRetryCount(0);
 								auto ping = CreateStream(0, "_ping_for_failback_", {failback_url}, ping_props);
 								if (ping)
 								{
@@ -240,6 +240,12 @@ namespace pvd
 
 	std::shared_ptr<pvd::Stream> PullApplication::CreateStream(const ov::String &stream_name, const std::vector<ov::String> &url_list, const std::shared_ptr<pvd::PullStreamProperties> &properties)
 	{
+		auto global_retry_count = GetHostInfo().GetOrigins().GetProperties().GetRetryCount();
+		if (properties->GetRetryCount() <= 0)
+		{
+			properties->SetRetryCount(global_retry_count);
+		}
+
 		auto stream = CreateStream(pvd::Application::IssueUniqueStreamId(), stream_name, url_list, properties);
 		if(stream == nullptr)
 		{

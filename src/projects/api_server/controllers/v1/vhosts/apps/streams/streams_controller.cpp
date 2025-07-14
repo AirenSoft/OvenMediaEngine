@@ -100,6 +100,15 @@ namespace api
 						{
 							properties->EnableIgnoreRtcpSRTimestamp(jv_properties["ignoreRtcpSRTimestamp"].asBool());
 						}
+
+						if (jv_properties["retryCount"].isNull() == false && jv_properties["retryCount"].isInt())
+						{
+							properties->SetRetryCount(jv_properties["retryCount"].asInt());
+						}
+						else
+						{
+							properties->SetRetryCount(1); 
+						}
 					}
 
 					logti("Request to pull stream: %s/%s - persistent(%s) noInputFailoverTimeoutMs(%d) unusedStreamDeletionTimeoutMs(%d) ignoreRtcpSRTimestamp(%s)", app->GetVHostAppName().CStr(), stream_name.CStr(), properties->IsPersistent() ? "true" : "false", properties->GetNoInputFailoverTimeout(), properties->GetUnusedStreamDeletionTimeout(), properties->IsRtcpSRTimestampIgnored() ? "true" : "false");
