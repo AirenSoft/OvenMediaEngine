@@ -57,7 +57,8 @@ namespace pvd
 		auto global_unused_stream_timeout_ms = GetHostInfo().GetOrigins().GetProperties().GetUnusedStreamDeletionTimeout();
 		auto global_failback_timeout_ms = GetHostInfo().GetOrigins().GetProperties().GetStreamFailbackTimeout();	
 		
-		while(!_stop_collector_thread_flag)
+		constexpr int64_t idle_wait_time_ms = 100; 
+		while (!_stop_collector_thread_flag)
 		{
 			auto streams = GetStreams();
 			for (auto const &x : streams)
@@ -169,7 +170,7 @@ namespace pvd
 				}
 			}
 
-			sleep(1);
+			std::this_thread::sleep_for(std::chrono::milliseconds(idle_wait_time_ms));
 		}
 	}
 
