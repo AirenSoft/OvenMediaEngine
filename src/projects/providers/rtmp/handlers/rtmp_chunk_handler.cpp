@@ -1400,13 +1400,16 @@ namespace pvd::rtmp
 
 			for (auto &media_packet : rtmp_track->GetMediaPacketList())
 			{
-				auto pts = media_packet->GetPts();
-				auto dts = media_packet->GetDts();
+				if (media_packet->GetPacketType() == cmn::PacketType::NALU)
+				{
+					auto pts = media_packet->GetPts();
+					auto dts = media_packet->GetDts();
 
-				_stream->AdjustTimestamp(track_id, pts, dts);
+					_stream->AdjustTimestamp(track_id, pts, dts);
 
-				media_packet->SetPts(pts);
-				media_packet->SetDts(dts);
+					media_packet->SetPts(pts);
+					media_packet->SetDts(dts);
+				}
 
 				_stream->SendFrame(media_packet);
 
