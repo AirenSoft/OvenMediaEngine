@@ -1400,7 +1400,9 @@ namespace pvd::rtmp
 
 			for (auto &media_packet : rtmp_track->GetMediaPacketList())
 			{
-				if (media_packet->GetPacketType() == cmn::PacketType::NALU)
+				auto packet_type = media_packet->GetPacketType();
+
+				if ((packet_type == cmn::PacketType::NALU) || (packet_type == cmn::PacketType::RAW))
 				{
 					auto pts = media_packet->GetPts();
 					auto dts = media_packet->GetDts();
