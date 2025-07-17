@@ -161,4 +161,5 @@ private:
 
 	ov::Data _digest;
 	ov::String _digest_algorithm;
+	std::mutex _digest_mutex;
 };
