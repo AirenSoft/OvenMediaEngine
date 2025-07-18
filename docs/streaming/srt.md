@@ -2,7 +2,7 @@
 
 OvenMediaEngine supports playback of streams delivered via RTMP, WebRTC, SRT, MPEG-2 TS, and RTSP using SRT-compatible players or integration with other SRT-enabled systems.
 
-<table><thead><tr><th width="290">Title</th><th>Functions</th></tr></thead><tbody><tr><td>Container</td><td>MPEG-2 TS</td></tr><tr><td>Transport</td><td>SRT</td></tr><tr><td>Codec</td><td>H.264, H.265, AAC</td></tr><tr><td>Additional Features</td><td>Simulcast</td></tr><tr><td>Default URL Pattern</td><td><code>srt://{OvenMediaEngine Host}:{SRT Port}?streamid={Host Name}/{App Name}/{Stream Name}/playlist</code></td></tr></tbody></table>
+<table><thead><tr><th width="290">Title</th><th>Functions</th></tr></thead><tbody><tr><td>Container</td><td>MPEG-2 TS</td></tr><tr><td>Transport</td><td>SRT</td></tr><tr><td>Codec</td><td>H.264, H.265, AAC</td></tr><tr><td>Additional Features</td><td>Simulcast</td></tr><tr><td>Default URL Pattern</td><td><code>srt://{OvenMediaEngine Host}:{SRT Port}?streamid={Virtual Host Name}/{App Name}/{Stream Name}/playlist</code></td></tr></tbody></table>
 
 Currently, OvenMediaEngine supports H.264, H.265, AAC codecs for SRT playback, ensuring the same compatibility as its [SRT provider functionality](../live-source/srt.md).
 
@@ -54,27 +54,11 @@ You can control whether to enable SRT playback for each application. To activate
 
 ## SRT client and `streamid`
 
-As with using [SRT as a live source](../live-source/srt.md#encoders-and-streamid), multiple streams can be serviced on a single port. To distinguish each stream, you must set the `streamid` in the format `{Host Name}/{App Name}/{Stream Name}/<Playlist Name>`.
+As with using [SRT as a live source](../live-source/srt.md#encoders-and-streamid), multiple streams can be serviced on a single port. To distinguish each stream, you must set the `streamid` in the format `{Virtual Host Name}/{App Name}/{Stream Name}/{Playlist Name}`.
 
-> `streamid` = `{Host Name}/{App Name}/{Stream Name}/<Playlist Name>`
+> `streamid` = `{Virtual Host Name}/{App Name}/{Stream Name}/{Playlist Name}`
 
 SRT clients such as FFmpeg, OBS Studio, and `srt-live-transmit` allow you to specify the `streamid` as a query string appended to the SRT URL. For example, you can specify the `streamid` in the SRT URL like this to play a specific SRT stream: `srt://{OvenMediaEngine Host}:{SRT Port}?streamid={streamid}`.
-
-Here, the `<host name>` refers to one of the patterns listed under `<VirtualHost>/<Host>/<Names>/<Name>`. In other words, if you configure it as shown below, you can use values such as `a.airensoft.com`, `test.com`, and `test.airensoft.com` as the `{Host Name}`.
-
-```html
-<!-- /Server/VirtualHosts -->
-<VirtualHost>
-    <Name>default</Name>
-    <Host>
-        <Names>
-            <Name>*.airensoft.com</Name>
-            <Name>test.com</Name>
-        </Names>
-    </Host>
-    ...
-</VirtualHost>
-```
 
 ## Playback
 
@@ -88,9 +72,9 @@ srt://{OvenMediaEngine Host}:{SRT Port}?streamid={streamid}
 
 SRT Publisher creates a default playlist named `playlist` with the first track from each of the audio tracks and video tracks, and all data tracks.
 
-For example, to playback the `srt.airensoft.com/app/stream` stream with the default playlist from OME listening on port `9998` at `192.168.0.160`, use the following SRT URL:
+For example, to playback the `default/app/stream` stream with the default playlist from OME listening on port `9998` at `192.168.0.160`, use the following SRT URL:
 
-> `srt://192.168.0.160:9998?streamid=srt.airensoft.com/app/stream/playlist`
+> `srt://192.168.0.160:9998?streamid=default/app/stream/playlist`
 
 You can input the SRT URL as shown above into your SRT client. Below, we provide instructions on how to input the SRT URL for each client.
 
