@@ -45,13 +45,13 @@ public:
 													const std::shared_ptr<ov::Url> &control_server_url, uint32_t timeout_msec,
 													const ov::String secret_key,
 													const std::shared_ptr<const ac::RequestInfo> &request_info,
-													const Status::Code status = Status::Code::OPENING);
+													const Status::Code status);
 
 	static std::shared_ptr<AdmissionWebhooks> Query(PublisherType publisher,
 													const std::shared_ptr<ov::Url> &control_server_url, uint32_t timeout_msec,
 													const ov::String secret_key,
 													const std::shared_ptr<const ac::RequestInfo> &request_info,
-													const Status::Code status = Status::Code::OPENING);
+													const Status::Code status);
 
 	ErrCode GetErrCode() const;
 	ov::String GetErrReason() const;

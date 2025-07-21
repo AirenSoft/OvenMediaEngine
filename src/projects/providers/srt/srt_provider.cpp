@@ -186,13 +186,15 @@ namespace pvd
 		
 		logti("The SRT client has connected : %s [%d] [%s]", remote->ToString().CStr(), remote->GetNativeHandle(), remote->GetStreamId().CStr());
 
-		auto final_url = _stream_url_resolver.Resolve(remote);
+		auto [final_url, host_info_item] = _stream_url_resolver.Resolve(remote);
 
-		if (final_url == nullptr)
+		if ((final_url == nullptr) || (host_info_item.has_value() == false))
 		{
 			remote->Close();
 			return;
 		}
+
+		const auto &host_info = host_info_item.value();
 
 		auto requested_url = final_url;
 
@@ -207,69 +209,71 @@ namespace pvd
 		// SignedPolicy
 		uint64_t life_time = 0;
 		
-		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(request_info);
-		if (signed_policy_result == AccessController::VerificationResult::Off)
+		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(host_info, request_info);
+
+		switch (signed_policy_result)
 		{
-			// Success
-		}
-		else if (signed_policy_result == AccessController::VerificationResult::Pass)
-		{
-			life_time = signed_policy->GetStreamExpireEpochMSec();
-		}
-		else if (signed_policy_result == AccessController::VerificationResult::Error)
-		{
-			// will not reach here
-			remote->Close();
-			return;
-		}
-		else if (signed_policy_result == AccessController::VerificationResult::Fail)
-		{
-			logtw("%s", signed_policy->GetErrMessage().CStr());
-			remote->Close();
-			return;
+			case AccessController::VerificationResult::Error:
+				// will not reach here
+				remote->Close();
+				return;
+
+			case AccessController::VerificationResult::Fail:
+				logtw("%s", signed_policy->GetErrMessage().CStr());
+				remote->Close();
+				return;
+
+			case AccessController::VerificationResult::Off:
+				// Success
+				break;
+
+			case AccessController::VerificationResult::Pass:
+				life_time = signed_policy->GetStreamExpireEpochMSec();
+				break;
 		}
 
 		// Admission Webhooks
-		auto vhost_app_name = orchestrator->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
-		auto stream_name = final_url->Stream();
+		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(host_info, request_info);
 
-		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
-		if (webhooks_result == AccessController::VerificationResult::Off)
+		auto vhost_app_name						   = orchestrator->ResolveApplicationName(host_info.GetName(), final_url->App());
+		auto stream_name						   = final_url->Stream();
+
+		switch (webhooks_result)
 		{
-			// Success
-		}
-		else if (webhooks_result == AccessController::VerificationResult::Pass)
-		{
-			// Lifetime
-			if (admission_webhooks->GetLifetime() != 0)
-			{
-				// Choice smaller value
-				auto stream_expired_msec_from_webhooks = ov::Clock::NowMSec() + admission_webhooks->GetLifetime();
-				if (life_time == 0 || stream_expired_msec_from_webhooks < life_time)
+			case AccessController::VerificationResult::Error:
+				logtw("AdmissionWebhooks error : %s", final_url->ToUrlString().CStr());
+				remote->Close();
+				return;
+
+			case AccessController::VerificationResult::Fail:
+				logtw("AdmissionWebhooks error : %s", admission_webhooks->GetErrReason().CStr());
+				remote->Close();
+				return;
+
+			case AccessController::VerificationResult::Off:
+				// Success
+				break;
+
+			case AccessController::VerificationResult::Pass:
+				// Lifetime
+				if (admission_webhooks->GetLifetime() != 0)
 				{
-					life_time = stream_expired_msec_from_webhooks;
+					// Choice smaller value
+					auto stream_expired_msec_from_webhooks = ov::Clock::NowMSec() + admission_webhooks->GetLifetime();
+					if (life_time == 0 || stream_expired_msec_from_webhooks < life_time)
+					{
+						life_time = stream_expired_msec_from_webhooks;
+					}
 				}
-			}
 
-			// Redirect URL
-			if (admission_webhooks->GetNewURL() != nullptr)
-			{
-				final_url = admission_webhooks->GetNewURL();
-				vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
-				stream_name = final_url->Stream();
-			}
-		}
-		else if (webhooks_result == AccessController::VerificationResult::Error)
-		{
-			logtw("AdmissionWebhooks error : %s", final_url->ToUrlString().CStr());
-			remote->Close();
-			return;
-		}
-		else if (webhooks_result == AccessController::VerificationResult::Fail)
-		{
-			logtw("AdmissionWebhooks error : %s", admission_webhooks->GetErrReason().CStr());
-			remote->Close();
-			return;
+				// Redirect URL
+				if (admission_webhooks->GetNewURL() != nullptr)
+				{
+					final_url	   = admission_webhooks->GetNewURL();
+					vhost_app_name = orchestrator->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
+					stream_name	   = final_url->Stream();
+				}
+				break;
 		}
 
 		// Check if application is exist
@@ -319,9 +323,19 @@ namespace pvd
 		auto final_url = channel->GetFinalUrl();
 		if (remote && requested_url && final_url)
 		{
-			auto request_info = std::make_shared<ac::RequestInfo>(requested_url, final_url, remote, nullptr);
+			auto [new_final_url, host_info_item] = _stream_url_resolver.Resolve(remote);
 
-			SendCloseAdmissionWebhooks(request_info);
+			if ((new_final_url == nullptr) || (host_info_item.has_value() == false))
+			{
+				OV_ASSERT2(false);
+				logte("Failed to resolve final URL for SRT disconnection: %s", remote->ToString().CStr());
+			}
+			else
+			{
+				auto request_info = std::make_shared<ac::RequestInfo>(requested_url, final_url, remote, nullptr);
+
+				SendCloseAdmissionWebhooks(host_info_item.value(), request_info);
+			}
 		}
 		// the return check is not necessary
 

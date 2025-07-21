@@ -203,13 +203,15 @@ namespace pub
 
 		logti("The SRT client has connected: %s", remote->ToString().CStr());
 
-		auto final_url = _stream_url_resolver.Resolve(remote);
+		auto [final_url, host_info_item] = _stream_url_resolver.Resolve(remote);
 
-		if (final_url == nullptr)
+		if ((final_url == nullptr) || (host_info_item.has_value() == false))
 		{
 			AddToDisconnect(remote);
 			return;
 		}
+
+		const auto &host_info = host_info_item.value();
 
 		auto requested_url = final_url;
 
@@ -220,7 +222,7 @@ namespace pub
 		// Handle SignedPolicy
 		//
 		uint64_t life_time = 0;
-		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(request_info);
+		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(host_info, request_info);
 
 		switch (signed_policy_result)
 		{
@@ -246,10 +248,11 @@ namespace pub
 		//
 		// Handle AdmissionWebhooks
 		//
-		auto vhost_app_name = orchestrator->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
+		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(host_info, request_info);
+
+		auto vhost_app_name = orchestrator->ResolveApplicationName(host_info.GetName(), final_url->App());
 		auto stream_name = final_url->Stream();
 
-		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
 		switch (webhooks_result)
 		{
 			case AccessController::VerificationResult::Error:
@@ -392,10 +395,20 @@ namespace pub
 
 		if ((requested_url != nullptr) && (final_url != nullptr))
 		{
-			auto request_info = std::make_shared<ac::RequestInfo>(requested_url, final_url, remote, nullptr);
+			auto [new_final_url, host_info_item] = _stream_url_resolver.Resolve(remote);
 
-			// Checking the return value is not necessary
-			SendCloseAdmissionWebhooks(request_info);
+			if ((new_final_url == nullptr) || (host_info_item.has_value() == false))
+			{
+				OV_ASSERT2(false);
+				logte("Failed to resolve final URL for SRT disconnection: %s", remote->ToString().CStr());
+			}
+			else
+			{
+				auto request_info = std::make_shared<ac::RequestInfo>(requested_url, final_url, remote, nullptr);
+
+				// Checking the return value is not necessary
+				SendCloseAdmissionWebhooks(host_info_item.value(), request_info);
+			}
 		}
 
 		logti("The SRT client has disconnected: [%s/%s], %s", stream->GetApplicationName(), stream->GetName().CStr(), remote->ToString().CStr());

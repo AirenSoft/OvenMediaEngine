@@ -9,6 +9,8 @@
 
 #include "./srt_stream_url_resolver.h"
 
+#include <orchestrator/orchestrator.h>
+
 #include "./srt_private.h"
 
 namespace modules::srt
@@ -30,7 +32,32 @@ namespace modules::srt
 		return (it != _stream_map.end()) ? std::optional<ov::String>(it->second) : std::nullopt;
 	}
 
-	std::shared_ptr<ov::Url> StreamUrlResolver::Resolve(const std::shared_ptr<ov::Socket> &remote)
+	std::optional<info::Host> StreamUrlResolver::GetHostInfo(const ov::String &host) const
+	{
+		auto orchestrator = ocst::Orchestrator::GetInstance();
+
+		// 1. Check if `host` is a name of virtual host
+		auto host_info	  = orchestrator->GetHostInfo(host);
+
+		if (host_info.has_value())
+		{
+			// `host` is a name of virtual host
+			return host_info;
+		}
+
+		// 2. If `host` is not a name of virtual host, consider it as a domain and get the vhost
+		auto vhost = orchestrator->GetVhostNameFromDomain(host);
+
+		if (vhost.IsEmpty())
+		{
+			logte("Could not find VirtualHost (%s)", host.CStr());
+			return std::nullopt;
+		}
+
+		return orchestrator->GetHostInfo(vhost);
+	}
+
+	std::tuple<std::shared_ptr<ov::Url>, std::optional<info::Host>> StreamUrlResolver::Resolve(const std::shared_ptr<ov::Socket> &remote)
 	{
 		// stream_id can be in the following format:
 		//
@@ -58,7 +85,7 @@ namespace modules::srt
 			if (path.has_value() == false)
 			{
 				logte("There is no stream information in the stream map for the SRT client: %s", remote->ToString().CStr());
-				return nullptr;
+				return {nullptr, std::nullopt};
 			}
 
 			stream_path = path.value();
@@ -100,7 +127,7 @@ namespace modules::srt
 					logte("Empty streamid is not allowed");
 				}
 
-				return nullptr;
+				return {nullptr, std::nullopt};
 			}
 
 			stream_path = ov::Url::Decode(final_streamid);
@@ -116,7 +143,7 @@ namespace modules::srt
 					logte("Invalid streamid: [%s]", streamid.CStr());
 				}
 
-				return nullptr;
+				return {nullptr, std::nullopt};
 			}
 		}
 
@@ -134,7 +161,7 @@ namespace modules::srt
 			if ((part_count != 3) && (part_count != 4))
 			{
 				logte("The streamid for SRT must be in the following format: {host}/{app}/{stream}[/{playlist}], but [%s]", stream_path.CStr());
-				return nullptr;
+				return {nullptr, std::nullopt};
 			}
 
 			// Convert to srt://{host}/{app}/{stream}[/{playlist}]
@@ -149,6 +176,6 @@ namespace modules::srt
 			logte("The streamid for SRT must be in one of the following formats: srt://{host}[:{port}]/{app}/{stream}[/{playlist}][?{query}={value}] or {host}/{app}/{stream}[/{playlist}], but [%s]%s", stream_path.CStr(), extra_log.CStr());
 		}
 
-		return final_url;
+		return {final_url, GetHostInfo(final_url->Host())};
 	}
 }  // namespace modules::srt
