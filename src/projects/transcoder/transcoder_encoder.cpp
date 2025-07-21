@@ -302,8 +302,19 @@ done:
 	return encoder;
 }
 
-TranscodeEncoder::TranscodeEncoder(info::Stream stream_info) : 
-	_stream_info(stream_info)
+TranscodeEncoder::TranscodeEncoder(info::Stream stream_info)
+	: _encoder_id(-1),
+	  _stream_info(stream_info),
+	  _track(nullptr),
+	  _bitstream_format(cmn::BitstreamFormat::Unknown),
+	  _packet_type(cmn::PacketType::Unknown),
+	  _kill_flag(false),
+	  _complete_handler(nullptr),
+	  _force_keyframe_by_time_interval(0),
+	  _accumulate_frame_duration(-1),
+	  _codec_context(nullptr),
+	  _packet(nullptr),
+	  _frame(nullptr)
 {
 }
 
@@ -454,12 +465,15 @@ bool TranscodeEncoder::PushProcess(std::shared_ptr<const MediaFrame> media_frame
 	if (GetRefTrack()->GetMediaType() == cmn::MediaType::Video)
 	{
 		av_frame->pict_type = AV_PICTURE_TYPE_NONE;
+
+		// If _force_keyframe_by_time_interval value is > 0,
+		// Enabled force keyframe by time interval.
 		if (_force_keyframe_by_time_interval > 0)
 		{
-			if (_accumulate_frame_duration >= _force_keyframe_by_time_interval ||
-				_accumulate_frame_duration == -1)  // First Frame
+			if (_accumulate_frame_duration >= _force_keyframe_by_time_interval ||  // Accumulated duration exceeds keyframe interval
+				_accumulate_frame_duration == -1)								   // Force keyframe the first frame
 			{
-				av_frame->pict_type = AV_PICTURE_TYPE_I;
+				av_frame->pict_type		   = AV_PICTURE_TYPE_I;
 				_accumulate_frame_duration = 0;
 			}
 			_accumulate_frame_duration += media_frame->GetDuration();
@@ -517,22 +531,33 @@ bool TranscodeEncoder::PopProcess()
 
 void TranscodeEncoder::CodecThread()
 {
-	// Initialize the codec and notify the main thread.
-	if(_codec_init_event.Submit(InitCodecInteral()) == false)
+	// Initialize the codec and notify to the main thread.
+	if (_codec_init_event.Submit(InitCodecInteral()) == false)
 	{
 		return;
 	}
 
-	// Initialize for force keyframe by time interval.
+	// Initialize for Force Keyframe by time interval.
 	if ((GetRefTrack()->GetMediaType() == cmn::MediaType::Video) &&
 		(GetRefTrack()->GetKeyFrameIntervalTypeByConfig() == cmn::KeyFrameIntervalType::TIME))
 	{
-		auto timebase_timescale = GetRefTrack()->GetTimeBase().GetTimescale();
-		auto key_frame_interval = GetRefTrack()->GetKeyFrameInterval();
-		_force_keyframe_by_time_interval = static_cast<int64_t>(timebase_timescale * (double)key_frame_interval / 1000.0);
+		// Enable force keyframe by time interval.
+		auto key_frame_interval_ms		 = GetRefTrack()->GetKeyFrameInterval();
+		auto timebase_timescale			 = GetRefTrack()->GetTimeBase().GetTimescale();
+		_force_keyframe_by_time_interval = static_cast<int64_t>(timebase_timescale * (double)key_frame_interval_ms / 1000.0);
 
 		// Insert keyframe in first frame
-		_accumulate_frame_duration = -1;
+		_accumulate_frame_duration		 = -1;
+
+		logti("Force keyframe by time interval is enabled. interval(%lld ms)", key_frame_interval_ms);
+	}
+	else
+	{
+		// Disable force keyframe by time interval.
+		_force_keyframe_by_time_interval = 0;
+		_accumulate_frame_duration		 = -1;
+
+		logti("Force keyframe by time interval is disabled.");
 	}
 
 	[[maybe_unused]] 
