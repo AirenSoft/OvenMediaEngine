@@ -47,7 +47,7 @@ If you want to change the signaling port, change the value of `<Ports><WebRTC><S
 
 The Signalling protocol is defined in a simple way:
 
-![](<../.gitbook/assets/image (3) (1) (1) (1).png>)
+![](<../.gitbook/assets/image (3) (1) (1) (1) (1).png>)
 
 If you want to use a player other than OvenPlayer, you need to develop the signalling protocol as shown above and can integrate OvenMediaEngine.
 

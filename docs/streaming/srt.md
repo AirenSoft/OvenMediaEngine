@@ -2,7 +2,7 @@
 
 OvenMediaEngine supports playback of streams delivered via RTMP, WebRTC, SRT, MPEG-2 TS, and RTSP using SRT-compatible players or integration with other SRT-enabled systems.
 
-<table><thead><tr><th width="290">Title</th><th>Functions</th></tr></thead><tbody><tr><td>Container</td><td>MPEG-2 TS</td></tr><tr><td>Transport</td><td>SRT</td></tr><tr><td>Codec</td><td>H.264, H.265, AAC</td></tr><tr><td>Additional Features</td><td>Simulcast</td></tr><tr><td>Default URL Pattern</td><td><code>srt://{OvenMediaEngine Host}:{SRT Port}?streamid={Virtual Host Name}/{App Name}/{Stream Name}/playlist</code></td></tr></tbody></table>
+<table><thead><tr><th width="290">Title</th><th>Functions</th></tr></thead><tbody><tr><td>Container</td><td>MPEG-2 TS</td></tr><tr><td>Transport</td><td>SRT</td></tr><tr><td>Codec</td><td>H.264, H.265, AAC</td></tr><tr><td>Additional Features</td><td>Simulcast</td></tr><tr><td>Default URL Pattern</td><td><code>srt://{OvenMediaEngine Host}:{SRT Port}?streamid={Virtual Host Name}/{App Name}/{Stream Name}/master</code></td></tr></tbody></table>
 
 Currently, OvenMediaEngine supports H.264, H.265, AAC codecs for SRT playback, ensuring the same compatibility as its [SRT provider functionality](../live-source/srt.md).
 
@@ -70,11 +70,11 @@ The SRT URL to be used in the player is structured as follows:
 srt://{OvenMediaEngine Host}:{SRT Port}?streamid={streamid}
 ```
 
-SRT Publisher creates a default playlist named `playlist` with the first track from each of the audio tracks and video tracks, and all data tracks.
+SRT Publisher creates a default playlist named `master` with the first track from each of the audio tracks and video tracks, and all data tracks.
 
 For example, to playback the `default/app/stream` stream with the default playlist from OME listening on port `9998` at `192.168.0.160`, use the following SRT URL:
 
-> `srt://192.168.0.160:9998?streamid=default/app/stream/playlist`
+> `srt://192.168.0.160:9998?streamid=default/app/stream/master`
 
 You can input the SRT URL as shown above into your SRT client. Below, we provide instructions on how to input the SRT URL for each client.
 
@@ -83,16 +83,16 @@ You can input the SRT URL as shown above into your SRT client. Below, we provide
 If you want to test SRT with FFplay, FFmpeg, or FFprobe, simply enter the SRT URL next to the command. For example, with FFplay, you can use the following command:
 
 ```
-$ ffplay "srt://192.168.0.160:9998?streamid=host/app/stream/playlist"
+$ ffplay "srt://192.168.0.160:9998?streamid=default/app/stream/master"
 ```
 
 If you have multiple audio tracks, you can choose one with `-ast` parameter
 
 ```
-$ ffplay "srt://192.168.0.160:9998?streamid=host/app/stream/playlist" -ast 1
+$ ffplay "srt://192.168.0.160:9998?streamid=default/app/stream/master" -ast 1
 ```
 
-<figure><img src="../.gitbook/assets/{99E5787E-D597-41E8-A6E0-C400F5C2E335}.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (2).png" alt=""><figcaption></figcaption></figure>
 
 ### OBS Studio
 
@@ -102,15 +102,15 @@ OBS Studio offers the ability to add an SRT stream as an input source. To use th
 
 Once added, you will see the SRT stream as a source, as shown below. This added source can be used just like any other media source.
 
-<figure><img src="../.gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 ### VLC
 
-You can also playback the SRT stream in VLC. Simply select `Media` > `Open Network Stream` from the menu and enter the SRT URL.
+You can also playback the SRT stream in VLC. Simply select `Media` > `Open Network Stream` from the menu and enter the SRT URL:
 
-<figure><img src="../.gitbook/assets/image (4).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
 
-<figure><img src="../.gitbook/assets/image (3).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (3) (1).png" alt=""><figcaption></figcaption></figure>
 
 ## Using Playlist
 
@@ -211,7 +211,7 @@ To play a stream using a particular playlist, specify the `Playlist.FileName` to
 **SRT playback URL using default playlist**
 
 ```
-srt://192.168.0.160:9998?streamid=host/app/stream/playlist
+srt://192.168.0.160:9998?streamid=host/app/stream/master
 ```
 
 **SRT playback URL using `360p` playlist**
