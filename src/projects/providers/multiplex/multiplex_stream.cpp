@@ -132,7 +132,7 @@ namespace pvd
                     break;
                 }
 
-                auto media_packet = stream_tap->Pop(0);
+                auto media_packet = stream_tap->Pop(100);
                 if (media_packet == nullptr)
                 {
                     continue;
