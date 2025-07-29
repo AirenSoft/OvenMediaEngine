@@ -106,7 +106,7 @@ ifeq ($(and \
   $(filter 0,$(call chk_lib_exist,libnvidia-ml.so)) \
 ), 0)
 HWACCELS_NVIDIA_ENABLED := true
-LOCAL_LDFLAGS += -L/usr/local/cuda/lib64 -lcuda -lnvidia-ml
+LOCAL_LDFLAGS += -L/usr/local/cuda/lib64 -L/usr/local/cuda/lib64/stubs -lcuda -lnvidia-ml
 PROJECT_CXXFLAGS += -I/usr/local/cuda/include -DHWACCELS_NVIDIA_ENABLED
 endif
 
