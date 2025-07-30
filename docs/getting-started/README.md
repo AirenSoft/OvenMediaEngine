@@ -8,7 +8,7 @@ OvenMediaEngine provides Docker images from AirenSoft's Docker Hub (airensoft/ov
 
 ### Installing dependencies
 
-OvenMediaEngine can work with a variety of open-sources and libraries. First, install them on your clean Linux machine as described below. We think that OME can support most Linux packages, but the tested platforms we use are Ubuntu 18+, Fedora 28+, Rocky Linux 9+, and AlmaLinux 9+.
+OvenMediaEngine can work with a variety of open-sources and libraries. First, install them on your clean Linux machine as described below. We think that OME can support most Linux packages, but the tested platforms we use are Ubuntu 18+, Fedora 28+, Rocky Linux 8+, and AlmaLinux 8+.
 
 ```bash
 curl -LOJ https://github.com/AirenSoft/OvenMediaEngine/archive/master.tar.gz && \
@@ -49,7 +49,7 @@ systemctl enable ovenmediaengine.service
 ```
 {% endtab %}
 
-{% tab title="Rocky Linux 9" %}
+{% tab title="Rocky Linux 8" %}
 ```bash
 sudo dnf update
 cd OvenMediaEngine-master/src
@@ -62,7 +62,7 @@ systemctl enable ovenmediaengine.service
 
 {% endtab %}
 
-{% tab title="AlmaLinux 9" %}
+{% tab title="AlmaLinux 8" %}
 ```bash
 sudo dnf update
 cd OvenMediaEngine-master/src
