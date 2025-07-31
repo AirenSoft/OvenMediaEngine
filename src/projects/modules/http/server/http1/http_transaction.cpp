@@ -75,6 +75,9 @@ namespace http
 							case InterceptorResult::Moved:
 								SetStatus(Status::Moved);
 								break;
+							case InterceptorResult::NotFound:
+								SetStatus(Status::Completed);
+								break;
 							case InterceptorResult::Error:
 							default:
 								SetStatus(Status::Error);
@@ -125,11 +128,7 @@ namespace http
 						SetConnectionPolicyByRequest();
 
 						// Notify to interceptor
-						auto need_to_disconnect = OnRequestPrepared();
-						if (need_to_disconnect == false)
-						{
-							return -1;
-						}
+						OnRequestPrepared();
 
 						// Check if the request is completed
 						// If Content-length is 0, it means that the request is completed.
@@ -143,6 +142,9 @@ namespace http
 									break;
 								case InterceptorResult::Moved:
 									SetStatus(Status::Moved);
+									break;
+								case InterceptorResult::NotFound:
+									SetStatus(Status::Completed);
 									break;
 								case InterceptorResult::Error:
 								default:

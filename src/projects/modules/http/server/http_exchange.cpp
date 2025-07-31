@@ -226,51 +226,33 @@ namespace http
 			}
 		}
 
-		bool HttpExchange::OnRequestPrepared()
+		void HttpExchange::OnRequestPrepared()
 		{
 			// Find interceptor using received header
-			auto interceptor = GetConnection()->FindInterceptor(GetSharedPtr());
-			if (interceptor == nullptr)
+			_interceptor = GetConnection()->FindInterceptor(GetSharedPtr());
+			if (_interceptor != nullptr)
 			{
-				logtd("Interceptor is nullptr");
-				SetStatus(Status::Error);
-				GetResponse()->SetStatusCode(StatusCode::NotFound);
-				GetResponse()->Response();
-				Release();
-				return false;
+				_interceptor->OnRequestPrepared(GetSharedPtr());
 			}
-
-			// Call interceptor
-			return interceptor->OnRequestPrepared(GetSharedPtr());
 		}
 
-		bool HttpExchange::OnDataReceived(const std::shared_ptr<const ov::Data> &data)
+		void HttpExchange::OnDataReceived(const std::shared_ptr<const ov::Data> &data)
 		{
-			auto interceptor = GetConnection()->FindInterceptor(GetSharedPtr());
-			if (interceptor == nullptr)
+			if (_interceptor != nullptr)
 			{
-				logtd("Interceptor is nullptr");
-				SetStatus(Status::Error);
-				GetResponse()->SetStatusCode(StatusCode::NotFound);
-				GetResponse()->Response();
-				Release();
-				return false;
+				_interceptor->OnDataReceived(GetSharedPtr(), data);
 			}
-
-			return interceptor->OnDataReceived(GetSharedPtr(), data);
 		}
 
 		InterceptorResult HttpExchange::OnRequestCompleted()
 		{
-			auto interceptor = GetConnection()->FindInterceptor(GetSharedPtr());
-			if (interceptor == nullptr)
+			if (_interceptor == nullptr)
 			{
-				logtd("Interceptor is nullptr");
-				SetStatus(Status::Error);
+				logte("Cannot find interceptor for %s", GetRequest()->ToString().CStr());
 				GetResponse()->SetStatusCode(StatusCode::NotFound);
 				GetResponse()->Response();
 				Release();
-				return InterceptorResult::Error;
+				return InterceptorResult::NotFound;
 			}
 
 			auto request = GetRequest();
@@ -284,7 +266,7 @@ namespace http
 				response->SetIfNoneMatch(if_none_match);
 			}
 
-			return interceptor->OnRequestCompleted(GetSharedPtr());
+			return _interceptor->OnRequestCompleted(GetSharedPtr());
 		}
 
 	}  // namespace svr

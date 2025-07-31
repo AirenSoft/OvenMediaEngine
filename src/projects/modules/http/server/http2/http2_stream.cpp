@@ -76,10 +76,7 @@ namespace http
 				SetKeepAlive(true);
 
 				// Notify to interceptor
-				if (OnRequestPrepared() == false)
-				{
-					return -1;
-				}
+				OnRequestPrepared();
 
 				if (_headers_frame->IS_HTTP2_FRAME_FLAG_ON(Http2HeadersFrame::Flags::EndStream))
 				{
@@ -105,6 +102,9 @@ namespace http
 						break;
 					case InterceptorResult::Moved:
 						SetStatus(Status::Moved);
+						break;
+					case InterceptorResult::NotFound:
+						SetStatus(Status::Completed);
 						break;
 					case InterceptorResult::Error:
 					default:
@@ -243,11 +243,7 @@ namespace http
 			// Data frame received
 			bool HttpStream::OnDataFrameReceived(const std::shared_ptr<const Http2DataFrame> &frame)
 			{
-				if (OnDataReceived(frame->GetData()) == false)
-				{
-					return false;
-				}
-
+				OnDataReceived(frame->GetData());
 				if (frame->IS_HTTP2_FRAME_FLAG_ON(Http2DataFrame::Flags::EndStream))
 				{
 					return OnEndStream();
