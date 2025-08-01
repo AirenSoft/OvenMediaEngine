@@ -129,9 +129,7 @@ namespace pub
 			}
 			else
 			{
-				logaw("Ignore unsupported %s codec (%s)",
-					  StringFromMediaType(media_type).CStr(),
-					  StringFromMediaCodecId(codec_id).CStr());
+				logaw("Ignore unsupported %s codec (%s)", cmn::GetMediaTypeString(media_type), cmn::GetCodecIdString(codec_id));
 			}
 		}
 		else if (media_type == cmn::MediaType::Data)
@@ -140,7 +138,7 @@ namespace pub
 		}
 		else
 		{
-			logaw("Ignore unsupported media type: %s", StringFromMediaType(media_type).CStr());
+			logaw("Ignore unsupported media type: %s", cmn::GetMediaTypeString(media_type));
 		}
 
 		return false;
@@ -203,8 +201,8 @@ namespace pub
 			else
 			{
 				logai("SrtStream - Ignore unsupported %s codec (%s)",
-					  StringFromMediaType(media_type).CStr(),
-					  StringFromMediaCodecId(codec_id).CStr());
+					  cmn::GetMediaTypeString(media_type),
+					  cmn::GetCodecIdString(codec_id));
 			}
 		}
 		else if (media_type == cmn::MediaType::Data)
@@ -213,7 +211,7 @@ namespace pub
 		}
 		else
 		{
-			logai("SrtStream - Ignore unsupported media type: %s", StringFromMediaType(media_type).CStr());
+			logai("SrtStream - Ignore unsupported media type: %s", cmn::GetMediaTypeString(media_type));
 		}
 	}
 

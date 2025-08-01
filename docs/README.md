@@ -13,7 +13,7 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
 ## Features
 
 * **Ingest**
-  * Push: WebRTC, WHIP (Simulcast), SRT, RTMP, MPEG-2 TS
+  * Push: WebRTC, WHIP (Simulcast), SRT, RTMP, E-RTMP, MPEG-2 TS
   * Pull: RTSP
   * Scheduled Channel (Pre-recorded Live)
   * Multiplex Channel (Duplicate stream / Mux tracks)
@@ -39,8 +39,11 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
   * Secure Reliable Transport
   * MPEG-2 TS Container
   * Audio/Video Muxed
+* **Enhanced RTMP (E-RTMP) for Advanced Codec Support**
+  * _H.264, H.265, AAC_
+  * More codec support will be added continuously
 * **Embedded Live Transcoder**
-  * Video: VP8, H.264, H.265(Hardware only), Pass-through
+  * Video: VP8, H.264, H.265 (Hardware only), Pass-through
   * Audio: Opus, AAC, Pass-through
 * **Clustering** (Origin-Edge Structure)
 * **Monitoring**
@@ -58,8 +61,8 @@ We have tested OvenMediaEngine on platforms, listed below. However, we think it 
 
 * Docker ([https://hub.docker.com/r/airensoft/ovenmediaengine](https://hub.docker.com/r/airensoft/ovenmediaengine))
 * Ubuntu 18+
-* Rocky Linux 9+
-* AlmaLinux 9+
+* Rocky Linux 8+
+* AlmaLinux 8+
 * Fedora 28+
 
 ## Getting Started

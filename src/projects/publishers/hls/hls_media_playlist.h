@@ -53,6 +53,8 @@ public:
 
 	void SetEndList();
 
+	std::size_t GetSegmentCount() const;
+
 private:
 	HlsMediaPlaylistConfig _config;
 	ov::String _variant_name;

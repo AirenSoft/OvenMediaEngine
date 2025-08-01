@@ -2,7 +2,7 @@
 
 ## Overview
 
-The REST APIs provided by OME allow you to query or change settings such as VirtualHost and Application/Stream.
+The REST APIs provided by OME allow you to query or change settings such as `VirtualHost` and `Application/Stream`.
 
 {% hint style="warning" %}
 There are some limitations/considerations.
@@ -74,11 +74,11 @@ In order to use the API server, you must configure `<Managers>` as well as port 
 
 #### Host
 
-In `<Names>`, set the domain or IP that can access the API server. If \* is set, any address is used. In order to access using the TLS Port, a certificate must be set in `<TLS>`.
+In `<Names>`, set the domain or IP that can access the API server. If `*` is set, any address is used. In order to access using the TLS Port, a certificate must be set in `<TLS>`.
 
 #### AccessToken
 
-API Server uses Basic HTTP Authentication Scheme to authenticate clients. An `AccessToken` is a plaintext credential string before base64 encoding. Setting the AccessToken to the form `user-id:password` per RFC7617 allows standard browsers to pass authentication, but it is not required.
+API Server uses Basic HTTP Authentication Scheme to authenticate clients. An `AccessToken` is a plaintext credential string before base64 encoding. Setting the `AccessToken` to the form `user-id:password` per RFC7617 allows standard browsers to pass authentication, but it is not required.
 
 For more information about HTTP Basic authentication, refer to the URL below.&#x20;
 
@@ -86,7 +86,7 @@ For more information about HTTP Basic authentication, refer to the URL below.&#x
 
 #### CrossDomains
 
-To enable CORS on your API Server, you can add a setting. You can add \* to allow all domains. If contains a scheme, such as https://, only that scheme can be allowed, or if the scheme is omitted, such as \*.airensoft.com, all schemes can be accepted.
+To enable CORS on your API Server, you can add a setting. You can add `*` to allow all domains. If contains a scheme, such as https://, only that scheme can be allowed, or if the scheme is omitted, such as \*.airensoft.com, all schemes can be accepted.
 
 
 

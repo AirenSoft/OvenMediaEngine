@@ -74,6 +74,8 @@ namespace pvd
 							const std::shared_ptr<const ov::Error> &error) override;
 
 	private:
+		bool _is_ertmp_enabled = false;
+
 		std::vector<std::shared_ptr<PhysicalPort>> _physical_port_list;
 	};
 }

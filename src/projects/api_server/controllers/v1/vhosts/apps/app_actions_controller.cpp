@@ -148,10 +148,10 @@ namespace api
 				record->SetApplication(app->GetVHostAppName().GetAppName());
 			}
 
-			// This is a recording task requested via the REST API, 
+			// This is a recording task requested via the REST API,
 			// and it will remain active until a STOP command is issued through the REST API.
 			record->SetByConfig(false);
-			
+
 			auto error = application->RecordStart(record);
 			if (error->GetCode() == pub::FilePublisher::FilePublisherStatusCode::FailureInvalidParameter)
 			{
@@ -331,8 +331,8 @@ namespace api
 			// If the stream does not exist, request a pull stream.
 			if (application->GetStream(push->GetStreamName()) == nullptr)
 			{
-				auto url = ov::Url::Parse(client->GetRequest()->GetUri());
-				auto app_name = app->GetVHostAppName();
+				auto url		 = ov::Url::Parse(client->GetRequest()->GetUri());
+				auto app_name	 = app->GetVHostAppName();
 				auto stream_name = push->GetStreamName();
 				ocst::Orchestrator::GetInstance()->RequestPullStreamWithOriginMap(url, app_name, stream_name);
 			}

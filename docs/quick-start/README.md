@@ -72,7 +72,7 @@ Publish your live stream to OvenMediaEngine using a live encoder like [OBS](http
 
 The RTMP publishing address is :&#x20;
 
-**Server** `rtmp://Your.Docker.Host.IP:1935/app`
+**Server** `rtmp://{Your Docker Host}:1935/app`
 
 **Stream Key** `stream`
 
@@ -93,19 +93,19 @@ The settings below are recommended for ultra-low latency.&#x20;
 
 Open the installed OvenPlayer Demo page in your browser.&#x20;
 
-`http://Your.Docker.Host.IP:8090/`
+`http://{Your Docker Host}:8090/`
 
 <figure><img src="../.gitbook/assets/image (2) (2) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### WebRTC Playback
 
-Add `ws://Your.Docker.Host.IP:3333/app/stream` to the Playback URL and click the ADD SOURCE and LOAD PLAYER button to play the live stream with WebRTC.
+Add `ws://{Your Docker Host}:3333/app/stream` to the Playback URL and click the ADD SOURCE and LOAD PLAYER button to play the live stream with WebRTC.
 
 <figure><img src="../.gitbook/assets/image (8).png" alt=""><figcaption></figcaption></figure>
 
 #### LLHLS Playback
 
-Add `http://Your.Docker.Host.IP:3333/app/stream/llhls.m3u8` to the Playback URL and click the ADD SOURCE and LOAD PLAYER button to play the live stream with LLHLS.
+Add `http://{Your Docker Host}:3333/app/stream/llhls.m3u8` to the Playback URL and click the ADD SOURCE and LOAD PLAYER button to play the live stream with LLHLS.
 
-<figure><img src="../.gitbook/assets/image (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
 

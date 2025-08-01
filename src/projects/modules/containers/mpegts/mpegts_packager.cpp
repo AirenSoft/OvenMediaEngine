@@ -17,6 +17,7 @@ namespace mpegts
     {
         _packager_id = packager_id;
         _config = config;
+		_next_target_duration_ms = config.target_duration_ms;
     }
 
     Packager::~Packager()
@@ -96,7 +97,7 @@ namespace mpegts
         {   
             if (track->GetMediaType() != cmn::MediaType::Video && track->GetMediaType() != cmn::MediaType::Audio && track->GetMediaType() != cmn::MediaType::Data)
             {
-                logte("Unsupported media type (%s) in Mpeg-2 TS Packager", StringFromMediaType(track->GetMediaType()).CStr());
+                logte("Unsupported media type (%s) in Mpeg-2 TS Packager", cmn::GetMediaTypeString(track->GetMediaType()));
                 continue;
             }
 
@@ -202,7 +203,7 @@ namespace mpegts
 				_force_make_boundary = true;
 			}
 
-			if ((sample_buffer->GetCurrentDurationMs() >= _config.target_duration_ms) || _force_make_boundary == true)
+			if ((sample_buffer->GetCurrentDurationMs() >= _next_target_duration_ms) || _force_make_boundary == true)
 			{
 				if (media_packet->GetMediaType() == cmn::MediaType::Video && media_packet->IsKeyFrame())
 				{
@@ -233,7 +234,7 @@ namespace mpegts
         }
 
 		// If the segment duration is too long (twice the target duration), a new segment is forcibly created.
-		if (force_create == false && main_sample_buffer->GetTotalAvailableDurationMs() >= _config.target_duration_ms * 2)
+		if (force_create == false && main_sample_buffer->GetTotalAvailableDurationMs() >= _config.target_duration_ms * 3)
 		{
 			logtw("Stream(%s) Main Track(%u) has too long duration (%.3f ms, twice the target duration %u ms), force to create a new segment", _config.stream_id_meta.CStr(), _main_track_id, main_sample_buffer->GetTotalAvailableDurationMs(), _config.target_duration_ms);
 			
@@ -430,6 +431,9 @@ namespace mpegts
                 segment->AddPacketData(sample.ts_packet_data);
             }
         }
+
+		_next_target_duration_ms -= segment->GetDurationMs();
+		_next_target_duration_ms += _config.target_duration_ms;
 
         AddSegment(segment);
     }

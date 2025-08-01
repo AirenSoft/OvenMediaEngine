@@ -52,13 +52,7 @@ namespace pvd
 		}
 
 		// Init StreamMap if exist
-		std::unique_lock<std::shared_mutex> lock{_stream_map_mutex};
-		auto stream_map = srt_bind_config.GetStreamMap();
-		for (const auto &stream : stream_map.GetStreamList())
-		{
-			_stream_map.emplace(stream.GetPort(), std::make_shared<StreamMap>(stream.GetPort(), stream.GetStreamPath()));
-		}
-		lock.unlock();
+		_stream_url_resolver.Initialize(srt_bind_config.GetStreamMap().GetStreamList());
 
 		bool is_configured;
 		bool is_port_configured;
@@ -123,7 +117,7 @@ namespace pvd
 				_physical_port_list = std::move(physical_port_list);
 			}
 
-			return Provider::Start();
+			return PushProvider::Start();
 		}
 
 		for (auto &physical_port : physical_port_list)
@@ -149,7 +143,7 @@ namespace pvd
 			physical_port_manager->DeletePort(physical_port);
 		}
 
-		return Provider::Stop();
+		return PushProvider::Stop();
 	}
 
 	bool SrtProvider::OnCreateHost(const info::Host &host_info)
@@ -186,166 +180,21 @@ namespace pvd
 		return PushProvider::OnDeleteProviderApplication(application);
 	}
 
-	std::shared_ptr<SrtProvider::StreamMap> SrtProvider::GetStreamMap(int port)
-	{
-		std::shared_lock<std::shared_mutex> lock{_stream_map_mutex};
-		auto it = _stream_map.find(port);
-		if (it == _stream_map.end())
-		{
-			return nullptr;
-		}
-
-		return it->second;
-	}
-
-	std::shared_ptr<ov::Url> SrtProvider::GetStreamUrlForRemote(const std::shared_ptr<ov::Socket> &remote, bool *is_vhost_form)
-	{
-		// stream_id can be in the following format:
-		//
-		//   #!::u=abc123,bmd_uuid=1234567890...
-		//
-		// https://github.com/Haivision/srt/blob/master/docs/features/access-control.md
-		constexpr static const char SRT_STREAM_ID_PREFIX[] = "#!::";
-		constexpr static const char SRT_USER_NAME_PREFIX[] = "u=";
-
-		std::shared_ptr<ov::Url> parsed_url = nullptr;
-
-		// Get app/stream name from stream_id
-		auto streamid = remote->GetStreamId();
-
-		bool is_vhost;
-
-		// stream_path takes one of two forms:
-		//
-		// 1. urlencode(srt://host[:port]/app/stream[?query=value]) (deprecated)
-		// 2. <vhost>/<app>/<stream>[?query=value]
-		ov::String stream_path;
-
-		if (streamid.IsEmpty())
-		{
-			auto stream_map = GetStreamMap(remote->GetLocalAddress()->Port());
-
-			if (stream_map == nullptr)
-			{
-				logte("There is no stream information in the stream map for the SRT client: %s", remote->ToString().CStr());
-				return nullptr;
-			}
-
-			stream_path = stream_map->stream_path;
-		}
-		else
-		{
-			auto final_streamid = streamid;
-			ov::String user_name;
-			bool from_user_name = false;
-
-			if (final_streamid.HasPrefix(SRT_STREAM_ID_PREFIX))
-			{
-				// Remove the prefix `#!::`
-				final_streamid = final_streamid.Substring(OV_COUNTOF(SRT_STREAM_ID_PREFIX) - 1);
-
-				auto key_values = final_streamid.Split(",");
-
-				// Extract user name part (u=xxx)
-				for (const auto &key_value : key_values)
-				{
-					if (key_value.HasPrefix(SRT_USER_NAME_PREFIX))
-					{
-						final_streamid = key_value.Substring(OV_COUNTOF(SRT_USER_NAME_PREFIX) - 1);
-						from_user_name = true;
-
-						break;
-					}
-				}
-			}
-
-			if (final_streamid.IsEmpty())
-			{
-				if (from_user_name)
-				{
-					logte("Empty user name is not allowed in the streamid: [%s]", streamid.CStr());
-				}
-				else
-				{
-					logte("Empty streamid is not allowed");
-				}
-
-				return nullptr;
-			}
-
-			stream_path = ov::Url::Decode(final_streamid);
-
-			if (stream_path.IsEmpty())
-			{
-				if (from_user_name)
-				{
-					logte("Invalid user name in the streamid: [%s] (streamid: [%s])", user_name.CStr(), streamid.CStr());
-				}
-				else
-				{
-					logte("Invalid streamid: [%s]", streamid.CStr());
-				}
-
-				return nullptr;
-			}
-		}
-
-		if (stream_path.HasPrefix("srt://"))
-		{
-			// Deprecated format
-			logtw("The srt://... format is deprecated. Use {vhost}/{app}/{stream} format instead: %s", streamid.CStr());
-			is_vhost = false;
-		}
-		else
-		{
-			// {vhost}/{app}/{stream}[/{playlist}] format
-			auto parts = stream_path.Split("/");
-			auto part_count = parts.size();
-
-			if ((part_count != 3) && (part_count != 4))
-			{
-				logte("The streamid for SRT must be in the following format: {vhost}/{app}/{stream}[/{playlist}], but [%s]", stream_path.CStr());
-				return nullptr;
-			}
-
-			// Convert to srt://{vhost}/{app}/{stream}[/{playlist}]
-			stream_path.Prepend("srt://");
-
-			is_vhost = true;
-		}
-
-		auto final_url = stream_path.IsEmpty() ? nullptr : ov::Url::Parse(stream_path);
-
-		if (final_url != nullptr)
-		{
-			if (is_vhost_form != nullptr)
-			{
-				*is_vhost_form = is_vhost;
-			}
-		}
-		else
-		{
-			auto extra_log = streamid.IsEmpty() ? "" : ov::String::FormatString(" (streamid: [%s])", streamid.CStr());
-			logte("The streamid for SRT must be in one of the following formats: srt://{host}[:{port}]/{app}/{stream}[/{playlist}][?{query}={value}] or {vhost}/{app}/{stream}[/{playlist}], but [%s]%s", stream_path.CStr(), extra_log.CStr());
-		}
-
-		return final_url;
-	}
-
 	void SrtProvider::OnConnected(const std::shared_ptr<ov::Socket> &remote)
 	{
 		auto orchestrator = ocst::Orchestrator::GetInstance();
 		
 		logti("The SRT client has connected : %s [%d] [%s]", remote->ToString().CStr(), remote->GetNativeHandle(), remote->GetStreamId().CStr());
 
-		bool is_vhost_form;
-		auto final_url = GetStreamUrlForRemote(remote, &is_vhost_form);
+		auto [final_url, host_info_item] = _stream_url_resolver.Resolve(remote);
 
-		if (final_url == nullptr)
+		if ((final_url == nullptr) || (host_info_item.has_value() == false))
 		{
 			remote->Close();
 			return;
 		}
+
+		const auto &host_info = host_info_item.value();
 
 		auto requested_url = final_url;
 
@@ -360,71 +209,71 @@ namespace pvd
 		// SignedPolicy
 		uint64_t life_time = 0;
 		
-		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(request_info);
-		if (signed_policy_result == AccessController::VerificationResult::Off)
+		auto [signed_policy_result, signed_policy] = VerifyBySignedPolicy(host_info, request_info);
+
+		switch (signed_policy_result)
 		{
-			// Success
-		}
-		else if (signed_policy_result == AccessController::VerificationResult::Pass)
-		{
-			life_time = signed_policy->GetStreamExpireEpochMSec();
-		}
-		else if (signed_policy_result == AccessController::VerificationResult::Error)
-		{
-			// will not reach here
-			remote->Close();
-			return;
-		}
-		else if (signed_policy_result == AccessController::VerificationResult::Fail)
-		{
-			logtw("%s", signed_policy->GetErrMessage().CStr());
-			remote->Close();
-			return;
+			case AccessController::VerificationResult::Error:
+				// will not reach here
+				remote->Close();
+				return;
+
+			case AccessController::VerificationResult::Fail:
+				logtw("%s", signed_policy->GetErrMessage().CStr());
+				remote->Close();
+				return;
+
+			case AccessController::VerificationResult::Off:
+				// Success
+				break;
+
+			case AccessController::VerificationResult::Pass:
+				life_time = signed_policy->GetStreamExpireEpochMSec();
+				break;
 		}
 
 		// Admission Webhooks
-		auto vhost_app_name = is_vhost_form
-								  ? orchestrator->ResolveApplicationName(final_url->Host(), final_url->App())
-								  : orchestrator->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
-		auto stream_name = final_url->Stream();
+		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(host_info, request_info);
 
-		auto [webhooks_result, admission_webhooks] = VerifyByAdmissionWebhooks(request_info);
-		if (webhooks_result == AccessController::VerificationResult::Off)
+		auto vhost_app_name						   = orchestrator->ResolveApplicationName(host_info.GetName(), final_url->App());
+		auto stream_name						   = final_url->Stream();
+
+		switch (webhooks_result)
 		{
-			// Success
-		}
-		else if (webhooks_result == AccessController::VerificationResult::Pass)
-		{
-			// Lifetime
-			if (admission_webhooks->GetLifetime() != 0)
-			{
-				// Choice smaller value
-				auto stream_expired_msec_from_webhooks = ov::Clock::NowMSec() + admission_webhooks->GetLifetime();
-				if (life_time == 0 || stream_expired_msec_from_webhooks < life_time)
+			case AccessController::VerificationResult::Error:
+				logtw("AdmissionWebhooks error : %s", final_url->ToUrlString().CStr());
+				remote->Close();
+				return;
+
+			case AccessController::VerificationResult::Fail:
+				logtw("AdmissionWebhooks error : %s", admission_webhooks->GetErrReason().CStr());
+				remote->Close();
+				return;
+
+			case AccessController::VerificationResult::Off:
+				// Success
+				break;
+
+			case AccessController::VerificationResult::Pass:
+				// Lifetime
+				if (admission_webhooks->GetLifetime() != 0)
 				{
-					life_time = stream_expired_msec_from_webhooks;
+					// Choice smaller value
+					auto stream_expired_msec_from_webhooks = ov::Clock::NowMSec() + admission_webhooks->GetLifetime();
+					if (life_time == 0 || stream_expired_msec_from_webhooks < life_time)
+					{
+						life_time = stream_expired_msec_from_webhooks;
+					}
 				}
-			}
 
-			// Redirect URL
-			if (admission_webhooks->GetNewURL() != nullptr)
-			{
-				final_url = admission_webhooks->GetNewURL();
-				vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
-				stream_name = final_url->Stream();
-			}
-		}
-		else if (webhooks_result == AccessController::VerificationResult::Error)
-		{
-			logtw("AdmissionWebhooks error : %s", final_url->ToUrlString().CStr());
-			remote->Close();
-			return;
-		}
-		else if (webhooks_result == AccessController::VerificationResult::Fail)
-		{
-			logtw("AdmissionWebhooks error : %s", admission_webhooks->GetErrReason().CStr());
-			remote->Close();
-			return;
+				// Redirect URL
+				if (admission_webhooks->GetNewURL() != nullptr)
+				{
+					final_url	   = admission_webhooks->GetNewURL();
+					vhost_app_name = orchestrator->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
+					stream_name	   = final_url->Stream();
+				}
+				break;
 		}
 
 		// Check if application is exist
@@ -450,9 +299,9 @@ namespace pvd
 		PushProvider::OnDataReceived(channel_id, data);
 	}
 
-	void SrtProvider::OnTimer(const std::shared_ptr<PushStream> &channel)
+	void SrtProvider::OnTimedOut(const std::shared_ptr<PushStream> &channel)
 	{
-		PushProvider::OnChannelDeleted(channel);
+		
 	}
 
 	void SrtProvider::OnDisconnected(const std::shared_ptr<ov::Socket> &remote,
@@ -474,9 +323,19 @@ namespace pvd
 		auto final_url = channel->GetFinalUrl();
 		if (remote && requested_url && final_url)
 		{
-			auto request_info = std::make_shared<ac::RequestInfo>(requested_url, final_url, remote, nullptr);
+			auto [new_final_url, host_info_item] = _stream_url_resolver.Resolve(remote);
 
-			SendCloseAdmissionWebhooks(request_info);
+			if ((new_final_url == nullptr) || (host_info_item.has_value() == false))
+			{
+				OV_ASSERT2(false);
+				logte("Failed to resolve final URL for SRT disconnection: %s", remote->ToString().CStr());
+			}
+			else
+			{
+				auto request_info = std::make_shared<ac::RequestInfo>(requested_url, final_url, remote, nullptr);
+
+				SendCloseAdmissionWebhooks(host_info_item.value(), request_info);
+			}
 		}
 		// the return check is not necessary
 

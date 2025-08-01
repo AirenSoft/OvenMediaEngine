@@ -8,10 +8,10 @@
 //==============================================================================
 #pragma once
 
-#include "rendition_template_types.h"
-
-#include <base/mediarouter/media_type.h>
 #include <base/info/media_track.h>
+#include <base/mediarouter/media_type.h>
+
+#include "rendition_template_types.h"
 
 // <AduioTemplate>
 // 	<VariantName>bypass_audio</VariantName>
@@ -36,15 +36,15 @@ namespace cfg
 				{
 				protected:
 					ov::String _variant_name;
-					ov::String _encoding_type = "all"; // all, encoded, bypassed
+					ov::String _encoding_type		 = "all";  // all, encoded, bypassed
 					EncodingType _encoding_type_enum = EncodingType::All;
-					int _index_hint = -1;
-					int _max_bitrate = -1;
-					int _min_bitrate = -1;
-					int _max_samplerate = -1;
-					int _min_samplerate = -1;
-					int _max_channel = -1;
-					int _min_channel = -1;
+					int _index_hint					 = -1;
+					int _max_bitrate				 = -1;
+					int _min_bitrate				 = -1;
+					int _max_samplerate				 = -1;
+					int _min_samplerate				 = -1;
+					int _max_channel				 = -1;
+					int _min_channel				 = -1;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetVariantName, _variant_name);
@@ -116,30 +116,29 @@ namespace cfg
 
 						return true;
 					}
-					
+
 				protected:
 					void MakeList() override
 					{
 						Register<Optional>({"VariantName", "variant_name"}, &_variant_name);
 						Register<Optional>({"EncodingType", "encoding_type"}, &_encoding_type, nullptr,
-							[=]() -> std::shared_ptr<ConfigError> {
-								if (_encoding_type != "all" && _encoding_type != "encoded" && _encoding_type != "bypassed")
-								{
-									return CreateConfigErrorPtr("Invalid EncodingType: %s (all, encoded, bypassed)", _encoding_type.CStr());
-								}
+										   [=]() -> std::shared_ptr<ConfigError> {
+											   if (_encoding_type != "all" && _encoding_type != "encoded" && _encoding_type != "bypassed")
+											   {
+												   return CreateConfigErrorPtr("Invalid EncodingType: %s (all, encoded, bypassed)", _encoding_type.CStr());
+											   }
 
-								if (_encoding_type.LowerCaseString() == "encoded")
-								{
-									_encoding_type_enum = EncodingType::Encoded;
-								}
-								else if (_encoding_type.LowerCaseString() == "bypassed")
-								{
-									_encoding_type_enum = EncodingType::Bypassed;
-								}
+											   if (_encoding_type.LowerCaseString() == "encoded")
+											   {
+												   _encoding_type_enum = EncodingType::Encoded;
+											   }
+											   else if (_encoding_type.LowerCaseString() == "bypassed")
+											   {
+												   _encoding_type_enum = EncodingType::Bypassed;
+											   }
 
-								return nullptr;
-							}
-						);
+											   return nullptr;
+										   });
 						Register<Optional>({"MaxBitrate", "max_bitrate"}, &_max_bitrate);
 						Register<Optional>({"MinBitrate", "min_bitrate"}, &_min_bitrate);
 						Register<Optional>({"MaxSamplerate", "max_samplerate"}, &_max_samplerate);
@@ -149,6 +148,6 @@ namespace cfg
 					}
 				};
 			}  // namespace oprf
-		} // namespace app
-	} // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

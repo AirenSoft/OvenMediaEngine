@@ -17,12 +17,25 @@ namespace mon
 		class Message
 		{
 		public:
-			enum class Code : uint16_t
+		 	constexpr static const uint32_t INGRESS_CODE_MASK = 0x110000;
+		 	constexpr static const uint32_t INGRESS_CODE_STATUS_MASK = INGRESS_CODE_MASK | 0x001000;
+		 	constexpr static const uint32_t INGRESS_CODE_METRIC_MASK = INGRESS_CODE_MASK | 0x002000;
+			constexpr static const uint32_t EGRESS_CODE_MASK = 0x120000;
+			constexpr static const uint32_t EGRESS_CODE_STATUS_MASK = EGRESS_CODE_MASK | 0x001000;
+			constexpr static const uint32_t EGRESS_CODE_READY_MASK = EGRESS_CODE_MASK | 0x002000;
+			constexpr static const uint32_t INTERNAL_QUEUE_CODE_MASK = 0x140000;
+
+			enum class Code : uint32_t
 			{
 				OK,
 
 				// Ingress Codes
-				INGRESS_BITRATE_LOW,
+				INGRESS_STREAM_CREATED = INGRESS_CODE_STATUS_MASK,
+				INGRESS_STREAM_PREPARED,
+				INGRESS_STREAM_DELETED ,
+				INGRESS_STREAM_CREATION_FAILED_DUPLICATE_NAME,
+
+				INGRESS_BITRATE_LOW = INGRESS_CODE_METRIC_MASK,
 				INGRESS_BITRATE_HIGH,
 				INGRESS_FRAMERATE_LOW,
 				INGRESS_FRAMERATE_HIGH,
@@ -35,8 +48,16 @@ namespace mon
 				INGRESS_LONG_KEY_FRAME_INTERVAL,
 				INGRESS_HAS_BFRAME,
 
+				// Egress Codes
+				EGRESS_STREAM_CREATED = EGRESS_CODE_STATUS_MASK,
+				EGRESS_STREAM_PREPARED,
+				EGRESS_STREAM_DELETED,
+
+				EGRESS_LLHLS_READY = EGRESS_CODE_READY_MASK,
+				EGRESS_HLS_READY,
+
 				// Internal Codes
-				INTERNAL_QUEUE_CONGESTION
+				INTERNAL_QUEUE_CONGESTION = INTERNAL_QUEUE_CODE_MASK
 			};
 
 			static std::shared_ptr<Message> CreateMessage(Code code, const ov::String &description)
@@ -65,6 +86,11 @@ namespace mon
 				{
 					OV_CASE_RETURN(Code::OK, "OK");
 
+					OV_CASE_RETURN(Code::INGRESS_STREAM_CREATED, "INGRESS_STREAM_CREATED");
+					OV_CASE_RETURN(Code::INGRESS_STREAM_PREPARED, "INGRESS_STREAM_PREPARED");
+					OV_CASE_RETURN(Code::INGRESS_STREAM_DELETED, "INGRESS_STREAM_DELETED");
+					OV_CASE_RETURN(Code::INGRESS_STREAM_CREATION_FAILED_DUPLICATE_NAME, "INGRESS_STREAM_CREATION_FAILED_DUPLICATE_NAME");
+
 					OV_CASE_RETURN(Code::INGRESS_BITRATE_LOW, "INGRESS_BITRATE_LOW");
 					OV_CASE_RETURN(Code::INGRESS_BITRATE_HIGH, "INGRESS_BITRATE_HIGH");
 					OV_CASE_RETURN(Code::INGRESS_FRAMERATE_LOW, "INGRESS_FRAMERATE_LOW");
@@ -78,10 +104,22 @@ namespace mon
 					OV_CASE_RETURN(Code::INGRESS_LONG_KEY_FRAME_INTERVAL, "INGRESS_LONG_KEY_FRAME_INTERVAL");
 					OV_CASE_RETURN(Code::INGRESS_HAS_BFRAME, "INGRESS_HAS_BFRAME");
 
+					OV_CASE_RETURN(Code::EGRESS_STREAM_CREATED, "EGRESS_STREAM_CREATED");
+					OV_CASE_RETURN(Code::EGRESS_STREAM_PREPARED, "EGRESS_STREAM_PREPARED");
+					OV_CASE_RETURN(Code::EGRESS_STREAM_DELETED, "EGRESS_STREAM_DELETED");
+
+					OV_CASE_RETURN(Code::EGRESS_LLHLS_READY, "EGRESS_LLHLS_READY");
+					OV_CASE_RETURN(Code::EGRESS_HLS_READY, "EGRESS_HLS_READY");
+
 					OV_CASE_RETURN(Code::INTERNAL_QUEUE_CONGESTION, "INTERNAL_QUEUE_CONGESTION");
 				}
 
 				return "OK";
+			}
+
+			static ov::String DescriptionFromMessageCode(Code message_code)
+			{
+				return DescriptionFromMessageCode(message_code, 0, 0);
 			}
 
 			template <typename T>
@@ -93,6 +131,11 @@ namespace mon
 				switch (message_code)
 				{
 					OV_CASE_RETURN(Code::OK, "The current status is good");
+
+					OV_CASE_RETURN(Code::INGRESS_STREAM_CREATED, "A new ingress stream has been created");
+					OV_CASE_RETURN(Code::INGRESS_STREAM_PREPARED, "A ingress stream has been prepared");
+					OV_CASE_RETURN(Code::INGRESS_STREAM_DELETED, "A ingress stream has been deleted");
+					OV_CASE_RETURN(Code::INGRESS_STREAM_CREATION_FAILED_DUPLICATE_NAME, "Failed to create stream because the specified stream name is already in use");
 
 					OV_CASE_RETURN(Code::INGRESS_BITRATE_LOW,
 										ov::String::FormatString("The ingress stream's current bitrate (%d bps) is lower than the configured bitrate (%d bps)", measured, config));
@@ -118,6 +161,14 @@ namespace mon
 										ov::String::FormatString("The ingress stream's current keyframe interval (%.1f seconds) is too long. Please use a keyframe interval of %.1f seconds or less", measured, config));
 					OV_CASE_RETURN(Code::INGRESS_HAS_BFRAME,
 										ov::String::FormatString("There are B-Frames in the ingress stream"));
+
+					OV_CASE_RETURN(Code::EGRESS_STREAM_CREATED, "A new egress stream has been created");
+					OV_CASE_RETURN(Code::EGRESS_STREAM_PREPARED, "A egress stream has been prepared");
+					OV_CASE_RETURN(Code::EGRESS_STREAM_DELETED, "A egress stream has been deleted");
+
+					OV_CASE_RETURN(Code::EGRESS_LLHLS_READY, "LLHLS stream is ready to play - initial segment(s) have been generated");
+					OV_CASE_RETURN(Code::EGRESS_HLS_READY, "HLS stream is ready to play - initial segment(s) have been generated");
+
 					OV_CASE_RETURN(Code::INTERNAL_QUEUE_CONGESTION,
 										ov::String::FormatString("Internal queue(s) is currently congested"));
 				}

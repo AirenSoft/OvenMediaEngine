@@ -8,8 +8,8 @@
 //==============================================================================
 #pragma once
 
-#include "../../common/ranged_port.h"
 #include "../../common/options.h"
+#include "../../common/ranged_port.h"
 #include "../../common/srt_stream_map.h"
 #include "./provider.h"
 
@@ -46,5 +46,5 @@ namespace cfg
 				};
 			};
 		}  // namespace pvd
-	}	   // namespace bind
+	}  // namespace bind
 }  // namespace cfg

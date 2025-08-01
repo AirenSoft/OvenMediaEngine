@@ -125,7 +125,7 @@ bool EncoderOPUS::Configure(std::shared_ptr<MediaTrack> context)
 		_kill_flag = false;
 
 		_codec_thread = std::thread(&EncoderOPUS::CodecThread, this);
-		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("ENC-%s-t%d", avcodec_get_name(GetCodecID()), _track->GetId()).CStr());
+		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("ENC-%s-t%d", cmn::GetCodecIdString(GetCodecID()), _track->GetId()).CStr());
 		
 		// Initialize the codec and wait for completion.
 		if(_codec_init_event.Get() == false)
@@ -170,7 +170,7 @@ void EncoderOPUS::CodecThread()
 			OV_ASSERT2(media_frame != nullptr);
 
 			// const MediaFrame *frame = media_frame.get();
-			auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Audio, media_frame);
+			auto av_frame = ffmpeg::compat::ToAVFrame(cmn::MediaType::Audio, media_frame);
 			if (!av_frame)
 			{
 				logte("Could not allocate the frame data");

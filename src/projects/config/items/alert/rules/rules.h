@@ -8,6 +8,7 @@
 //==============================================================================
 #pragma once
 
+#include "egress/egress.h"
 #include "ingress/ingress.h"
 
 namespace cfg
@@ -20,17 +21,20 @@ namespace cfg
 			{
 			protected:
 				Ingress _ingress;
+				Egress _egress;
 
 				bool _internal_queue_congestion = false;
 
 			public:
 				CFG_DECLARE_CONST_REF_GETTER_OF(GetIngress, _ingress)
+				CFG_DECLARE_CONST_REF_GETTER_OF(GetEgress, _egress)
 				CFG_DECLARE_CONST_REF_GETTER_OF(IsInternalQueueCongestion, _internal_queue_congestion)
 
 			protected:
 				void MakeList() override
 				{
 					Register<Optional>("Ingress", &_ingress);
+					Register<Optional>("Egress", &_egress);
 					Register<Optional>("InternalQueueCongestion", &_internal_queue_congestion, nullptr, [=]() -> std::shared_ptr<ConfigError> {
 						_internal_queue_congestion = true;
 						return nullptr;
@@ -38,5 +42,5 @@ namespace cfg
 				}
 			};
 		}  // namespace rule
-	}	   // namespace alrt
+	}  // namespace alrt
 }  // namespace cfg

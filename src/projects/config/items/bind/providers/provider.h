@@ -52,5 +52,5 @@ namespace cfg
 				};
 			};
 		}  // namespace pvd
-	}	   // namespace bind
+	}  // namespace bind
 }  // namespace cfg

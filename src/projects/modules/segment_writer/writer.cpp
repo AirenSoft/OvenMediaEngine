@@ -19,6 +19,7 @@ extern "C"
 
 #include <modules/bitstream/aac/aac_converter.h>
 #include <modules/bitstream/nalu/nal_stream_converter.h>
+#include <modules/ffmpeg/compat.h>
 
 #define OV_LOG_TAG "Writer"
 
@@ -223,7 +224,7 @@ bool Writer::FillCodecParameters(const std::shared_ptr<const Track> &track, AVCo
 			codec_parameters->bit_rate = media_track->GetBitrate();
 			codec_parameters->width = media_track->GetWidth();
 			codec_parameters->height = media_track->GetHeight();
-			codec_parameters->format = media_track->GetColorspace();
+			codec_parameters->format = (int)ffmpeg::compat::ToAVPixelFormat(media_track->GetColorspace());
 
 			std::shared_ptr<const ov::Data> extra_data = nullptr;
 			if (media_track->GetCodecId() == cmn::MediaCodecId::H265)
@@ -378,7 +379,7 @@ bool Writer::AddTrack(const std::shared_ptr<const MediaTrack> &media_track)
 	_track_list.emplace_back(track);
 	_track_map[media_track->GetId()] = track;
 
-	logad("Track %s is added", ::StringFromMediaType(media_track->GetMediaType()).CStr());
+	logad("Track %s is added", cmn::GetMediaTypeString(media_track->GetMediaType()));
 
 	return true;
 }

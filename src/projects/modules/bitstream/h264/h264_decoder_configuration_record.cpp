@@ -129,6 +129,98 @@ bool AVCDecoderConfigurationRecord::Parse(const std::shared_ptr<const ov::Data> 
 	return IsValid();
 }
 
+bool AVCDecoderConfigurationRecord::ParseV2Internal(ov::BitReader &reader)
+{
+	auto data = reader.GetData();
+
+	if (reader.GetRemainingBytes() < MIN_AVCDECODERCONFIGURATIONRECORD_SIZE)
+	{
+		logte("The data inputted is too small for parsing (%d must be bigger than %d)", reader.GetRemainingBytes(), MIN_AVCDECODERCONFIGURATIONRECORD_SIZE);
+		return false;
+	}
+
+	SetVersion(reader.ReadU8());
+	SetProfileIndication(reader.ReadU8());
+	SetCompatibility(reader.ReadU8());
+	SetLevelIndication(_level_indication = reader.ReadU8());
+	_reserved1 = reader.ReadAs<uint8_t>(6);
+	// 2022-11-16 Some encoder does not set the _reserved1 to 0b111111
+	// if (record._reserved1 != 0b111111)
+	// {
+	// 	return false;
+	// }
+	SetLengthMinusOne(reader.ReadAs<uint8_t>(2));
+	_reserved2 = reader.ReadAs<uint8_t>(3);
+	// 2022-11-16 Some encoder does not set the _reserved2 to 0b111
+	// if (record._reserved2 != 0b111)
+	// {
+	// 	return false;
+	// }
+
+	auto num_of_sps = reader.ReadAs<uint8_t>(5);
+	for (uint8_t i = 0; i < num_of_sps; i++)
+	{
+		uint16_t sps_length = reader.ReadU16BE();
+		if (sps_length == 0 || reader.GetRemainingBytes() < sps_length)
+		{
+			return false;
+		}
+		auto sps = reader.ReadBytes(sps_length);
+		if (AddSPS(sps) == false)
+		{
+			return false;
+		}
+	}
+
+	auto num_of_pps = reader.ReadU8();
+	for (uint8_t i = 0; i < num_of_pps; i++)
+	{
+		uint16_t pps_length = reader.ReadU16BE();
+		if (pps_length == 0 || reader.GetRemainingBytes() < pps_length)
+		{
+			return false;
+		}
+
+		auto pps = reader.ReadBytes(pps_length);
+		if (AddPPS(pps) == false)
+		{
+			return false;
+		}
+	}
+
+	if (_profile_indication == 100 || _profile_indication == 110 ||
+		_profile_indication == 122 || _profile_indication == 144)
+	{
+		_reserved3 = reader.ReadAs<uint8_t>(6);
+		SetChromaFormat(reader.ReadAs<uint8_t>(2));
+		_reserved4 = reader.ReadAs<uint8_t>(5);
+		SetBitDepthLumaMinus8(reader.ReadAs<uint8_t>(3));
+		_reserved5 = reader.ReadAs<uint8_t>(5);
+		SetBitDepthChromaMinus8(reader.ReadAs<uint8_t>(3));
+
+		auto num_of_sps_ext = reader.ReadU8();
+		for (uint8_t i = 0; i < num_of_sps_ext; i++)
+		{
+			uint16_t sps_ext_length = reader.ReadU16BE();
+			if (sps_ext_length == 0 || reader.GetRemainingBytes() < sps_ext_length)
+			{
+				return false;
+			}
+
+			auto sps_ext = reader.ReadBytes(sps_ext_length);
+			if (AddSPSExt(sps_ext) == false)
+			{
+				return false;
+			}
+		}
+	}
+
+	// No need to serialize the data
+	SetData(data);
+
+	return IsValid();
+}
+
 bool AVCDecoderConfigurationRecord::Equals(const std::shared_ptr<DecoderConfigurationRecord> &other)  
 {
 	if (other == nullptr)
@@ -236,7 +328,7 @@ uint8_t AVCDecoderConfigurationRecord::NumOfSPSExt() const
 	return _num_of_sps_ext;
 }
 
-std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::GetSPSData(int index) const
+std::shared_ptr<const ov::Data> AVCDecoderConfigurationRecord::GetSPSData(int index) const
 {
 	if (static_cast<int>(_sps_data_list.size()) - 1 < index)
 	{
@@ -246,7 +338,7 @@ std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::GetSPSData(int index) c
 	return _sps_data_list[index];
 }
 
-std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::GetPPSData(int index) const
+std::shared_ptr<const ov::Data> AVCDecoderConfigurationRecord::GetPPSData(int index) const
 {
 	if (static_cast<int>(_pps_data_list.size()) - 1 < index)
 	{
@@ -256,7 +348,7 @@ std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::GetPPSData(int index) c
 	return _pps_data_list[index];
 }
 
-std::shared_ptr<ov::Data> AVCDecoderConfigurationRecord::GetSPSExtData(int index) const
+std::shared_ptr<const ov::Data> AVCDecoderConfigurationRecord::GetSPSExtData(int index) const
 {
 	if (static_cast<int>(_sps_ext_data_list.size()) - 1 < index)
 	{
@@ -410,6 +502,9 @@ std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> AVCDecoderConfigurati
 		auto pps = GetPPSData(i);
 		frag_header.fragmentation_offset.push_back(offset);
 		frag_header.fragmentation_length.push_back(pps->GetLength());
+
+		offset += pps->GetLength();
+
 		data->Append(pps);
 	}
 
@@ -459,7 +554,7 @@ void AVCDecoderConfigurationRecord::SetBitDepthChromaMinus8(uint8_t bit_depth_ch
 	_bit_depth_chroma_minus8 = bit_depth_chroma_minus8;
 }
 
-bool AVCDecoderConfigurationRecord::AddSPS(const std::shared_ptr<ov::Data> &nalu)
+bool AVCDecoderConfigurationRecord::AddSPS(const std::shared_ptr<const ov::Data> &nalu)
 {
 	H264SPS sps;
 	if (H264Parser::ParseSPS(nalu->GetDataAs<uint8_t>(), nalu->GetLength(), sps) == false)
@@ -486,7 +581,7 @@ bool AVCDecoderConfigurationRecord::AddSPS(const std::shared_ptr<ov::Data> &nalu
 	return true;
 }
 
-bool AVCDecoderConfigurationRecord::AddPPS(const std::shared_ptr<ov::Data> &nalu)
+bool AVCDecoderConfigurationRecord::AddPPS(const std::shared_ptr<const ov::Data> &nalu)
 {
 	H264PPS pps;
 	if (H264Parser::ParsePPS(nalu->GetDataAs<uint8_t>(), nalu->GetLength(), pps) == false)
@@ -507,7 +602,7 @@ bool AVCDecoderConfigurationRecord::AddPPS(const std::shared_ptr<ov::Data> &nalu
 	return true;
 }
 
-bool AVCDecoderConfigurationRecord::AddSPSExt(const std::shared_ptr<ov::Data> &sps_ext)
+bool AVCDecoderConfigurationRecord::AddSPSExt(const std::shared_ptr<const ov::Data> &sps_ext)
 {
 	_sps_ext_data_list.push_back(sps_ext);
 	_num_of_sps_ext++;

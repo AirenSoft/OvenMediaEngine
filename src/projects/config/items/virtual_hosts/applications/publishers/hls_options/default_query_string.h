@@ -59,20 +59,20 @@ namespace cfg
 
 				protected:
 					void MakeList() override
-					{	
+					{
 						Register<Optional>({"Query", "queries"}, &_items, nullptr,
-							[=]() -> std::shared_ptr<ConfigError> {
-								for (auto &item : _items)
-								{
-									auto key = item.GetKey();
-									auto value = item.GetValue();
-									_item_map.emplace(key, value);
-								}
-								return nullptr;
-							});
+										   [=]() -> std::shared_ptr<ConfigError> {
+											   for (auto &item : _items)
+											   {
+												   auto key	  = item.GetKey();
+												   auto value = item.GetValue();
+												   _item_map.emplace(key, value);
+											   }
+											   return nullptr;
+										   });
 					}
 				};
 			}  // namespace pub
-		} // namespace app
-	} // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

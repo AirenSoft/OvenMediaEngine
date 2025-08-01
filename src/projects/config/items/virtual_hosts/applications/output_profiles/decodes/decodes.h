@@ -19,7 +19,7 @@ namespace cfg
 				struct Decodes : public Item
 				{
 				public:
-					// Informal Option 
+					// Informal Option
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetThreadCount, _thread_count);
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsOnlyKeyframes, _only_keyframes);
 
@@ -31,9 +31,9 @@ namespace cfg
 					}
 
 					int32_t _thread_count = 2;
-					bool _only_keyframes = false;
+					bool _only_keyframes  = false;
 				};
-			}  // namespace dec
-		}	   // namespace app
-	}		   // namespace vhost
+			}  // namespace oprf
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

@@ -370,7 +370,7 @@ namespace bmff
 		// [ISO/IEC 14496-12 8.9.3] 
 		// name is a null-terminated string in UTF-8 characters which gives a human-readable name for the track
 		// type (for debugging and inspection purposes). 		
-		stream.WriteText(StringFromMediaType(GetMediaTrack()->GetMediaType()), true);
+		stream.WriteText(ov::String(cmn::GetMediaTypeString(GetMediaTrack()->GetMediaType())), true);
 
 		return WriteFullBox(container_stream, "hdlr", *stream.GetData(), 0, 0);
 	}

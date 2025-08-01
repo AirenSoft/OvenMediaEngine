@@ -49,6 +49,8 @@ namespace mon
 		bool OnApplicationCreated(const info::Application &app_info);
 		bool OnApplicationDeleted(const info::Application &app_info);
 		bool OnStreamCreated(const info::Stream &stream_info);
+		bool OnStreamCreationFailed(const info::Stream &stream_info);
+		bool OnStreamPrepared(const info::Stream &stream_info);
 		bool OnStreamDeleted(const info::Stream &stream_info);
 		bool OnStreamUpdated(const info::Stream &stream_info);
 
@@ -58,12 +60,14 @@ namespace mon
 		void OnSessionDisconnected(const info::Stream &stream_info, PublisherType type);
 		void OnSessionsDisconnected(const info::Stream &stream_info, PublisherType type, uint64_t number_of_sessions);
 
+		std::shared_ptr<alrt::Alert> GetAlert();
+
 	private:
 		ov::DelayQueue _timer{"MonLogTimer"};
 		std::shared_ptr<ServerMetrics> _server_metric = nullptr;
 		EventLogger	_logger;
 		EventForwarder _forwarder;
-		alrt::Alert _alert;
+		std::shared_ptr<alrt::Alert> _alert = nullptr;
 		bool _is_analytics_on = false;
 
 	};

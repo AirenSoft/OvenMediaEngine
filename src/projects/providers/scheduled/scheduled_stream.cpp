@@ -120,7 +120,6 @@ namespace pvd
             return true;
         }
 
-        // even if the pointer is changed, but the program is the same, it is not changed
         if (*_current_program == *GetSchedule()->GetCurrentProgram())
         {
             return false;
@@ -194,6 +193,52 @@ namespace pvd
         return false;
     }
 
+	bool ScheduledStream::SetDurationToAllItems(const std::shared_ptr<Schedule::Program> &program)
+	{
+		if (program == nullptr)
+		{
+			return false;
+		}
+
+		int64_t total_duration_ms = 0;
+		for (auto &item : program->items)
+		{
+			if (item == nullptr)
+			{
+				logtw("Scheduled Channel %s/%s: Item is null in program %s", GetApplicationName(), GetName().CStr(), program->name.CStr());
+				continue;
+			}
+
+			if (item->duration_ms > 0)
+			{
+				logti("Scheduled Channel %s/%s: Item %s duration is already set to %lld ms", GetApplicationName(), GetName().CStr(), item->url.CStr(), item->duration_ms);
+				// already set
+				total_duration_ms += item->duration_ms;
+				continue;
+			}
+
+			if (item->file == true)
+			{
+				item->duration_ms = GetFileItemDurationMS(item) - item->start_time_ms_conf;
+				total_duration_ms += item->duration_ms;
+			}
+			else
+			{
+				// Live with no duration means it will be played until the end of the program
+				item->duration_ms = -1;
+				program->unlimited_duration = true;
+			}
+
+			logti("Scheduled Channel %s/%s: Item %s duration set to %lld ms", GetApplicationName(), GetName().CStr(), item->url.CStr(), item->duration_ms);
+		}
+
+		program->total_item_duration_ms = total_duration_ms;
+
+		logti("Total item duration ms : %lld ms", program->total_item_duration_ms);
+
+		return true;
+	}
+
     void ScheduledStream::WorkerThread()
     {
         while (_worker_thread_running)
@@ -224,11 +269,15 @@ namespace pvd
                 PlayFallbackOrWait();
                 continue;
             }
+			else
+			{
+				SetDurationToAllItems(_current_program);
+			}
 
             logti("Scheduled Channel %s/%s: Start %s program", GetApplicationName(), GetName().CStr(), _current_program->name.CStr());
 
             // Items
-            int err_count = 0;
+			bool first_item = true;
             while (_worker_thread_running)
             {
                 guard.lock();
@@ -242,31 +291,31 @@ namespace pvd
                 }
 
                 guard.lock();
-                _current_item = _current_program->GetNextItem();
+				if (first_item == true)
+				{
+					_current_item = _current_program->GetFirstItem();
+				}
+                else
+				{
+					_current_item = _current_program->GetNextItem();
+				}
                 guard.unlock();
+
                 if (_current_item == nullptr)
                 {
                     logti("Scheduled Channel %s/%s: Program ended", GetApplicationName(), GetName().CStr());
                     PlayFallbackOrWait();
                     break;
                 }
+				else
+				{
+					first_item = false;
+				}
                 
-                bool need_break = false;
-                do
+                while (_worker_thread_running)
                 {
                     auto result = PlayItem(_current_item);
-                    if (result == PlaybackResult::PLAY_NEXT_ITEM)
-                    {
-                        // PLAY_NEXT_ITEM
-                        err_count = 0;
-                    }
-                    else if (result == PlaybackResult::PLAY_NEXT_PROGRAM)
-                    {
-                        err_count = 0;
-                        need_break = true;
-                        break;
-                    }
-                    else if (result == PlaybackResult::ERROR)
+                    if (result == PlaybackResult::ERROR)
                     {
                         if (_current_item->fallback_on_err == true)
                         {
@@ -274,29 +323,10 @@ namespace pvd
                             {
                                 continue;
                             }
-
-							need_break = true;
-							break;
-                        }
-                        // Play next item
-                        else
-                        {
-                            _realtime_clock.Pause();
-
-                            // Too many errors
-                            err_count ++;
-                            if (err_count > 3)
-                            {
-                                logte("Scheduled Channel %s/%s: Too many errors. Sleep for %lld milliseconds", GetApplicationName(), GetName().CStr(), 1000);
-                                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-                            }
                         }
                     }
-                } while (0);
 
-                if (need_break == true)
-                {
-                    break;
+					break;
                 }
             }
         }
@@ -352,7 +382,22 @@ namespace pvd
             }
             else if (result == PlaybackResult::ERROR)
             {
-                logtw("Scheduled Channel %s/%s: Failed to play fallback program.", GetApplicationName(), GetName().CStr());
+				logte("Scheduled Channel %s/%s: Playback error in fallback program. Try to play next item", GetApplicationName(), GetName().CStr());
+
+				if (CheckCurrentItemAvailable() == true)
+                {
+                    return PlaybackResult::FAILBACK;
+                }
+
+                _realtime_clock.Pause();
+                _schedule_updated.Wait(1000);
+
+                continue;
+			}
+			else
+			{
+				logtc("Scheduled Channel %s/%s: Unknown playback result %d", GetApplicationName(), GetName().CStr(), static_cast<int>(result));
+				break;
             }
         }
 
@@ -502,12 +547,12 @@ namespace pvd
                     packet_type = cmn::PacketType::RAW;
                     break;
 				default:
-                    logtw("Scheduled Channel : %s/%s: Unsupported codec %s", GetApplicationName(), GetName().CStr(), StringFromMediaCodecId(track->GetCodecId()).CStr());
+                    logtw("Scheduled Channel : %s/%s: Unsupported codec %s", GetApplicationName(), GetName().CStr(), cmn::GetCodecIdString(track->GetCodecId()));
 					::av_packet_unref(&packet);
 					continue;
 			}
 
-			auto media_packet = ffmpeg::Conv::ToMediaPacket(GetMsid(), track->GetId(), &packet, track->GetMediaType(), bitstream_format, packet_type);
+			auto media_packet = ffmpeg::compat::ToMediaPacket(GetMsid(), track->GetId(), &packet, track->GetMediaType(), bitstream_format, packet_type);
 
             // Convert to fixed time base
             auto origin_tb = context->streams[packet.stream_index]->time_base;
@@ -517,11 +562,15 @@ namespace pvd
             auto pts = media_packet->GetPts();
             auto dts = media_packet->GetDts();
             auto duration = media_packet->GetDuration();
-
+			
             // origin timebase to track timebase
-            pts = static_cast<double>(pts) * (static_cast<double>(origin_tb.num) / static_cast<double>(origin_tb.den) * track->GetTimeBase().GetTimescale());
-            dts = static_cast<double>(dts) * (static_cast<double>(origin_tb.num) / static_cast<double>(origin_tb.den) * track->GetTimeBase().GetTimescale());
-            duration = static_cast<double>(duration) * (static_cast<double>(origin_tb.num) / static_cast<double>(origin_tb.den) * track->GetTimeBase().GetTimescale());
+            // pts = static_cast<double>(pts) * (static_cast<double>(origin_tb.num) / static_cast<double>(origin_tb.den) * track->GetTimeBase().GetTimescale());
+            // dts = static_cast<double>(dts) * (static_cast<double>(origin_tb.num) / static_cast<double>(origin_tb.den) * track->GetTimeBase().GetTimescale());
+            // duration = static_cast<double>(duration) * (static_cast<double>(origin_tb.num) / static_cast<double>(origin_tb.den) * track->GetTimeBase().GetTimescale());
+
+			pts = Rescale(pts, track->GetTimeBase().GetDen() * origin_tb.num, origin_tb.den * track->GetTimeBase().GetNum());
+			dts = Rescale(dts, track->GetTimeBase().GetDen() * origin_tb.num, origin_tb.den * track->GetTimeBase().GetNum());
+			duration = Rescale(duration, track->GetTimeBase().GetDen() * origin_tb.num, origin_tb.den * track->GetTimeBase().GetNum());
 
             if (track_first_packet_map.find(track_id) == track_first_packet_map.end())
             {
@@ -532,6 +581,14 @@ namespace pvd
            
             AdjustTimestampByBase(track_id, pts, dts, std::numeric_limits<int64_t>::max(), duration);
 			logtd("Scheduled Channel Send Packet : %s/%s: Track %d, origin dts : %lld, pts %lld, dts %lld, duration %lld, tb %f", GetApplicationName(), GetName().CStr(), track_id, single_file_dts, pts, dts, duration, track->GetTimeBase().GetExpr());
+
+			int64_t dts_us = Rescale(dts, 1000000 * track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen());
+			if (_global_track_offset_us_map.find(track_id) == _global_track_offset_us_map.end())
+			{
+				_global_track_offset_us_map[track_id] = dts_us;
+			}
+
+			int64_t global_zero_based_dts = dts_us - _global_track_offset_us_map[track_id];
 
             media_packet->SetPts(pts);
             media_packet->SetDts(dts);
@@ -588,12 +645,11 @@ namespace pvd
                 }
             }
             
-            double elapsed = _realtime_clock.ElapsedUs();
-            double dts_us = static_cast<double>(dts) * 1000.0 * 1000.0 * track->GetTimeBase().GetExpr();
-            if (elapsed < dts_us)
+            int64_t elapsed = _realtime_clock.ElapsedUs();
+            if (elapsed < global_zero_based_dts)
             {
-                int64_t wait_time = dts_us - elapsed;
-                logtd("Scheduled Channel : %s/%s: Current(%f) Dts(%f) Wait(%lld)", GetApplicationName(), GetName().CStr(), elapsed, dts_us, wait_time);
+                int64_t wait_time = global_zero_based_dts - elapsed;
+                // logti("Scheduled Channel : %s/%s: Track(%d) Current(%lld) DTS(%lld) Wait(%lld)", GetApplicationName(), GetName().CStr(), track_id, elapsed, global_zero_based_dts, wait_time);
                 std::this_thread::sleep_for(std::chrono::microseconds(wait_time));
             }
         }
@@ -657,12 +713,12 @@ namespace pvd
                 continue;
             }
 
-            if (ffmpeg::Conv::ToMediaType(stream->codecpar->codec_type) == cmn::MediaType::Video &&
+            if (ffmpeg::compat::ToMediaType(stream->codecpar->codec_type) == cmn::MediaType::Video &&
                 video_track_needed == true)
             {
                 video_track_needed = false;
             }
-            else if (ffmpeg::Conv::ToMediaType(stream->codecpar->codec_type) == cmn::MediaType::Audio &&
+            else if (ffmpeg::compat::ToMediaType(stream->codecpar->codec_type) == cmn::MediaType::Audio &&
                 audio_track_needed == true)
             {
                 audio_track_needed = false;
@@ -686,6 +742,45 @@ namespace pvd
 
         return true;
     }
+
+	int64_t ScheduledStream::GetFileItemDurationMS(const std::shared_ptr<Schedule::Item> &item) const
+	{
+		if (item == nullptr || item->file == false || item->file_path.IsEmpty())
+		{
+			return 0;
+		}
+
+		AVFormatContext *format_context = nullptr;
+
+		int err = ::avformat_open_input(&format_context, item->file_path.CStr(), nullptr, nullptr);
+		if (err < 0)
+		{
+			char errbuf[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+
+			::av_strerror(err, errbuf, sizeof(errbuf));
+
+			logte("%s/%s: Failed to open %s item. error (%d, %s)", GetApplicationName(), GetName().CStr(), item->file_path.CStr(), err, errbuf);
+			return 0;
+		}
+
+		err = ::avformat_find_stream_info(format_context, nullptr);
+		if (err < 0)
+		{
+			char errbuf[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+
+			::av_strerror(err, errbuf, sizeof(errbuf));
+
+			logte("%s/%s: Failed to find stream info. Error (%d, %s)", GetApplicationName(), GetName().CStr(), item->file_path.CStr(), err, errbuf);
+			::avformat_close_input(&format_context);
+			return 0;
+		}
+
+		int64_t duration_ms = format_context->duration / AV_TIME_BASE * 1000;
+
+		::avformat_close_input(&format_context);
+
+		return duration_ms;
+	}
 
     AVFormatContext *ScheduledStream::PrepareFilePlayback(const std::shared_ptr<Schedule::Item> &item)
     {
@@ -734,10 +829,10 @@ namespace pvd
                 continue;
             }
 
-            if (ffmpeg::Conv::ToMediaType(stream->codecpar->codec_type) == cmn::MediaType::Video &&
+            if (ffmpeg::compat::ToMediaType(stream->codecpar->codec_type) == cmn::MediaType::Video &&
                 video_track_needed == true)
             {
-                auto new_track = ffmpeg::Conv::CreateMediaTrack(stream);
+                auto new_track = ffmpeg::compat::CreateMediaTrack(stream);
                 if (new_track == nullptr)
                 {
                     continue;
@@ -762,10 +857,10 @@ namespace pvd
 
                 video_track_needed = false;
             }
-            else if (ffmpeg::Conv::ToMediaType(stream->codecpar->codec_type) == cmn::MediaType::Audio &&
+            else if (ffmpeg::compat::ToMediaType(stream->codecpar->codec_type) == cmn::MediaType::Audio &&
                 audio_track_needed == true)
             {
-                auto new_track = ffmpeg::Conv::CreateMediaTrack(stream);
+                auto new_track = ffmpeg::compat::CreateMediaTrack(stream);
                 if (new_track == nullptr)
                 {
                     continue;
@@ -806,7 +901,7 @@ namespace pvd
         if (video_track_needed == true || audio_track_needed == true)
         {
             logte("%s/%s: Failed to find %s track(s) from file %s", GetApplicationName(), GetName().CStr(), 
-                video_track_needed&& audio_track_needed == true ? "video and audio" :
+                video_track_needed && audio_track_needed == true ? "video and audio" :
                 video_track_needed == true ? "video" : "audio", item->file_path.CStr());
             ::avformat_close_input(&format_context);
             return nullptr;
@@ -832,7 +927,9 @@ namespace pvd
         // Seek to start position
         if (item->start_time_ms > 0)
         {
-            int64_t seek_target = item->start_time_ms * 1000;
+			// if stream_index is -1, in AV_TIME_BASE units
+			// #define AV_TIME_BASE 1000000
+            int64_t seek_target = item->start_time_ms * 1000; // Convert to microseconds
             int64_t seek_min = 0;
             int64_t seek_max = total_duration_ms * 1000;
 
@@ -842,6 +939,9 @@ namespace pvd
                 logte("%s/%s: Failed to seek to start position %d, err:%d", GetApplicationName(), GetName().CStr(), item->start_time_ms, seek_ret);
             }
         }
+
+		logti("Scheduled Channel : %s/%s: File %s prepared. Start time %lld ms, Duration %lld ms",
+			GetApplicationName(), GetName().CStr(), item->file_path.CStr(), item->start_time_ms, item->duration_ms);
 
         if (UpdateStream() == false)
         {
@@ -878,6 +978,8 @@ namespace pvd
         std::map<int, bool> track_first_packet_map;
         std::map<int, int64_t> track_single_file_dts_offset_map;
         std::map<int, bool> end_of_track_map;
+
+		// bool sent_keyframe = false;
 
         // Play
         while (_worker_thread_running)
@@ -935,18 +1037,25 @@ namespace pvd
             }
 
             // Transcoder will make bogus frame if it can't be decoded
-            // if (sent_keyframe == false && media_packet->GetMediaType() == cmn::MediaType::Video)
+			// if (GetRepresentationType() == StreamRepresentationType::Relay && sent_keyframe == false)
             // {
-            //     if (media_packet->GetFlag() != MediaPacketFlag::Key)
-            //     {
-            //         // Skip until key frame
-            //         continue;
-            //     }
-            //     else
-            //     {
-            //         sent_keyframe = true;
-            //     }
-            // }
+			// 	if (media_packet->GetMediaType() == cmn::MediaType::Video)
+			// 	{
+			// 		if (media_packet->GetFlag() != MediaPacketFlag::Key)
+			// 		{
+			// 			// Skip until key frame
+			// 			continue;
+			// 		}
+			// 		else
+			// 		{
+			// 			sent_keyframe = true;
+			// 		}
+			// 	}
+			// 	else 
+			// 	{
+			// 		continue; // Skip until key frame
+			// 	}
+			// }
 
             auto track = GetTrack(track_id);
             if (track == nullptr)
@@ -963,9 +1072,14 @@ namespace pvd
             auto duration = media_packet->GetDuration();
 
             // origin timebase to track timebase
-            pts = (((double)pts * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
-            dts = (((double)dts * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
-			duration = static_cast<double>(duration) * (static_cast<double>(origin_tb.GetNum()) / static_cast<double>(origin_tb.GetDen()) * track->GetTimeBase().GetTimescale());
+            //pts = (((double)pts * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
+            //dts = (((double)dts * (double)origin_tb.GetNum()) / (double)origin_tb.GetDen()) * track->GetTimeBase().GetTimescale();
+			//duration = static_cast<double>(duration) * (static_cast<double>(origin_tb.GetNum()) / static_cast<double>(origin_tb.GetDen()) * track->GetTimeBase().GetTimescale());
+			
+			// origin timebase to track timebase
+			pts = Rescale(pts, track->GetTimeBase().GetDen() * origin_tb.GetNum(), origin_tb.GetDen() * track->GetTimeBase().GetNum());
+			dts = Rescale(dts, track->GetTimeBase().GetDen() * origin_tb.GetNum(), origin_tb.GetDen() * track->GetTimeBase().GetNum());
+			duration = Rescale(duration, track->GetTimeBase().GetDen() * origin_tb.GetNum(), origin_tb.GetDen() * track->GetTimeBase().GetNum());
 
 			logtd("Scheduled Channel : %s/%s: Track %d, origin dts : %lld, pts %lld, dts %lld, duration %lld, tb %f", GetApplicationName(), GetName().CStr(), track_id, dts, pts, dts, duration, track->GetTimeBase().GetExpr());
 
@@ -977,7 +1091,13 @@ namespace pvd
             auto single_file_dts = dts - track_single_file_dts_offset_map[track_id];
 
             AdjustTimestampByBase(track_id, pts, dts, std::numeric_limits<int64_t>::max(), duration);
-			
+
+			int64_t dts_us = Rescale(dts, 1000000 * track->GetTimeBase().GetNum(), track->GetTimeBase().GetDen());
+			if (_global_track_offset_us_map.find(track_id) == _global_track_offset_us_map.end())
+			{
+				_global_track_offset_us_map[track_id] = dts_us;
+			}
+
 			media_packet->SetMsid(GetMsid());
             media_packet->SetPts(pts);
             media_packet->SetDts(dts);
@@ -1108,7 +1228,8 @@ namespace pvd
     std::shared_ptr<MediaRouterStreamTap> ScheduledStream::PrepareStreamPlayback(const std::shared_ptr<Schedule::Item> &item)
     {
         auto stream_tap = MediaRouterStreamTap::Create();
-		stream_tap->SetNeedPastData(true);
+		// 첫번째 재생인 경우에만 keyframe부터 나가야되니까 그때 적용할까?
+		// stream_tap->SetNeedPastData(true);
 
         auto stream_url = ov::Url::Parse(item->url);
         if (stream_url == nullptr)

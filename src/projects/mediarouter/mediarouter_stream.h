@@ -23,6 +23,7 @@
 #include "mediarouter_alert.h"
 #include "modules/managed_queue/managed_queue.h"
 
+static constexpr int64_t MEDIA_ROUTE_STREAM_MAX_MIRROR_BUFFER_SIZE_MS = 2000; // Maximum size of mirror buffer
 
 class MediaRouteStream : public MediaRouterNormalize, public MediaRouterStats, public MediaRouterEventGenerator, public MediaRouterAlert
 {

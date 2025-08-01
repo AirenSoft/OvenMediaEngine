@@ -140,9 +140,12 @@ namespace pub
 		bool IsAccessControlEnabled(const std::shared_ptr<const ov::Url> &request_url);
 
 		// SignedPolicy is an official feature
+		std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedPolicy>> VerifyBySignedPolicy(const info::Host &host_info, const std::shared_ptr<const ac::RequestInfo> &request_info);
 		std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedPolicy>> VerifyBySignedPolicy(const std::shared_ptr<const ac::RequestInfo> &request_info);
 		// AdmissionWebhooks is an official feature
+		std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> SendCloseAdmissionWebhooks(const info::Host &host_info, const std::shared_ptr<const ac::RequestInfo> &request_info);
 		std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> SendCloseAdmissionWebhooks(const std::shared_ptr<const ac::RequestInfo> &request_info);
+		std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> VerifyByAdmissionWebhooks(const info::Host &host_info, const std::shared_ptr<const ac::RequestInfo> &request_info);
 		std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> VerifyByAdmissionWebhooks(const std::shared_ptr<const ac::RequestInfo> &request_info);
 
 		std::map<info::application_id_t, std::shared_ptr<Application>> 	_applications;

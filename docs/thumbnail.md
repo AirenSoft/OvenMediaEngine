@@ -55,14 +55,9 @@ To publish thumbnails, you need to set up an encoding profile. You can choose **
 </OutputProfiles>
 ```
 
-| Property  | Description                      |
-| --------- | -------------------------------- |
-| Codec     | Specifies the image codec to use |
-| Width     | Width of resolution              |
-| Height    | Height of resolution             |
-| Framerate | Frames per second                |
+<table><thead><tr><th width="290">Property</th><th>Description</th></tr></thead><tbody><tr><td>Codec</td><td>Specifies the image codec to use</td></tr><tr><td>Width</td><td>Width of resolution</td></tr><tr><td>Height</td><td>Height of resolution</td></tr><tr><td>Framerate</td><td>Frames per second</td></tr></tbody></table>
 
-#### Support image codecs
+#### Supported image codecs
 
 <table><thead><tr><th width="149">Encode Type</th><th width="177.33333333333331">Codec</th><th>Codec of Configuration</th></tr></thead><tbody><tr><td>Image</td><td>JPEG</td><td>jpeg</td></tr><tr><td></td><td>PNG</td><td>png</td></tr><tr><td></td><td>WEBP</td><td>webp</td></tr></tbody></table>
 
@@ -93,17 +88,15 @@ When the setting is made for the thumbnail and the stream is input, you can view
 | ------ | -------------------------------------------------------------------------------------------------- |
 | GET    | http(s)://\<ome\_hos&#x74;_>:\<port>/\<app\_name>/\<output\_stream\_name>/thumb.\<jpg\|png\|webp>_ |
 
-
-
-
-
 ## Advanced&#x20;
 
 ### Keyframes Decoding Only
 
 For use cases without video (re)encoding, OME can be set to only decode the keyframes of incoming streams. This is a massive performance increase when all you are using the encoder for is generating thumbnails.
 
+{% hint style="info" %}
 _Supported since OvenmediaEngine version 0.17.2_
+{% endhint %}
 
 ```xml
 <OutputProfiles>

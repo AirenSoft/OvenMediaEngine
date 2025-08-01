@@ -25,6 +25,11 @@ namespace mon
 
 		bool Alert::Start(const std::shared_ptr<const cfg::Server> &server_config)
 		{
+			if (!_stop_thread_flag)
+			{
+				return true;
+			}
+
 			if (server_config == nullptr)
 			{
 				return false;
@@ -47,12 +52,20 @@ namespace mon
 
 			_server_config = server_config;
 
+			_rules_updater = std::make_shared<AlertRulesUpdater>(alert);
+			_rules_updater->UpdateIfNeeded();
+
+			_stop_thread_flag = false;
+			_event_worker_thread = std::thread(&Alert::EventWorkerThread, this);
+
+			pthread_setname_np(_event_worker_thread.native_handle(), "AL");
+
 			_timer.Push(
 				[this](void *paramter) -> ov::DelayQueueAction {
-					DispatchThreadProc();
+					MetricWorkerThread();
 					return ov::DelayQueueAction::Repeat;
 				},
-				100);
+				500);
 			_timer.Start();
 
 			return true;
@@ -60,15 +73,29 @@ namespace mon
 
 		bool Alert::Stop()
 		{
+			if (_stop_thread_flag)
+			{
+				return true;
+			}
+
+			_stop_thread_flag = true;
+
 			_timer.Stop();
+
+			_stream_event_queue.Stop();
+			_queue_event.Stop();
+
+			if (_event_worker_thread.joinable())
+			{
+				_event_worker_thread.join();
+			}
 
 			return true;
 		}
 
-		void Alert::DispatchThreadProc()
+		void Alert::MetricWorkerThread()
 		{
-			auto alert = _server_config->GetAlert();
-			auto rules = alert.GetRules();
+			auto rules = _rules_updater->GetRules();
 
 			NotificationData::Type type;
 			ov::String messages_key;
@@ -86,7 +113,7 @@ namespace mon
 				const auto &queue_metric_list = MonitorInstance->GetServerMetrics()->GetQueueMetricsList();
 				for (const auto &[queue_key, queue_metric] : queue_metric_list)
 				{
-					if (!VerifyQueueCongestionRules(rules, queue_metric, message_list))
+					if (!VerifyQueueCongestionRules(*rules, queue_metric, message_list))
 					{
 						break;
 					}
@@ -118,7 +145,7 @@ namespace mon
 								messages_key = stream_metric->GetUri();
 								new_messages_keys.push_back(messages_key);
 
-								VerifyIngressRules(rules, stream_metric, message_list);
+								VerifyIngressMetricRules(*rules, stream_metric, message_list);
 
 								if (IsAlertNeeded(messages_key, message_list))
 								{
@@ -133,6 +160,38 @@ namespace mon
 			}
 
 			CleanupReleasedMessages(new_messages_keys);
+
+			_rules_updater->UpdateIfNeeded();
+		}
+
+		void Alert::EventWorkerThread()
+		{
+			while (!_stop_thread_flag)
+			{
+				_queue_event.Wait();
+
+				auto stream_event = PopStreamEvent();
+				if (stream_event == nullptr || stream_event->_metric == nullptr)
+				{
+					continue;
+				}
+
+				auto code = stream_event->_code;
+				auto stream_metric = stream_event->_metric;
+				
+				ov::String description = Message::DescriptionFromMessageCode(code);
+				auto message = Message::CreateMessage(code, description);
+	
+				std::vector<std::shared_ptr<Message>> message_list(1, message);
+	
+				auto messages_key = stream_metric->GetUri();
+				auto type = NotificationData::TypeFromMessageCode(code);
+	
+				if (IsAlertNeeded(messages_key, message_list))
+				{
+					SendNotification(type, message_list, stream_metric->GetUri(), stream_metric);
+				}
+			}
 		}
 
 		template <typename T>
@@ -145,6 +204,70 @@ namespace mon
 
 				message_list.push_back(message);
 			}
+		}
+
+		void Alert::SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric)
+		{
+			if (_stop_thread_flag)
+			{
+				return;
+			}
+
+			auto rules = _rules_updater->GetRules();
+
+			if (!VerifyStreamEventRule(*rules, code))
+			{
+				return;
+			}
+
+			_stream_event_queue.Enqueue(std::make_shared<StreamEvent>(code, stream_metric));
+			_queue_event.Notify();
+		}
+
+		bool Alert::VerifyStreamEventRule(const cfg::alrt::rule::Rules &rules, Message::Code code)
+		{
+			if (OV_CHECK_FLAG(ov::ToUnderlyingType(code), Message::INGRESS_CODE_STATUS_MASK))
+			{
+				auto ingress = rules.GetIngress();
+				if (ingress.IsParsed() == false || ingress.IsStreamStatus() == false)
+				{
+					return false;
+				}
+
+				return true;
+			}
+			else if (OV_CHECK_FLAG(ov::ToUnderlyingType(code), Message::EGRESS_CODE_STATUS_MASK))
+			{
+				auto egress = rules.GetEgress();
+				if (egress.IsParsed() == false || egress.IsStreamStatus() == false)
+				{
+					return false;
+				}
+
+				return true;
+			}
+			else if (OV_CHECK_FLAG(ov::ToUnderlyingType(code), Message::EGRESS_CODE_READY_MASK))
+			{
+				auto egress = rules.GetEgress();
+				if (egress.IsParsed() == false)
+				{
+					return false;
+				}
+				if (code == Message::Code::EGRESS_LLHLS_READY && egress.IsLLHLSReady() == false)
+				{
+					return false;
+				}
+				else if (code == Message::Code::EGRESS_HLS_READY && egress.IsHLSReady() == false)
+				{
+					return false;
+				}
+
+				return true;
+			}
+
+			// Invalid message code for stream
+			logtw("Invalid message code: %s", Message::StringFromMessageCode(code).CStr());
+			return false;
 		}
 
 		bool Alert::VerifyQueueCongestionRules(const cfg::alrt::rule::Rules &rules, const std::shared_ptr<QueueMetrics> &queue_metric, std::vector<std::shared_ptr<Message>> &message_list)
@@ -164,7 +287,7 @@ namespace mon
 			return true;
 		}
 
-		void Alert::VerifyIngressRules(const cfg::alrt::rule::Rules &rules, const std::shared_ptr<StreamMetrics> &stream_metric, std::vector<std::shared_ptr<Message>> &message_list)
+		void Alert::VerifyIngressMetricRules(const cfg::alrt::rule::Rules &rules, const std::shared_ptr<StreamMetrics> &stream_metric, std::vector<std::shared_ptr<Message>> &message_list)
 		{
 			auto ingress = rules.GetIngress();
 			if (!ingress.IsParsed())
@@ -377,6 +500,7 @@ namespace mon
 			{
 				// Probably this doesn't happen
 				logte("Could not load Notification");
+				return;
 			}
 
 			if (notification_response->GetStatusCode() != Notification::StatusCode::OK)
@@ -472,6 +596,22 @@ namespace mon
 			}
 
 			return item->second;
+		}
+
+		std::shared_ptr<Alert::StreamEvent> Alert::PopStreamEvent()
+		{
+			if (_stream_event_queue.IsEmpty())
+			{
+				return nullptr;
+			}
+
+			auto message = _stream_event_queue.Dequeue();
+			if (message.has_value())
+			{
+				return message.value();
+			}
+
+			return nullptr;
 		}
 	}  // namespace alrt
 }  // namespace mon

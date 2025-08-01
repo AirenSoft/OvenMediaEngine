@@ -139,7 +139,7 @@ bool FilterRescaler::InitializeFilterDescription()
 					auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(input_module_id, input_device_id);
 					if (hw_device_ctx == nullptr)
 					{
-						logte("Could not get hw device context for %s(%d)", cmn::GetStringFromCodecModuleId(input_module_id), input_device_id);
+						logte("Could not get hw device context for %s(%d)", cmn::GetCodecModuleIdString(input_module_id), input_device_id);
 						return false;
 					}
 					auto constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx, nullptr);
@@ -153,7 +153,7 @@ bool FilterRescaler::InitializeFilterDescription()
 				}
 				break;
 				default:
-					logtw("Unsupported input module: %s", cmn::GetStringFromCodecModuleId(input_module_id));
+					logtw("Unsupported input module: %s", cmn::GetCodecModuleIdString(input_module_id));
 				case cmn::MediaCodecModuleId::X264:
 				case cmn::MediaCodecModuleId::QSV:		// CPU memory using 'gpu_copy=on'
 				case cmn::MediaCodecModuleId::NILOGAN:	// CPU memory using 'out=sw'
@@ -179,7 +179,7 @@ bool FilterRescaler::InitializeFilterDescription()
 				}
 				break;
 				default:
-					logtw("Unsupported input module: %s", cmn::GetStringFromCodecModuleId(input_module_id));
+					logtw("Unsupported input module: %s", cmn::GetCodecModuleIdString(input_module_id));
 				case cmn::MediaCodecModuleId::X264:
 				case cmn::MediaCodecModuleId::QSV:		// CPU memory using 'gpu_copy=on'
 				case cmn::MediaCodecModuleId::NILOGAN:	// CPU memory using 'out=sw'
@@ -231,7 +231,7 @@ bool FilterRescaler::InitializeFilterDescription()
 					auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(input_module_id, input_device_id);
 					if (hw_device_ctx == nullptr)
 					{
-						logte("Could not get hw device context for %s(%d)", cmn::GetStringFromCodecModuleId(input_module_id), input_device_id);
+						logte("Could not get hw device context for %s(%d)", cmn::GetCodecModuleIdString(input_module_id), input_device_id);
 						return false;
 					}
 					auto constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx, nullptr);
@@ -245,7 +245,7 @@ bool FilterRescaler::InitializeFilterDescription()
 				}
 				break;
 				default:
-					logtw("Unsupported input module: %s", cmn::GetStringFromCodecModuleId(input_module_id));
+					logtw("Unsupported input module: %s", cmn::GetCodecModuleIdString(input_module_id));
 				case cmn::MediaCodecModuleId::X264:		// CPU memory
 				case cmn::MediaCodecModuleId::QSV:		// CPU memory using 'gpu_copy=on'
 				case cmn::MediaCodecModuleId::NILOGAN:	// CPU memory using 'out=sw'
@@ -273,7 +273,7 @@ bool FilterRescaler::InitializeFilterDescription()
 		filters.push_back(desc);
 
 		// 4. Pixel Format
-		filters.push_back(ov::String::FormatString("format=%s", ::av_get_pix_fmt_name((AVPixelFormat)_output_track->GetColorspace())));
+		filters.push_back(ov::String::FormatString("format=%s", ::av_get_pix_fmt_name(ffmpeg::compat::ToAVPixelFormat(_output_track->GetColorspace()))));
 	}
 	
 	if(filters.size() == 0)
@@ -294,7 +294,7 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	_output_track = output_track;
 	_src_width = _input_track->GetWidth();
 	_src_height = _input_track->GetHeight();
-	_src_pixfmt = _input_track->GetColorspace();
+	_src_pixfmt = ffmpeg::compat::ToAVPixelFormat(_input_track->GetColorspace());
 
 	// Initialize Constant Framerate & Skip Frames Filter
 	_fps_filter.SetInputTimebase(_input_track->GetTimeBase());
@@ -332,9 +332,9 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	logti("Rescaler parameters. track(#%u -> #%u), module(%s:%d -> %s:%d). desc(src:%s -> output:%s), fps(%.2f -> %.2f), skipFrames(%d)",
 		  _input_track->GetId(),
 		  _output_track->GetId(),
-		  GetStringFromCodecModuleId(_input_track->GetCodecModuleId()),
+		  cmn::GetCodecModuleIdString(_input_track->GetCodecModuleId()),
 		  _input_track->GetCodecDeviceId(),
-		  GetStringFromCodecModuleId(_output_track->GetCodecModuleId()),
+		  cmn::GetCodecModuleIdString(_output_track->GetCodecModuleId()),
 		  _output_track->GetCodecDeviceId(),
 		  _src_args.CStr(),
 		  _filter_desc.CStr(),
@@ -442,7 +442,7 @@ bool FilterRescaler::PushProcess(std::shared_ptr<MediaFrame> media_frame)
 		return false;
 	}
 
-	auto av_frame = ffmpeg::Conv::ToAVFrame(cmn::MediaType::Video, media_frame);
+	auto av_frame = ffmpeg::compat::ToAVFrame(cmn::MediaType::Video, media_frame);
 	if (!av_frame)
 	{
 		logte("Could not allocate the video frame data");
@@ -527,7 +527,7 @@ bool FilterRescaler::PopProcess(bool is_flush)
 		else
 		{
 			_frame->pict_type = AV_PICTURE_TYPE_NONE;
-			auto output_frame = ffmpeg::Conv::ToMediaFrame(cmn::MediaType::Video, _frame);
+			auto output_frame = ffmpeg::compat::ToMediaFrame(cmn::MediaType::Video, _frame);
 			::av_frame_unref(_frame);
 			if (output_frame == nullptr)
 			{
@@ -728,7 +728,7 @@ bool FilterRescaler::SetHWContextToFilterIfNeed()
 			{
 				logtd("set hardware device/frames context to filter. name(%s)", filter->name);
 
-				if (ffmpeg::Conv::SetHwDeviceCtxOfAVFilterContext(filter, hw_device_ctx) == false)
+				if (ffmpeg::compat::SetHwDeviceCtxOfAVFilterContext(filter, hw_device_ctx) == false)
 				{
 					logte("Could not set hw device context for %s", filter->name);
 					return false;
@@ -742,7 +742,7 @@ bool FilterRescaler::SetHWContextToFilterIfNeed()
 						continue;
 					}
 
-					if (ffmpeg::Conv::SetHWFramesCtxOfAVFilterLink(input, hw_device_ctx, _output_track->GetWidth(), _output_track->GetHeight()) == false)
+					if (ffmpeg::compat::SetHWFramesCtxOfAVFilterLink(input, hw_device_ctx, _output_track->GetWidth(), _output_track->GetHeight()) == false)
 					{
 						logte("Could not set hw frames context for %s", filter->name);
 						return false;

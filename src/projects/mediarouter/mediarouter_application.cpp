@@ -525,6 +525,8 @@ bool MediaRouteApplication::NotifyStreamPrepared(std::shared_ptr<MediaRouteStrea
 
 	stream->OnStreamPrepared(true);
 
+	MonitorInstance->OnStreamPrepared(*stream->GetStream());
+
 	return true;
 }
 
@@ -922,7 +924,10 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 
 						for (const auto &item : stream->GetMirrorBuffer())
 						{
-							stream_tap->Push(item->packet);
+							if (item->GetElapsedMilliseconds() < MEDIA_ROUTE_STREAM_MAX_MIRROR_BUFFER_SIZE_MS)
+							{
+								stream_tap->Push(item->packet);
+							}
 						}
 					}
 					else
@@ -1004,7 +1009,10 @@ void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 
 						for (const auto &item : stream->GetMirrorBuffer())
 						{
-							stream_tap->Push(item->packet);
+							if (item->GetElapsedMilliseconds() < MEDIA_ROUTE_STREAM_MAX_MIRROR_BUFFER_SIZE_MS)
+							{
+								stream_tap->Push(item->packet);
+							}
 						}
 					}
 					else

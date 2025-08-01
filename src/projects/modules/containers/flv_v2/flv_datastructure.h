@@ -363,7 +363,7 @@ namespace modules
 			return "(Unknown)";
 		}
 
-		enum class AudioPacketType
+		enum class AudioPacketType : uint8_t
 		{
 			SequenceStart = 0,
 			CodedFrames = 1,

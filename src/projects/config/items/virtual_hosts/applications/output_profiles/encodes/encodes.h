@@ -35,11 +35,7 @@ namespace cfg
 				protected:
 					void MakeList() override
 					{
-						Register<Optional>({"Audio", "audios"}, &_audio_profiles, 
-						[=]() -> std::shared_ptr<ConfigError> {
-							return nullptr;
-						},
-						[=]() -> std::shared_ptr<ConfigError> {
+						Register<Optional>({"Audio", "audios"}, &_audio_profiles, [=]() -> std::shared_ptr<ConfigError> { return nullptr; }, [=]() -> std::shared_ptr<ConfigError> {
 							
 							uint32_t index = 0;
 							for (auto &profile : _audio_profiles)
@@ -51,14 +47,9 @@ namespace cfg
 								}
 							}
 
-							return nullptr;
-						});
+							return nullptr; });
 
-						Register<Optional>({"Video", "videos"}, &_video_profiles, 
-						[=]() -> std::shared_ptr<ConfigError> {
-							return nullptr;
-						},
-						[=]() -> std::shared_ptr<ConfigError> {
+						Register<Optional>({"Video", "videos"}, &_video_profiles, [=]() -> std::shared_ptr<ConfigError> { return nullptr; }, [=]() -> std::shared_ptr<ConfigError> {
 							uint32_t index = 0;
 							for (auto &profile : _video_profiles)
 							{
@@ -69,13 +60,8 @@ namespace cfg
 								}
 							}
 
-							return nullptr;
-						});
-						Register<Optional>({"Image", "images"}, &_image_profiles,
-						[=]() -> std::shared_ptr<ConfigError> {
-							return nullptr;
-						},
-						[=]() -> std::shared_ptr<ConfigError> {
+							return nullptr; });
+						Register<Optional>({"Image", "images"}, &_image_profiles, [=]() -> std::shared_ptr<ConfigError> { return nullptr; }, [=]() -> std::shared_ptr<ConfigError> {
 							uint32_t index = 0;
 							for (auto &profile : _image_profiles)
 							{
@@ -86,11 +72,10 @@ namespace cfg
 								}
 							}
 
-							return nullptr;
-						});
+							return nullptr; });
 					}
 				};
 			}  // namespace oprf
-		} // namespace app
-	} // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

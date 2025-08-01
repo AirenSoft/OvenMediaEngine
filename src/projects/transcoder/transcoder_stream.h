@@ -208,25 +208,25 @@ private:
 	bool PrepareInternal();
 	bool UpdateInternal(const std::shared_ptr<info::Stream> &stream);
 
-	int32_t CreateOutputStreamDynamic();
-	int32_t CreateOutputStreams();
+	size_t CreateOutputStreamDynamic();
+	size_t CreateOutputStreams();
 	std::shared_ptr<info::Stream> CreateOutputStream(const cfg::vhost::app::oprf::OutputProfile &cfg_output_profile);
 
-	int32_t BuildComposite();
+	size_t BuildComposite();
 	// Store information for track mapping by stage
 	void AddComposite(ov::String serialized_profile,
 					  std::shared_ptr<info::Stream> input_stream, std::shared_ptr<MediaTrack> input_track,
 					  std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track);
 	ov::String GetInfoStringComposite();
 
-	int32_t CreateDecoders();
+	size_t CreateDecoders();
 	bool CreateDecoder(MediaTrackId decoder_id, std::shared_ptr<info::Stream> input_stream, std::shared_ptr<MediaTrack> input_track);
 	std::shared_ptr<TranscodeDecoder> GetDecoder(MediaTrackId decoder_id);
 	void SetDecoder(MediaTrackId decoder_id, std::shared_ptr<TranscodeDecoder> decoder);
 	void RemoveDecoders();
 
 
-	int32_t CreateFilters(std::shared_ptr<MediaFrame> buffer);
+	size_t CreateFilters(std::shared_ptr<MediaFrame> buffer);
 	bool CreateFilter(MediaTrackId filter_id, std::shared_ptr<MediaTrack> input_track, std::shared_ptr<MediaTrack> output_track);
 	std::shared_ptr<TranscodeFilter> GetFilter(MediaTrackId filter_id);
 	void SetFilter(MediaTrackId filter_id, std::shared_ptr<TranscodeFilter> filter);
@@ -234,10 +234,12 @@ private:
 
 	std::shared_ptr<MediaTrack> GetInputTrackOfFilter(MediaTrackId decoder_id);
 
-	int32_t CreateEncoders(std::shared_ptr<MediaFrame> buffer);
+	size_t CreateEncoders(std::shared_ptr<MediaFrame> buffer);
 	bool CreateEncoder(MediaTrackId encoder_id, std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track);
-	std::optional<std::pair<std::shared_ptr<TranscodeFilter>, std::shared_ptr<TranscodeEncoder>>> GetEncoder(MediaTrackId encoder_id);
-	void SetEncoder(MediaTrackId encoder_id, std::shared_ptr<TranscodeFilter> filter, std::shared_ptr<TranscodeEncoder> encoder);
+	std::optional<std::pair<std::shared_ptr<TranscodeFilter>, std::shared_ptr<TranscodeEncoder>>> GetEncoderSet(MediaTrackId encoder_id);
+	std::shared_ptr<TranscodeFilter> GetPostFilter(MediaTrackId encoder_id);
+	std::shared_ptr<TranscodeEncoder> GetEncoder(MediaTrackId encoder_id);
+	void SetPostFilterAndEncoder(MediaTrackId encoder_id, std::shared_ptr<TranscodeFilter> filter, std::shared_ptr<TranscodeEncoder> encoder);
 	void RemoveEncoders();
 	void RemoveSpecificEncoders();
 
@@ -260,11 +262,11 @@ private:
 
 	// Step 2: Filter (resample/rescale the decoded frame)
 	void SpreadToFilters(MediaTrackId decoder_id, std::shared_ptr<MediaFrame> frame);
-	TranscodeResult FilterFrame(MediaTrackId track_id, std::shared_ptr<MediaFrame> frame);
-	void OnFilteredFrame(MediaTrackId filter_id, std::shared_ptr<MediaFrame> decoded_frame);
+	TranscodeResult PreFilterFrame(MediaTrackId track_id, std::shared_ptr<MediaFrame> frame);
+	void OnPreFilteredFrame(MediaTrackId filter_id, std::shared_ptr<MediaFrame> decoded_frame);
 
-	TranscodeResult PreEncodeFilterFrame(std::shared_ptr<MediaFrame> frame);
-	void OnPreEncodeFilteredFrame(MediaTrackId filter_id, std::shared_ptr<MediaFrame> decoded_frame);
+	TranscodeResult PostFilterFrame(std::shared_ptr<MediaFrame> frame);
+	void OnPostFilteredFrame(MediaTrackId filter_id, std::shared_ptr<MediaFrame> decoded_frame);
 
 	// Step 3: Encode (Encode the filtered frame to packets)
 	TranscodeResult EncodeFrame(std::shared_ptr<const MediaFrame> frame);

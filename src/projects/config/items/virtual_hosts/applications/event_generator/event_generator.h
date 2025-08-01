@@ -8,7 +8,6 @@
 //==============================================================================
 #pragma once
 
-
 namespace cfg
 {
 	namespace vhost
@@ -20,7 +19,7 @@ namespace cfg
 				struct EventGenerator : public Item
 				{
 				protected:
-					bool _enable = false;
+					bool _enable	 = false;
 					ov::String _path = "";
 
 				public:
@@ -34,7 +33,7 @@ namespace cfg
 						Register<Optional>("Path", &_path);
 					}
 				};
-			}
-		} // namespace app
-	} // namespace vhost
+			}  // namespace eg
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

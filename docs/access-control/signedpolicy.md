@@ -102,12 +102,7 @@ To enable SignedPolicy, you need to add the following `<SignedPolicy>` setting i
 </VirtualHost>
 ```
 
-| Key                   | Description                                                                                                                                                                   |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PolicyQueryKeyName    | The query string key name in the URL pointing to the policy value                                                                                                             |
-| SignatureQueryKeyName | The query string key name in the URL pointing to the signature value                                                                                                          |
-| SecretKey             | The secret key used when encoding with HMAC-SHA1                                                                                                                              |
-| Enables               | List of providers and publishers to enable SignedPolicy. Currently, SignedPolicy supports rtmp among providers, and among publishers, WebRTC, LLHLS, Thumbnail are supported. |
+<table><thead><tr><th width="290">Key</th><th>Description</th></tr></thead><tbody><tr><td>PolicyQueryKeyName</td><td>The query string key name in the URL pointing to the policy value.</td></tr><tr><td>SignatureQueryKeyName</td><td>The query string key name in the URL pointing to the signature value.</td></tr><tr><td>SecretKey</td><td>The secret key used when encoding with HMAC-SHA1.</td></tr><tr><td>Enables</td><td>List of providers and publishers to enable SignedPolicy. Currently, SignedPolicy supports rtmp among providers, and among publishers, WebRTC, LLHLS, Thumbnail are supported.</td></tr></tbody></table>
 
 ## Make SignedPolicy URL with a script
 

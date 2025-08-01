@@ -8,6 +8,8 @@
 //==============================================================================
 #pragma once
 
+#include "./option.h"
+
 namespace cfg
 {
 	namespace cmn
@@ -39,7 +41,7 @@ namespace cfg
 					return std::nullopt;
 				}
 
-				auto key_value = it->second;
+				auto key_value		= it->second;
 				auto key_value_list = key_value.Split(":");
 				if (key_value_list.size() != 2)
 				{
@@ -47,7 +49,7 @@ namespace cfg
 				}
 
 				auto origin_key = key_value_list[0];
-				auto value = key_value_list[1];
+				auto value		= key_value_list[1];
 
 				return std::make_tuple(origin_key, value);
 			}
@@ -57,16 +59,16 @@ namespace cfg
 			{
 				Register<Optional>({"Url", "urls"}, &_url_list);
 				Register<Optional>({"Header", "headers"}, &_custom_headers, nullptr,
-							[=]() -> std::shared_ptr<ConfigError> {
-								for (auto &item : _custom_headers)
-								{
-									auto key = item.GetKey().LowerCaseString();
-									auto key_value = ov::String::FormatString("%s:%s", item.GetKey().CStr(), item.GetValue().CStr());
-									// To keep the original case of the key
-									_custom_header_map.emplace(key, key_value);
-								}
-								return nullptr;
-							});
+								   [=]() -> std::shared_ptr<ConfigError> {
+									   for (auto &item : _custom_headers)
+									   {
+										   auto key		  = item.GetKey().LowerCaseString();
+										   auto key_value = ov::String::FormatString("%s:%s", item.GetKey().CStr(), item.GetValue().CStr());
+										   // To keep the original case of the key
+										   _custom_header_map.emplace(key, key_value);
+									   }
+									   return nullptr;
+								   });
 			}
 		};
 	}  // namespace cmn

@@ -143,7 +143,7 @@ namespace pvd
 		if (StartSignallingServers(server_config, webrtc_bind_config) &&
 			StartICEPorts(server_config, webrtc_bind_config))
 		{
-			return Provider::Start();
+			return PushProvider::Start();
 		}
 
 		logte("An error occurred while initialize %s. Stopping RtcSignallingServer...", GetProviderName());
@@ -168,7 +168,7 @@ namespace pvd
 			_whip_server->Stop();
 		}
 
-		return Provider::Stop();
+		return PushProvider::Stop();
 	}
 
 	bool WebRTCProvider::OnCreateHost(const info::Host &host_info)

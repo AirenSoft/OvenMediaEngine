@@ -87,6 +87,9 @@ void MediaRouterEventGenerator::Init(const std::shared_ptr<info::Stream> &stream
 		_cfg_path = ov::PathManager::GetAppPath("conf") + _cfg_path;
 	}
 
+	// Initialize the last modified time
+	_last_modified_time = 0;
+
 	logtd("Enabled: %s, Path:%s", _cfg_enabled ? "true" : "false", _cfg_path.CStr());
 }
 
@@ -107,11 +110,14 @@ void MediaRouterEventGenerator::Update(
 		auto result = stat(_cfg_path.CStr(), &file_stat);
 		if (result != 0 && errno == ENOENT)
 		{
+			// No configuration file
 			_events.clear();
+			return;
 		}
 
 		if (_last_modified_time == file_stat.st_mtime)
 		{
+			// No change configuration file
 			return;
 		}
 		_last_modified_time = file_stat.st_mtime;

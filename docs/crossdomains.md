@@ -23,14 +23,6 @@ CrossDomain settings are available for HTTP-based APIs, HLS, LLHLS, and Thumnail
 
 You can set it using the `<Url>` element as shown above, and you can use the following values:
 
-| Url Value      | Description                                                   |
-| -------------- | ------------------------------------------------------------- |
-| \*             | Allows requests from all Domains                              |
-| domain         | Allows both HTTP and HTTPS requests from the specified Domain |
-| http://domain  | Allows HTTP requests from the specified Domain                |
-| https://domain | Allows HTTPS requests from the specified Domain               |
+<table><thead><tr><th width="290">Url Value</th><th>Description</th></tr></thead><tbody><tr><td><code>*</code></td><td>Allows requests from all Domains.</td></tr><tr><td>domain</td><td>Allows both HTTP and HTTPS requests from the specified Domain.</td></tr><tr><td>http://domain</td><td>Allows HTTP requests from the specified Domain.</td></tr><tr><td>https://domain</td><td>Allows HTTPS requests from the specified Domain.</td></tr></tbody></table>
 
-You can respond with custom HTTP headers via `<CrossDomains>`. You can use them by adding multiple `<Header><Key>` and `<Header><Value>` as in the example above.
-
-
-
+You can respond with custom HTTP headers via `<CrossDomains>`. You can use them by adding multiple `<Header>/<Key>` and `<Header>/<Value>` as in the example above.

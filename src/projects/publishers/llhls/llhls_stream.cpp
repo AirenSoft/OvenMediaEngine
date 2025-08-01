@@ -142,7 +142,7 @@ bool LLHlsStream::Start()
 				continue;
 			}
 
-			logti("LLHlsStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), StringFromMediaCodecId(track->GetCodecId()).CStr());
+			logti("LLHlsStream(%s/%s) - Ignore unsupported codec(%s)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), cmn::GetCodecIdString(track->GetCodecId()));
 			continue;
 		}
 	}
@@ -1339,7 +1339,7 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 		{
 			cenc_property.scheme = bmff::CencProtectScheme::None;
 			// Not yet support for other codec
-			logte("LLHlsStream::AddPackager() - CENC is not supported for this codec(%s), this track will be excluded from CENC protection", StringFromMediaCodecId(media_track->GetCodecId()).CStr());
+			logte("LLHlsStream::AddPackager() - CENC is not supported for this codec(%s), this track will be excluded from CENC protection", cmn::GetCodecIdString(media_track->GetCodecId()));
 			_cenc_property.scheme = bmff::CencProtectScheme::None;
 		}
 	}
@@ -1447,7 +1447,7 @@ ov::String LLHlsStream::GetChunklistName(const int32_t &track_id) const
 	// chunklist_<track id>_<media type>_<stream key>_llhls.m3u8
 	return ov::String::FormatString("chunklist_%d_%s_%s_llhls.m3u8",
 									track_id,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
+									ov::String(cmn::GetMediaTypeString(GetTrack(track_id)->GetMediaType())).LowerCaseString().CStr(),
 									_stream_key.CStr());
 }
 
@@ -1456,7 +1456,7 @@ ov::String LLHlsStream::GetInitializationSegmentName(const int32_t &track_id) co
 	// init_<track id>_<media type>_<random str>_llhls.m4s
 	return ov::String::FormatString("init_%d_%s_%s_llhls.m4s",
 									track_id,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
+									ov::String(cmn::GetMediaTypeString(GetTrack(track_id)->GetMediaType())).LowerCaseString().CStr(),
 									_stream_key.CStr());
 }
 
@@ -1466,7 +1466,7 @@ ov::String LLHlsStream::GetSegmentName(const int32_t &track_id, const int64_t &s
 	return ov::String::FormatString("seg_%d_%lld_%s_%s_llhls.m4s",
 									track_id,
 									segment_number,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
+									ov::String(cmn::GetMediaTypeString(GetTrack(track_id)->GetMediaType())).LowerCaseString().CStr(),
 									_stream_key.CStr());
 }
 
@@ -1477,7 +1477,7 @@ ov::String LLHlsStream::GetPartialSegmentName(const int32_t &track_id, const int
 									track_id,
 									segment_number,
 									partial_number,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
+									ov::String(cmn::GetMediaTypeString(GetTrack(track_id)->GetMediaType())).LowerCaseString().CStr(),
 									_stream_key.CStr());
 }
 
@@ -1502,7 +1502,7 @@ ov::String LLHlsStream::GetNextPartialSegmentName(const int32_t &track_id, const
 									track_id,
 									next_segment_number,
 									next_partial_number,
-									StringFromMediaType(GetTrack(track_id)->GetMediaType()).LowerCaseString().CStr(),
+									ov::String(cmn::GetMediaTypeString(GetTrack(track_id)->GetMediaType())).LowerCaseString().CStr(),
 									_stream_key.CStr());
 }
 
@@ -1557,6 +1557,11 @@ bool LLHlsStream::CheckPlaylistReady()
 	logti("LLHlsStream(%s/%s) - Ready to play : Part Hold Back = %f", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), final_part_hold_back);
 
 	_playlist_ready = true;
+
+	auto alert = MonitorInstance->GetAlert();
+	auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pub::Stream::GetSharedPtr()));
+
+	alert->SendStreamMessage(mon::alrt::Message::Code::EGRESS_LLHLS_READY, stream_metrics);
 
 	// Dump master playlist if configured
 	DumpMasterPlaylistsOfAllItems();
@@ -1621,15 +1626,15 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 		return;
 	}
 
-	// Milliseconds
-	auto chunk_duration = static_cast<float>(chunk->GetDuration()) / static_cast<float>(1000.0);
+	// Milliseconds to seconds
+	auto chunk_duration = static_cast<double>(chunk->GetDuration()) / static_cast<double>(1000.0);
 
 	// Human readable timestamp
 	if (_first_chunk == true)
 	{
 		_first_chunk = false;
 
-		auto first_chunk_timestamp_ms = (static_cast<float>(chunk->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
+		auto first_chunk_timestamp_ms = (static_cast<double>(chunk->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
 
 		_wallclock_offset_ms = std::chrono::duration_cast<std::chrono::milliseconds>(GetInputStreamPublishedTime().time_since_epoch()).count() - first_chunk_timestamp_ms;
 
@@ -1639,7 +1644,7 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 		}
 	}
 
-	auto start_timestamp = (static_cast<float>(chunk->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
+	auto start_timestamp = (static_cast<double>(chunk->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
 	start_timestamp += _wallclock_offset_ms;
 
 	auto chunk_info = LLHlsChunklist::SegmentInfo(chunk->GetNumber(), start_timestamp, chunk_duration, chunk->GetSize(),

@@ -19,10 +19,10 @@ namespace cfg
 				struct Dvr : public Item
 				{
 				protected:
-					bool _enabled = false;
+					bool _enabled				  = false;
 					ov::String _temp_storage_path = "/tmp/ll_hls_dvr";
-					int _max_duration = 3600;
-					bool _event_playlist_type = false;
+					int _max_duration			  = 3600;
+					bool _event_playlist_type	  = false;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsEnabled, _enabled)
@@ -37,10 +37,9 @@ namespace cfg
 						Register<Optional>("TempStoragePath", &_temp_storage_path);
 						Register<Optional>("MaxDuration", &_max_duration);
 						Register<Optional>("EventPlaylistType", &_event_playlist_type);
-						
 					}
 				};
 			}  // namespace pub
-		} // namespace app
-	} // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

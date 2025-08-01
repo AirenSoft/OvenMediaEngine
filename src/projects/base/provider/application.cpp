@@ -71,6 +71,18 @@ namespace pvd
 		return last_issued_stream_id++;
 	}
 
+	const std::map<uint32_t, std::shared_ptr<Stream>> Application::GetStreams()
+	{
+		std::shared_lock<std::shared_mutex> lock(_streams_guard);
+		
+		if(_streams.empty())
+		{
+			return {};
+		}
+
+		return _streams;
+	}
+
 	const std::shared_ptr<Stream> Application::GetStreamById(uint32_t stream_id)
 	{
 		std::shared_lock<std::shared_mutex> lock(_streams_guard);
@@ -101,10 +113,14 @@ namespace pvd
 
 	bool Application::AddStream(const std::shared_ptr<Stream> &stream)
 	{
+		stream->SetApplication(GetSharedPtrAs<Application>());
+		stream->SetApplicationInfo(GetSharedPtrAs<Application>());
+		
 		// Check if same stream name is exist in MediaRouter(may be created by another provider)
 		if (IsExistingInboundStream(stream->GetName()) == true)
 		{
 			logtw("Reject to add stream : there is already an incoming stream (%s) with the same name in application(%s) ", stream->GetName().CStr(), GetVHostAppName().CStr());
+			MonitorInstance->OnStreamCreationFailed(*stream);
 			return false;
 		}
 
@@ -123,9 +139,6 @@ namespace pvd
 			
 			stream->AddTrack(data_track);
 		}
-
-		stream->SetApplication(GetSharedPtrAs<Application>());
-		stream->SetApplicationInfo(GetSharedPtrAs<Application>());
 
 		// This is not an official feature
 		// OutputProfile(without encoding) is not applied to a specific provider.
@@ -168,6 +181,21 @@ namespace pvd
 				track->SetPublicName(public_name);
 			}
 		}
+
+		// Set Timestamp Mode
+		TimestampMode timestamp_mode = TimestampMode::Auto;
+
+		auto cfg_provider_list = GetConfig().GetProviders().GetProviderList();
+		for (const auto &cfg_provider : cfg_provider_list)
+		{
+			if (cfg_provider->GetType() == GetParentProvider()->GetProviderType())
+			{
+				timestamp_mode = cfg_provider->GetTimestampMode();
+				break;
+			}
+		}
+
+		stream->SetTimestampMode(timestamp_mode);
 
 		{
 			std::lock_guard<std::shared_mutex> streams_lock(_streams_guard);

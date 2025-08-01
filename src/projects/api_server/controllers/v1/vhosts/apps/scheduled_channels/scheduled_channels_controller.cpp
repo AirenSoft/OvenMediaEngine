@@ -8,11 +8,12 @@
 //==============================================================================
 #include "scheduled_channels_controller.h"
 
-#include <orchestrator/orchestrator.h>
-#include "../../../../../api_private.h"
-#include <providers/scheduled/scheduled_stream.h>
-#include <providers/scheduled/schedule.h>
 #include <base/ovlibrary/files.h>
+#include <orchestrator/orchestrator.h>
+#include <providers/scheduled/schedule.h>
+#include <providers/scheduled/scheduled_stream.h>
+
+#include "../../../../../api_private.h"
 
 namespace api
 {
@@ -28,12 +29,12 @@ namespace api
 		};
 
 		ApiResponse ScheduledChannelsController::OnGetChannelList(const std::shared_ptr<http::svr::HttpExchange> &client,
-													   const std::shared_ptr<mon::HostMetrics> &vhost,
-													   const std::shared_ptr<mon::ApplicationMetrics> &app)
+																  const std::shared_ptr<mon::HostMetrics> &vhost,
+																  const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
 			Json::Value response = Json::arrayValue;
 
-			auto stream_list = app->GetStreamMetricsMap();
+			auto stream_list	 = app->GetStreamMetricsMap();
 
 			for (auto &item : stream_list)
 			{
@@ -53,10 +54,9 @@ namespace api
 			return response;
 		}
 
-
 		ApiResponse ScheduledChannelsController::OnCreateChannel(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
-													const std::shared_ptr<mon::HostMetrics> &vhost,
-													const std::shared_ptr<mon::ApplicationMetrics> &app)
+																 const std::shared_ptr<mon::HostMetrics> &vhost,
+																 const std::shared_ptr<mon::ApplicationMetrics> &app)
 		{
 			// Validation check
 			if (!request_body.isObject())
@@ -68,13 +68,13 @@ namespace api
 			auto schedule_config = app->GetConfig().GetProviders().GetScheduledProvider();
 			if (schedule_config.IsParsed() == false)
 			{
-				return {http::StatusCode::Forbidden}; // Not enabled
+				return {http::StatusCode::Forbidden};  // Not enabled
 			}
 
-			auto media_root_dir = ov::GetDirPath(schedule_config.GetMediaRootDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
+			auto media_root_dir		= ov::GetDirPath(schedule_config.GetMediaRootDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
 			auto schedule_files_dir = ov::GetDirPath(schedule_config.GetScheduleFilesDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
 
-			auto [schedule, error] = pvd::Schedule::CreateFromJsonObject(request_body, media_root_dir);
+			auto [schedule, error]	= pvd::Schedule::CreateFromJsonObject(request_body, media_root_dir);
 			if (schedule == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::BadRequest, error);
@@ -82,8 +82,8 @@ namespace api
 
 			// Check if stream is already exists
 			auto stream_name = schedule->GetStream().name;
-			
-			auto stream = GetStream(app, stream_name, nullptr);
+
+			auto stream		 = GetStream(app, stream_name, nullptr);
 			if (stream != nullptr)
 			{
 				throw http::HttpError(http::StatusCode::Conflict, "Stream '%s' already exists", stream_name.CStr());
@@ -91,22 +91,22 @@ namespace api
 
 			auto schedule_file_path = ov::String::FormatString("%s/%s.%s", schedule_files_dir.CStr(), schedule->GetStream().name.CStr(), pvd::ScheduleFileExtension);
 
-			auto error_code = schedule->SaveToXMLFile(schedule_file_path);
+			auto error_code			= schedule->SaveToXMLFile(schedule_file_path);
 			if (error_code != CommonErrorCode::SUCCESS)
 			{
 				throw http::HttpError(http::StatusCode::InternalServerError, "Could not save the schedule file %s", schedule_file_path.CStr());
 			}
-			
+
 			return {http::StatusCode::Created};
 		}
 
 		// PUT /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>
 		ApiResponse ScheduledChannelsController::OnPatchChannel(const std::shared_ptr<http::svr::HttpExchange> &client,
-									const Json::Value &request_body,
-									const std::shared_ptr<mon::HostMetrics> &vhost,
-									const std::shared_ptr<mon::ApplicationMetrics> &app,
-									const std::shared_ptr<mon::StreamMetrics> &stream, 
-									const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
+																const Json::Value &request_body,
+																const std::shared_ptr<mon::HostMetrics> &vhost,
+																const std::shared_ptr<mon::ApplicationMetrics> &app,
+																const std::shared_ptr<mon::StreamMetrics> &stream,
+																const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
 			// Validation check
 			if (!request_body.isObject())
@@ -125,7 +125,7 @@ namespace api
 				throw http::HttpError(http::StatusCode::BadRequest, "Stream object could not be patched");
 			}
 
-			// Get Real ScheduledStream 
+			// Get Real ScheduledStream
 			auto provider = std::dynamic_pointer_cast<pvd::Provider>(ocst::Orchestrator::GetInstance()->GetProviderFromType(ProviderType::Scheduled));
 			if (provider == nullptr)
 			{
@@ -142,12 +142,12 @@ namespace api
 			auto schedule_config = app->GetConfig().GetProviders().GetScheduledProvider();
 			if (schedule_config.IsParsed() == false)
 			{
-				return {http::StatusCode::Forbidden}; // Not enabled
+				return {http::StatusCode::Forbidden};  // Not enabled
 			}
 
 			auto schedule_files_dir = ov::GetDirPath(schedule_config.GetScheduleFilesDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
 
-			auto old_schedule = scheduled_stream->PeekSchedule();
+			auto old_schedule		= scheduled_stream->PeekSchedule();
 			if (old_schedule == nullptr)
 			{
 				throw http::HttpError(http::StatusCode::NotFound, "Could not get the schedule");
@@ -167,19 +167,19 @@ namespace api
 
 			auto schedule_file_path = ov::String::FormatString("%s/%s.%s", schedule_files_dir.CStr(), new_schedule->GetStream().name.CStr(), pvd::ScheduleFileExtension);
 
-			auto error_code = new_schedule->SaveToXMLFile(schedule_file_path);
+			auto error_code			= new_schedule->SaveToXMLFile(schedule_file_path);
 			if (error_code != CommonErrorCode::SUCCESS)
 			{
 				throw http::HttpError(http::StatusCode::InternalServerError, "Could not save the schedule file %s", schedule_file_path.CStr());
 			}
-			
+
 			return {http::StatusCode::Created};
 		}
-		
+
 		ApiResponse ScheduledChannelsController::OnGetChannel(const std::shared_ptr<http::svr::HttpExchange> &client,
-												   const std::shared_ptr<mon::HostMetrics> &vhost,
-												   const std::shared_ptr<mon::ApplicationMetrics> &app,
-												   const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
+															  const std::shared_ptr<mon::HostMetrics> &vhost,
+															  const std::shared_ptr<mon::ApplicationMetrics> &app,
+															  const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
 			// Get Real ScheduledStream
 			auto provider = std::dynamic_pointer_cast<pvd::Provider>(ocst::Orchestrator::GetInstance()->GetProviderFromType(ProviderType::Scheduled));
@@ -217,37 +217,37 @@ namespace api
 			{
 				if (curr_program != nullptr)
 				{
-					curr_program_json["name"] = curr_program->name.CStr();
+					curr_program_json["name"]	   = curr_program->name.CStr();
 					curr_program_json["scheduled"] = ov::Converter::ToISO8601String(curr_program->scheduled_time).CStr();
-					curr_program_json["end"] = ov::Converter::ToISO8601String(curr_program->end_time).CStr();
-					curr_program_json["duration"] = curr_program->duration_ms;
-					curr_program_json["repeat"] = curr_program->repeat;
+					curr_program_json["end"]	   = ov::Converter::ToISO8601String(curr_program->end_time).CStr();
+					curr_program_json["duration"]  = curr_program->duration_ms;
+					curr_program_json["repeat"]	   = curr_program->repeat;
 
 					if (curr_item != nullptr)
 					{
 						curr_program_json["state"] = "onair";
 
 						Json::Value item_json;
-						item_json["url"] = curr_item->url.CStr();
-						item_json["duration"] = curr_item->duration_ms;
-						item_json["start"] = curr_item->start_time_ms;
+						item_json["url"]				 = curr_item->url.CStr();
+						item_json["duration"]			 = curr_item->duration_ms_conf;
+						item_json["start"]				 = curr_item->start_time_ms_conf;
 
-						item_json["currentPosition"] = curr_item_pos;
+						item_json["currentPosition"]	 = curr_item_pos;
 
 						curr_program_json["currentItem"] = item_json;
 					}
 				}
 			}
-			
+
 			response["currentProgram"] = curr_program_json;
 
 			return response;
 		}
 
 		ApiResponse ScheduledChannelsController::OnDeleteChannel(const std::shared_ptr<http::svr::HttpExchange> &client,
-													  const std::shared_ptr<mon::HostMetrics> &vhost,
-													  const std::shared_ptr<mon::ApplicationMetrics> &app,
-													  const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
+																 const std::shared_ptr<mon::HostMetrics> &vhost,
+																 const std::shared_ptr<mon::ApplicationMetrics> &app,
+																 const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
 			if (stream->GetSourceType() != StreamSourceType::Scheduled)
 			{
@@ -258,10 +258,10 @@ namespace api
 			auto schedule_config = app->GetConfig().GetProviders().GetScheduledProvider();
 			if (schedule_config.IsParsed() == false)
 			{
-				return {http::StatusCode::Forbidden}; // Not enabled
+				return {http::StatusCode::Forbidden};  // Not enabled
 			}
 
-			auto media_root_dir = ov::GetDirPath(schedule_config.GetMediaRootDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
+			auto media_root_dir		= ov::GetDirPath(schedule_config.GetMediaRootDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
 			auto schedule_files_dir = ov::GetDirPath(schedule_config.GetScheduleFilesDir(), cfg::ConfigManager::GetInstance()->GetConfigPath());
 
 			auto schedule_file_path = ov::String::FormatString("%s/%s.%s", schedule_files_dir.CStr(), stream->GetName().CStr(), pvd::ScheduleFileExtension);

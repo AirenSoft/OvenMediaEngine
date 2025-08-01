@@ -39,9 +39,12 @@ namespace pvd
 		// Get all applications
 		std::map<info::application_id_t, std::shared_ptr<Application>> GetApplications();
 
+		std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedPolicy>> VerifyBySignedPolicy(const info::Host &host_info, const std::shared_ptr<const ac::RequestInfo> &request_info);
 		std::tuple<AccessController::VerificationResult, std::shared_ptr<const SignedPolicy>> VerifyBySignedPolicy(const std::shared_ptr<const ac::RequestInfo> &request_info);
 
+		std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> SendCloseAdmissionWebhooks(const info::Host &host_info, const std::shared_ptr<const ac::RequestInfo> &request_info);
 		std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> SendCloseAdmissionWebhooks(const std::shared_ptr<const ac::RequestInfo> &request_info);
+		std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> VerifyByAdmissionWebhooks(const info::Host &host_info, const std::shared_ptr<const ac::RequestInfo> &request_info);
 		std::tuple<AccessController::VerificationResult, std::shared_ptr<const AdmissionWebhooks>> VerifyByAdmissionWebhooks(const std::shared_ptr<const ac::RequestInfo> &request_info);
 
 	protected:

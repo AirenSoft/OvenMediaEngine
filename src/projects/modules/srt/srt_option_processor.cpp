@@ -1,6 +1,6 @@
 //==============================================================================
 //
-//  SRT Option Processor
+//  OvenMediaEngine
 //
 //  Created by Hyunjun Jang
 //  Copyright (c) 2023 AirenSoft. All rights reserved.

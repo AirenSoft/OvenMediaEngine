@@ -57,15 +57,10 @@ namespace pvd
 		auto global_unused_stream_timeout_ms = GetHostInfo().GetOrigins().GetProperties().GetUnusedStreamDeletionTimeout();
 		auto global_failback_timeout_ms = GetHostInfo().GetOrigins().GetProperties().GetStreamFailbackTimeout();	
 		
-		while(!_stop_collector_thread_flag)
+		constexpr int64_t idle_wait_time_ms = 100; 
+		while (!_stop_collector_thread_flag)
 		{
-			// TODO (Getroot): If there is no stream, use semaphore to wait until the stream is added.
-			std::shared_lock<std::shared_mutex> lock(_streams_guard, std::defer_lock);
-			lock.lock();
-			// Copy to prevent performance degradation due to mutex lock in loop
-			auto streams = _streams;
-			lock.unlock();
-
+			auto streams = GetStreams();
 			for (auto const &x : streams)
 			{
 				auto stream = std::dynamic_pointer_cast<PullStream>(x.second);
@@ -124,7 +119,7 @@ namespace pvd
 								logtd("%s/%s(%u) Attempt to connect to verify that the primary stream is available. url(%s)", stream->GetApplicationInfo().GetVHostAppName().CStr(), stream->GetName().CStr(), stream->GetId(), failback_url.CStr());
 							
 								auto ping_props = std::make_shared<pvd::PullStreamProperties>();
-								ping_props->SetRetryConnectCount(0);
+								ping_props->SetRetryCount(0);
 								auto ping = CreateStream(0, "_ping_for_failback_", {failback_url}, ping_props);
 								if (ping)
 								{
@@ -175,7 +170,7 @@ namespace pvd
 				}
 			}
 
-			sleep(1);
+			std::this_thread::sleep_for(std::chrono::milliseconds(idle_wait_time_ms));
 		}
 	}
 
@@ -246,6 +241,12 @@ namespace pvd
 
 	std::shared_ptr<pvd::Stream> PullApplication::CreateStream(const ov::String &stream_name, const std::vector<ov::String> &url_list, const std::shared_ptr<pvd::PullStreamProperties> &properties)
 	{
+		auto global_retry_count = GetHostInfo().GetOrigins().GetProperties().GetRetryCount();
+		if (properties->GetRetryCount() <= 0)
+		{
+			properties->SetRetryCount(global_retry_count);
+		}
+
 		auto stream = CreateStream(pvd::Application::IssueUniqueStreamId(), stream_name, url_list, properties);
 		if(stream == nullptr)
 		{
@@ -294,8 +295,6 @@ namespace pvd
 			// Something wrong
 			return false;
 		}
-
-		pull_stream->SetMsid(pull_stream->GetMsid() + 1);
 
 		NotifyStreamUpdated(pull_stream);
 

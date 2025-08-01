@@ -339,7 +339,7 @@ std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 	for (auto it = _mirror_buffer.begin(); it != _mirror_buffer.end();)
 	{
 		auto item = *it;
-		if (item->GetElapsedMilliseconds() > 3000)
+		if (item->GetElapsedMilliseconds() > MEDIA_ROUTE_STREAM_MAX_MIRROR_BUFFER_SIZE_MS)
 		{
 			it = _mirror_buffer.erase(it);
 		}

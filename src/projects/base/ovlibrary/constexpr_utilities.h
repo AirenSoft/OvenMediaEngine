@@ -30,7 +30,7 @@ namespace ov
 		}
 		static_assert(StrLen("Sample") == 6, "StrLen() doesn't work properly");
 
-		constexpr bool StrCmp(const char *str1, const char *str2)
+		constexpr int StrCmp(const char *str1, const char *str2)
 		{
 			while (*str1 && (*str1 == *str2))
 			{
@@ -38,10 +38,16 @@ namespace ov
 				++str2;
 			}
 
-			return *str1 == *str2;
+			if (*str1 == *str2)
+			{
+				return 0;
+			}
+
+			return (*str1 < *str2) ? -1 : 1;
 		}
-		static_assert(StrCmp("Sample", "Sample") == true, "StrCmp() doesn't work properly");
-		static_assert(StrCmp("Sample", "SAMPLE") == false, "StrCmp() doesn't work properly");
+		static_assert(StrCmp("Sample", "Sample") == 0, "StrCmp() doesn't work properly");
+		static_assert(StrCmp("Sample", "SAMPLE") == 1, "StrCmp() doesn't work properly");
+		static_assert(StrCmp("SAMPLE", "Sample") == -1, "StrCmp() doesn't work properly");
 
 		constexpr bool StrNCmp(const char *str1, const char *str2, size_t n)
 		{
@@ -59,16 +65,38 @@ namespace ov
 
 		constexpr const char *StrStr(const char *haystack, const char *needle)
 		{
-			while (*haystack != '\0')
+			if (*needle == '\0')
 			{
-				const auto result = StrCmp(haystack, needle);
+				// Empty needle matches at the start of haystack
+				return haystack;
+			}
 
-				if (result)
+			const char *p1 = haystack;
+			const char *p2 = needle;
+
+			while (*p1 != '\0')
+			{
+				if (*p1 == *p2)
 				{
-					return haystack;
+					const char *start = p1;
+
+					while (*p2 != '\0' && *p1 == *p2)
+					{
+						++p1;
+						++p2;
+					}
+
+					if (*p2 == '\0')
+					{
+						// Found the needle
+						return start;
+					}
+
+					// Reset p2 to the start of needle
+					p2 = needle;
 				}
 
-				++haystack;
+				++p1;
 			}
 
 			return nullptr;
@@ -79,7 +107,8 @@ namespace ov
 			// This cast is valid because haystack is a non-const pointer
 			return const_cast<char *>(StrStr(haystack, needle));
 		}
-		static_assert(StrStr("Sample", "le") != nullptr, "StrStr() doesn't work properly");
+		static_assert(StrCmp(StrStr("Sample", "le"), "le") == 0, "StrStr() doesn't work properly");
+		static_assert(StrCmp(StrStr("Sample", "Sa"), "Sample") == 0, "StrStr() doesn't work properly");
 		static_assert(StrStr("Sample", "LE") == nullptr, "StrStr() doesn't work properly");
 
 		constexpr off_t IndexOf(const char *str, const char *sub_str, off_t start_position = 0)

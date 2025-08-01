@@ -8,13 +8,13 @@
 //==============================================================================
 #pragma once
 
-#include "rendition_template_types.h"
-
 #include <base/info/media_track.h>
 #include <base/mediarouter/media_type.h>
 
+#include "rendition_template_types.h"
+
 // <VideoTemplate>
-// 	<!-- If you receive 3 Video Tracks from WebRTC Simulcast, 
+// 	<!-- If you receive 3 Video Tracks from WebRTC Simulcast,
 // 		3 video tracks with the same name bypass_video are created. -->
 // 	<VariantName>bypass_video</VariantName>
 // 	<BypassedTrack>true</BypassedTrack>
@@ -40,17 +40,17 @@ namespace cfg
 				{
 				protected:
 					ov::String _variant_name;
-					ov::String _encoding_type = "all"; // all, encoded, bypassed
+					ov::String _encoding_type		 = "all";  // all, encoded, bypassed
 					EncodingType _encoding_type_enum = EncodingType::All;
-					int _index_hint = -1;
-					int _max_width = -1;
-					int _min_width = -1;
-					int _max_height = -1;
-					int _min_height = -1;
-					int _max_framerate = -1;
-					int _min_framerate = -1;
-					int _max_bitrate = -1;
-					int _min_bitrate = -1;
+					int _index_hint					 = -1;
+					int _max_width					 = -1;
+					int _min_width					 = -1;
+					int _max_height					 = -1;
+					int _min_height					 = -1;
+					int _max_framerate				 = -1;
+					int _min_framerate				 = -1;
+					int _max_bitrate				 = -1;
+					int _min_bitrate				 = -1;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetVariantName, _variant_name);
@@ -69,7 +69,8 @@ namespace cfg
 					{
 						if (track->GetMediaType() != ::cmn::MediaType::Video)
 						{
-							return false;;
+							return false;
+							;
 						}
 
 						if (_variant_name.IsEmpty() == false && track->GetVariantName() != _variant_name)
@@ -134,29 +135,28 @@ namespace cfg
 
 						return true;
 					}
-					
+
 				protected:
 					void MakeList() override
 					{
 						Register<Optional>({"VariantName", "variant_name"}, &_variant_name);
 						Register<Optional>({"EncodingType", "encoding_type"}, &_encoding_type, nullptr,
-							[=]() -> std::shared_ptr<ConfigError> {
-								if (_encoding_type != "all" && _encoding_type != "encoded" && _encoding_type != "bypassed")
-								{
-									return CreateConfigErrorPtr("Invalid EncodingType: %s (all, encoded, bypassed)", _encoding_type.CStr());
-								}
+										   [=]() -> std::shared_ptr<ConfigError> {
+											   if (_encoding_type != "all" && _encoding_type != "encoded" && _encoding_type != "bypassed")
+											   {
+												   return CreateConfigErrorPtr("Invalid EncodingType: %s (all, encoded, bypassed)", _encoding_type.CStr());
+											   }
 
-								if (_encoding_type.LowerCaseString() == "encoded")
-								{
-									_encoding_type_enum = EncodingType::Encoded;
-								}
-								else if (_encoding_type.LowerCaseString() == "bypassed")
-								{
-									_encoding_type_enum = EncodingType::Bypassed;
-								}
-								return nullptr;
-							}
-						);
+											   if (_encoding_type.LowerCaseString() == "encoded")
+											   {
+												   _encoding_type_enum = EncodingType::Encoded;
+											   }
+											   else if (_encoding_type.LowerCaseString() == "bypassed")
+											   {
+												   _encoding_type_enum = EncodingType::Bypassed;
+											   }
+											   return nullptr;
+										   });
 						Register<Optional>({"MaxWidth", "max_width"}, &_max_width);
 						Register<Optional>({"MinWidth", "min_width"}, &_min_width);
 						Register<Optional>({"MaxHeight", "max_height"}, &_max_height);
@@ -168,6 +168,6 @@ namespace cfg
 					}
 				};
 			}  // namespace oprf
-		} // namespace app
-	} // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

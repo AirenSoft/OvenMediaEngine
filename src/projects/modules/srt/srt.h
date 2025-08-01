@@ -9,3 +9,4 @@
 #pragma once
 
 #include "./srt_option_processor.h"
+#include "./srt_stream_url_resolver.h"

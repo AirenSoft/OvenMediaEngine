@@ -14,20 +14,7 @@ namespace pvd
 	class PullStreamProperties
 	{
 	public:
-		PullStreamProperties()
-			: _persistent(false), _failback(false), _relay(false), _ignore_rtcp_sr_timestamp(false), _failback_timeout(-1), _no_input_failover_timeout(-1), _unused_stream_deletion_timeout(-1), _retry_connect_count(2) {};
-
-		PullStreamProperties(bool ignore_rtcp_sr_timestamp, bool persistent, bool failback, bool relay, int32_t failback_timeout = -1, int32_t no_input_failover_timeout = -1, int32_t unused_stream_deletion_timeout = -1, int32_t retry_connect_count = 2)
-		{
-			_ignore_rtcp_sr_timestamp = ignore_rtcp_sr_timestamp;
-			_persistent = persistent;
-			_failback = failback;
-			_relay = relay;
-			_failback_timeout = failback_timeout;
-			_no_input_failover_timeout = no_input_failover_timeout;
-			_unused_stream_deletion_timeout = unused_stream_deletion_timeout;
-			_retry_connect_count = retry_connect_count;
-		};
+		PullStreamProperties(){};
 
 		bool IsPersistent()
 		{
@@ -94,14 +81,14 @@ namespace pvd
 			return _unused_stream_deletion_timeout;
 		}
 
-		int32_t GetRetryConnectCount() 
+		int32_t GetRetryCount() 
 		{
-			return _retry_connect_count;
+			return _retry_count;
 		}
 
-		void SetRetryConnectCount(int32_t retry_connect_count) 
+		void SetRetryCount(int32_t retry_connect_count) 
 		{
-			_retry_connect_count = retry_connect_count;
+			_retry_count = retry_connect_count;
 		}
 
 		int32_t GetNoInputFailoverTimeoutMSec()
@@ -146,7 +133,7 @@ namespace pvd
 		int32_t _failback_timeout = -1;
 		int32_t _no_input_failover_timeout = -1;
 		int32_t _unused_stream_deletion_timeout = -1;
-		int32_t _retry_connect_count = 2;
+		int32_t _retry_count = -1; 
 
 	public:
 		// The last checked time is saved for failback.

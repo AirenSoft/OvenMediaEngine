@@ -10,11 +10,11 @@
 
 #include <fstream>
 
+#include "alert/alert.h"
 #include "analytics/analytics.h"
 #include "base/ovlibrary/uuid.h"
 #include "bind/bind.h"
 #include "managers/managers.h"
-#include "alert/alert.h"
 #include "modules/modules.h"
 #include "virtual_hosts/virtual_hosts.h"
 

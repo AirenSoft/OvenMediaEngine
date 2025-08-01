@@ -7,13 +7,13 @@
 //
 //==============================================================================
 #include "vhosts_controller.h"
-#include "vhost_actions_controller.h"
 
 #include <config/config.h>
 
 #include "../../../api_private.h"
 #include "../../../api_server.h"
 #include "apps/apps_controller.h"
+#include "vhost_actions_controller.h"
 
 namespace api
 {
@@ -55,14 +55,14 @@ namespace api
 
 					_server->CreateVHost(vhost_config);
 
-					auto vhost = GetVirtualHost(vhost_config.GetName());
+					auto vhost		= GetVirtualHost(vhost_config.GetName());
 					auto vhost_json = vhost->ToJson();
 					vhost_json.removeMember("applications");
 
 					Json::Value response;
 					response["statusCode"] = static_cast<int>(http::StatusCode::OK);
-					response["message"] = StringFromStatusCode(http::StatusCode::OK);
-					response["response"] = vhost_json;
+					response["message"]	   = StringFromStatusCode(http::StatusCode::OK);
+					response["response"]   = vhost_json;
 
 					status_codes.AddStatusCode(http::StatusCode::OK);
 					response_value.append(std::move(response));
@@ -107,7 +107,7 @@ namespace api
 													const std::shared_ptr<mon::HostMetrics> &vhost)
 		{
 			ThrowIfVirtualIsReadOnly(*(vhost.get()));
-			
+
 			_server->DeleteVHost(*(vhost.get()));
 
 			return {};

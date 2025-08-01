@@ -241,3 +241,9 @@ std::shared_ptr<mpegts::Segment> HlsMediaPlaylist::GetLatestSegment() const
 
 	return _segments.rbegin()->second;
 }
+
+std::size_t HlsMediaPlaylist::GetSegmentCount() const
+{
+	std::shared_lock<std::shared_mutex> lock(_segments_mutex);
+	return _segments.size();
+}

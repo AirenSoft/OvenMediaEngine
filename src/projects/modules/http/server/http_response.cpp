@@ -385,6 +385,8 @@ namespace http
 			}
 			else
 			{
+				std::lock_guard<std::mutex> lock(_tls_data->GetSequentialSendMutex());
+
 				if (_tls_data->Encrypt(data, &send_data) == false)
 				{
 					logte("Failed to encrypt data: %s", _client_socket->ToString().CStr());
@@ -396,6 +398,10 @@ namespace http
 					// There is no data to send
 					return true;
 				}
+
+				auto result = _client_socket->Send(send_data);
+
+				return result;
 			}
 
 			return _client_socket->Send(send_data);

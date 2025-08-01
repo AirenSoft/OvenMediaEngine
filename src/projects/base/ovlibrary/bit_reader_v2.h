@@ -196,11 +196,11 @@ namespace ov
 
 			if constexpr (std::is_enum_v<T>)
 			{
-				return static_cast<T>(BitReaderBEToHost<UnderylingType<T>>(static_cast<UnderylingType<T>>(value)));
+				return static_cast<T>(BitReaderBEToHost(static_cast<UnderylingType<T>>(value)));
 			}
 			else
 			{
-				return BitReaderBEToHost(value);
+				return static_cast<T>(BitReaderBEToHost(value));
 			}
 		}
 
@@ -213,11 +213,11 @@ namespace ov
 
 			if constexpr (std::is_enum_v<T>)
 			{
-				return static_cast<T>(BitReaderLEToHost<UnderylingType<T>>(static_cast<UnderylingType<T>>(value)));
+				return static_cast<T>(BitReaderLEToHost(static_cast<UnderylingType<T>>(value)));
 			}
 			else
 			{
-				return BitReaderLEToHost(value);
+				return static_cast<T>(BitReaderLEToHost(value));
 			}
 		}
 

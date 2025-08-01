@@ -18,15 +18,21 @@ public:
 	{
 	}
 
-	AVCodecID GetCodecID() const noexcept override
+	cmn::MediaCodecId GetCodecID() const noexcept override
 	{
-		return AV_CODEC_ID_H264;
+		return cmn::MediaCodecId::H264;
 	}
 
-	int GetSupportedFormat() const noexcept override 
+	cmn::AudioSample::Format GetSupportAudioFormat() const noexcept override
 	{
-		return AV_PIX_FMT_CUDA;
+		return cmn::AudioSample::Format::None;
 	}
+
+	cmn::VideoPixelFormatId GetSupportVideoFormat() const noexcept override 
+	{
+		return cmn::VideoPixelFormatId::CUDA;
+	}
+
 
 	cmn::BitstreamFormat GetBitstreamFormat() const noexcept override
 	{

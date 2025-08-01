@@ -37,7 +37,7 @@ namespace api
 			std::vector<std::shared_ptr<mon::StreamMetrics>> output_streams;
 
 			auto orchestrator = ocst::Orchestrator::GetInstance();
-			auto source_url = client->GetRequest()->GetParsedUri();
+			auto source_url	  = client->GetRequest()->GetParsedUri();
 
 			if (request_body.isObject() == false)
 			{
@@ -45,8 +45,8 @@ namespace api
 			}
 
 			auto jv_stream_name = request_body["name"];
-			auto jv_urls = request_body["urls"];
-			auto jv_properties = request_body["properties"];
+			auto jv_urls		= request_body["urls"];
+			auto jv_properties	= request_body["properties"];
 
 			if (jv_stream_name.isNull() || jv_stream_name.isString() == false ||
 				jv_urls.isNull() || jv_urls.isArray() == false)
@@ -100,6 +100,15 @@ namespace api
 						{
 							properties->EnableIgnoreRtcpSRTimestamp(jv_properties["ignoreRtcpSRTimestamp"].asBool());
 						}
+
+						if (jv_properties["retryCount"].isNull() == false && jv_properties["retryCount"].isInt())
+						{
+							properties->SetRetryCount(jv_properties["retryCount"].asInt());
+						}
+						else
+						{
+							properties->SetRetryCount(1); 
+						}
 					}
 
 					logti("Request to pull stream: %s/%s - persistent(%s) noInputFailoverTimeoutMs(%d) unusedStreamDeletionTimeoutMs(%d) ignoreRtcpSRTimestamp(%s)", app->GetVHostAppName().CStr(), stream_name.CStr(), properties->IsPersistent() ? "true" : "false", properties->GetNoInputFailoverTimeout(), properties->GetUnusedStreamDeletionTimeout(), properties->IsRtcpSRTimestampIgnored() ? "true" : "false");
@@ -145,7 +154,7 @@ namespace api
 		{
 			Json::Value response = Json::arrayValue;
 
-			auto stream_list = app->GetStreamMetricsMap();
+			auto stream_list	 = app->GetStreamMetricsMap();
 
 			for (auto &item : stream_list)
 			{
@@ -166,8 +175,8 @@ namespace api
 												   const std::shared_ptr<mon::StreamMetrics> &stream, const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
 		{
 			auto orchestrator = ocst::Orchestrator::GetInstance();
-			auto app_name = app->GetVHostAppName();
-			auto stream_name = stream->GetName();
+			auto app_name	  = app->GetVHostAppName();
+			auto stream_name  = stream->GetName();
 
 			// Get default playlist from the publishers
 			for (
@@ -206,11 +215,11 @@ namespace api
 		{
 			auto orchestrator = ocst::Orchestrator::GetInstance();
 
-			auto app_name = app->GetVHostAppName();
-			auto stream_name = stream->GetName();
+			auto app_name	  = app->GetVHostAppName();
+			auto stream_name  = stream->GetName();
 
-			auto code = orchestrator->TerminateStream(app_name, stream_name);
-			auto http_code = http::StatusCodeFromCommonError(code);
+			auto code		  = orchestrator->TerminateStream(app_name, stream_name);
+			auto http_code	  = http::StatusCodeFromCommonError(code);
 			if (http_code != http::StatusCode::OK)
 			{
 				throw http::HttpError(http_code, "Could not terminate the stream");

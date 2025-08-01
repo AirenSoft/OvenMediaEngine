@@ -22,7 +22,7 @@ namespace cmn
 	enum class MediaType : int8_t
 	{
 		Unknown = -1,
-		Video = 0,
+		Video	= 0,
 		Audio,
 		Data,
 		Subtitle,
@@ -32,20 +32,20 @@ namespace cmn
 
 	enum class BitstreamFormat : int8_t
 	{
-		Unknown = -1,
+		Unknown	  = -1,
 		H264_AVCC = 0,
-		H264_ANNEXB,		// OME's default internal bitstream format for H264
+		H264_ANNEXB,  // OME's default internal bitstream format for H264
 		H264_RTP_RFC_6184,
-		HVCC, // H.265 HVCC
-		H265_ANNEXB,		// OME's default internal bitstream format for H265
+		HVCC,		  // H.265 HVCC
+		H265_ANNEXB,  // OME's default internal bitstream format for H265
 		H265_RTP_RFC_7798,
-		VP8,/*raw*/			// OME's default internal bitstream format for VP8
+		VP8,  // raw - OME's default internal bitstream format for VP8
 		VP8_RTP_RFC_7741,
 		AAC_RAW,
 		AAC_MPEG4_GENERIC,
-		AAC_ADTS,			// OME's default internal bitstream format for AAC
+		AAC_ADTS,  // OME's default internal bitstream format for AAC
 		AAC_LATM,
-		OPUS,/*raw*/		// OME's default internal bitstream format for OPUS
+		OPUS,  // raw - OME's default internal bitstream format for OPUS
 		OPUS_RTP_RFC_7587,
 		MP3,
 		JPEG,
@@ -54,24 +54,24 @@ namespace cmn
 
 		// For Data Track
 		ID3v2,
-		OVEN_EVENT, // OvenMediaEngine defined event
+		OVEN_EVENT,	 // OvenMediaEngine defined event
 		CUE,
-		AMF, 				// AMF0
-		SEI,				// H.264/H.265 SEI
-		SCTE35				// SCTE35
+		AMF,	// AMF0
+		SEI,	// H.264/H.265 SEI
+		SCTE35	// SCTE35
 	};
 
 	enum class PacketType : int8_t
 	{
 		Unknown = -1,
-		// This is a special purpose packet type, used by the ovt provider, 
+		// This is a special purpose packet type, used by the ovt provider,
 		// and the "media router" delivers this type of packet to the publisher as it is without parsing.
-		OVT = 0,	
+		OVT		= 0,
 
-		RAW, // AAC RAW, AAC ADTS, JPEG
+		RAW,  // AAC RAW, AAC ADTS, JPEG
 		// H.264
-		SEQUENCE_HEADER, // For H.264 AVCC, AAC RAW
-		NALU, // For H.264 AVCC, ANNEXB	
+		SEQUENCE_HEADER,  // For H.264 AVCC, AAC RAW
+		NALU,			  // For H.264 AVCC, ANNEXB
 
 		// For Data Track
 		EVENT,
@@ -108,20 +108,70 @@ namespace cmn
 		Webp
 	};
 
+	// DeviceId is used to identify a hwardware accelerator device.
+	typedef int32_t DeviceId;
+
 	enum class MediaCodecModuleId : uint8_t
 	{
 		None = 0,
-		DEFAULT,	// SW
-		OPENH264,	// SW
-		BEAMR,		// SW
-		X264,		// SW		
-		NVENC,		// HW
-		QSV,		// HW
-		XMA,		// HW
-		NILOGAN,	// HW
-		LIBVPX,		// SW
-		FDKAAC,		// SW
-		LIBOPUS,	// SW
+		DEFAULT,   // SW
+		OPENH264,  // SW
+		BEAMR,	   // SW
+		X264,	   // SW
+		NVENC,	   // HW
+		QSV,	   // HW
+		XMA,	   // HW
+		NILOGAN,   // HW
+		LIBVPX,	   // SW
+		FDKAAC,	   // SW
+		LIBOPUS,   // SW
+		NB
+	};
+
+	enum class VideoPixelFormatId : int32_t
+	{
+		None = 0,
+		YUVJ444P,
+		YUVJ422P,
+		YUVJ420P,
+		YUVA420P,
+		YUV444P9,
+		YUV444P16,
+		YUV444P12,
+		YUV444P10,
+		YUV444P,
+		YUV440P12,
+		YUV440P10,
+		YUV440P,
+		YUV422P12,
+		YUV422P10,
+		YUV422P,
+		YUV420P9,
+		YUV420P12,
+		YUV420P10,
+		YUV420P,
+		RGB24,
+		P016,
+		P010,
+		NV21,
+		NV20,
+		NV16,
+		NV12,
+		GRAY8,
+		GRAY10,
+		GBRP16,
+		GBRP12,
+		GBRP10,
+		GBRP,
+		BGR24,
+		BGR0,
+		ARGB,
+		RGBA,
+		ABGR,
+		BGRA,
+		CUDA,
+		XVBM_8,
+		XVBM_10,
 		NB
 	};
 
@@ -133,14 +183,24 @@ namespace cmn
 
 	static bool IsVideoCodec(cmn::MediaCodecId codec_id)
 	{
-		if (codec_id == cmn::MediaCodecId::H264 ||
-			codec_id == cmn::MediaCodecId::H265 ||
-			codec_id == cmn::MediaCodecId::Vp8 ||
-			codec_id == cmn::MediaCodecId::Vp9 ||
-			codec_id == cmn::MediaCodecId::Flv ||
-			codec_id == cmn::MediaCodecId::Vp9)
+		switch (codec_id)
 		{
-			return true;
+			OV_CASE_RETURN(cmn::MediaCodecId::None, false);
+
+			OV_CASE_RETURN(cmn::MediaCodecId::H264, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::H265, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Vp8, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Vp9, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Av1, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Flv, true);
+
+			OV_CASE_RETURN(cmn::MediaCodecId::Aac, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Mp3, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Opus, false);
+
+			OV_CASE_RETURN(cmn::MediaCodecId::Jpeg, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Png, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Webp, false);
 		}
 
 		return false;
@@ -148,11 +208,24 @@ namespace cmn
 
 	static bool IsImageCodec(cmn::MediaCodecId codec_id)
 	{
-		if (codec_id == cmn::MediaCodecId::Jpeg ||
-			codec_id == cmn::MediaCodecId::Png ||
-			codec_id == cmn::MediaCodecId::Webp)
+		switch (codec_id)
 		{
-			return true;
+			OV_CASE_RETURN(cmn::MediaCodecId::None, false);
+
+			OV_CASE_RETURN(cmn::MediaCodecId::H264, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::H265, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Vp8, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Vp9, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Av1, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Flv, true);
+
+			OV_CASE_RETURN(cmn::MediaCodecId::Aac, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Mp3, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Opus, false);
+
+			OV_CASE_RETURN(cmn::MediaCodecId::Jpeg, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Png, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Webp, true);
 		}
 
 		return false;
@@ -160,11 +233,24 @@ namespace cmn
 
 	static bool IsAudioCodec(cmn::MediaCodecId codec_id)
 	{
-		if (codec_id == cmn::MediaCodecId::Aac ||
-			codec_id == cmn::MediaCodecId::Mp3 ||
-			codec_id == cmn::MediaCodecId::Opus)
+		switch (codec_id)
 		{
-			return true;
+			OV_CASE_RETURN(cmn::MediaCodecId::None, false);
+
+			OV_CASE_RETURN(cmn::MediaCodecId::H264, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::H265, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Vp8, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Vp9, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Av1, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Flv, false);
+
+			OV_CASE_RETURN(cmn::MediaCodecId::Aac, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Mp3, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::Opus, true);
+
+			OV_CASE_RETURN(cmn::MediaCodecId::Jpeg, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Png, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Webp, false);
 		}
 
 		return false;
@@ -268,7 +354,7 @@ namespace cmn
 		else if (name.HasSuffix("_XMA") || name.HasSuffix("XMA"))
 		{
 			return cmn::MediaCodecModuleId::XMA;
-		}		
+		}
 		else if (name.HasSuffix("_LIBVPX") || name.HasSuffix("LIBVPX"))
 		{
 			return cmn::MediaCodecModuleId::LIBVPX;
@@ -277,7 +363,7 @@ namespace cmn
 		{
 			return cmn::MediaCodecModuleId::FDKAAC;
 		}
-		else if (name.HasSuffix("_X264") || name.HasSuffix("X264") )
+		else if (name.HasSuffix("_X264") || name.HasSuffix("X264"))
 		{
 			return cmn::MediaCodecModuleId::X264;
 		}
@@ -289,7 +375,7 @@ namespace cmn
 		return cmn::MediaCodecModuleId::None;
 	}
 
-	constexpr const char *GetStringFromCodecModuleId(MediaCodecModuleId id)
+	constexpr const char *GetCodecModuleIdString(MediaCodecModuleId id)
 	{
 		switch (id)
 		{
@@ -315,7 +401,7 @@ namespace cmn
 
 	static bool IsSupportHWAccels(cmn::MediaCodecModuleId id)
 	{
-		switch(id)
+		switch (id)
 		{
 			case cmn::MediaCodecModuleId::NVENC:
 			case cmn::MediaCodecModuleId::QSV:
@@ -329,7 +415,7 @@ namespace cmn
 		return false;
 	}
 
-	constexpr const char *GetCodecIdToString(cmn::MediaCodecId id)
+	constexpr const char *GetCodecIdString(cmn::MediaCodecId id)
 	{
 		switch (id)
 		{
@@ -391,7 +477,7 @@ namespace cmn
 		else if (name.HasPrefix("WEBP"))
 		{
 			return cmn::MediaCodecId::Webp;
-		}		
+		}
 		// Audio codecs
 		else if (name.HasPrefix("AAC"))
 		{
@@ -548,13 +634,13 @@ namespace cmn
 		{
 			None = -1,
 
-			U8 = 0,	  ///< unsigned 8 bits
-			S16 = 1,  ///< signed 16 bits
-			S32 = 2,  ///< signed 32 bits
-			Flt = 3,  ///< float
-			Dbl = 4,  ///< double
+			U8	 = 0,  ///< unsigned 8 bits
+			S16	 = 1,  ///< signed 16 bits
+			S32	 = 2,  ///< signed 32 bits
+			Flt	 = 3,  ///< float
+			Dbl	 = 4,  ///< double
 
-			U8P = 5,   ///< unsigned 8 bits, planar
+			U8P	 = 5,  ///< unsigned 8 bits, planar
 			S16P = 6,  ///< signed 16 bits, planar
 			S32P = 7,  ///< signed 32 bits, planar
 			FltP = 8,  ///< float, planar
@@ -566,23 +652,23 @@ namespace cmn
 		// Samplerates
 		enum class Rate : int32_t
 		{
-			None = 0,
-			R8000 = 8000,
-			R11025 = 11025,
-			R16000 = 16000,
-			R22050 = 22050,
-			R32000 = 32000,
-			R44056 = 44056,
-			R44100 = 44100,
-			R47250 = 47250,
-			R48000 = 48000,
-			R50000 = 50000,
-			R50400 = 50400,
-			R88200 = 88200,
-			R96000 = 96000,
-			R176400 = 176400,
-			R192000 = 192000,
-			R352800 = 352800,
+			None	 = 0,
+			R8000	 = 8000,
+			R11025	 = 11025,
+			R16000	 = 16000,
+			R22050	 = 22050,
+			R32000	 = 32000,
+			R44056	 = 44056,
+			R44100	 = 44100,
+			R47250	 = 47250,
+			R48000	 = 48000,
+			R50000	 = 50000,
+			R50400	 = 50400,
+			R88200	 = 88200,
+			R96000	 = 96000,
+			R176400	 = 176400,
+			R192000	 = 192000,
+			R352800	 = 352800,
 			R2822400 = 2822400,
 			R5644800 = 5644800,
 
@@ -602,9 +688,9 @@ namespace cmn
 		AudioSample &operator=(const AudioSample &T) noexcept
 		{
 			_sample_size = T._sample_size;
-			_format = T._format;
-			_name = T._name;
-			_rate = T._rate;
+			_format		 = T._format;
+			_name		 = T._name;
+			_rate		 = T._rate;
 
 			return *this;
 		}
@@ -668,17 +754,23 @@ namespace cmn
 		}
 
 		// Sample rate
-		Rate _rate = Rate::None;
+		Rate _rate			 = Rate::None;
 
 		// Sample format
-		Format _format = Format::None;
+		Format _format		 = Format::None;
 
 		// Sample size
 		int32_t _sample_size = 0;
 
 		// Sample format name
-		std::string _name = "none";
+		std::string _name	 = "none";
 	};
+
+	template <typename... Args>
+	static constexpr uint32_t MakeAudioChannelLayout(Args... channels)
+	{
+		return (0u | ... | static_cast<uint32_t>(channels));
+	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 	// Audio layout
@@ -689,70 +781,106 @@ namespace cmn
 		// Defines values for compatibility with FFmpeg ChannelName
 		enum class Channel : uint32_t
 		{
-			None 				= 0x00000000U,
-			FrontLeft 			= 0x00000001U,
-			FrontRight 			= 0x00000002U,
-			FrontCenter 		= 0x00000004U,
-			LowFrequency 		= 0x00000008U,
-			BackLeft 			= 0x00000010U,
-			BackRight 			= 0x00000020U,
-			FrontLeftOfCenter 	= 0x00000040U,
-			FrontRightOfCenter 	= 0x00000080U,
-			BackCenter 			= 0x00000100U,
-			SideLeft 			= 0x00000200U,
-			SideRight 			= 0x00000400U,
-			TopCenter 			= 0x00000800U,
-			TopFrontLeft 		= 0x00001000U,
-			TopFrontCenter 		= 0x00002000U,
-			TopFrontRight 		= 0x00004000U,
-			TopBackLeft 		= 0x00008000U,
-			TopBackCenter 		= 0x00010000U,
-			TopBackRight 		= 0x00020000U,
-			StereoLeft 			= 0x20000000U,
-			StereoRight 		= 0x40000000U
+			None			   = 0x00000000U,
+			FrontLeft		   = 0x00000001U,
+			FrontRight		   = 0x00000002U,
+			FrontCenter		   = 0x00000004U,
+			LowFrequency	   = 0x00000008U,
+			BackLeft		   = 0x00000010U,
+			BackRight		   = 0x00000020U,
+			FrontLeftOfCenter  = 0x00000040U,
+			FrontRightOfCenter = 0x00000080U,
+			BackCenter		   = 0x00000100U,
+			SideLeft		   = 0x00000200U,
+			SideRight		   = 0x00000400U,
+			TopCenter		   = 0x00000800U,
+			TopFrontLeft	   = 0x00001000U,
+			TopFrontCenter	   = 0x00002000U,
+			TopFrontRight	   = 0x00004000U,
+			TopBackLeft		   = 0x00008000U,
+			TopBackCenter	   = 0x00010000U,
+			TopBackRight	   = 0x00020000U,
+			StereoLeft		   = 0x20000000U,
+			StereoRight		   = 0x40000000U
 		};
 
 		// Defines values for compatibility with FFmpeg ChannelLayout
 		enum class Layout : uint32_t
 		{
-			LayoutUnknown 			= (uint32_t)Channel::None,				
-			LayoutMono 				= (uint32_t)Channel::FrontCenter,
-			LayoutStereo 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight,
-			Layout2Point1 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::LowFrequency,
-			Layout21 				= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::BackCenter,
-			LayoutSurround 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter,
-			Layout3Point1  			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::LowFrequency,
-			Layout4Point0  			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::BackCenter,
-			Layout4Point1 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::BackCenter | (uint32_t)Channel::LowFrequency,
-			Layout22 				= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight,
-			LayoutQuad 				= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight,
-			Layout5Point0 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight,
-			Layout5Point1 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::LowFrequency,
-			Layout5Point0Back 		= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight,
-			Layout5Point1Back 		= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight | (uint32_t)Channel::LowFrequency,
-			Layout6Point0 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::BackCenter,
-			Layout6Point0Front 		= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::FrontLeftOfCenter | (uint32_t)Channel::FrontRightOfCenter,
-			LayoutHexagonal 		= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight | (uint32_t)Channel::BackCenter,
-			Layout6Point1 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::LowFrequency | (uint32_t)Channel::BackCenter,
-			Layout6Point1Back 		= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight | (uint32_t)Channel::LowFrequency | (uint32_t)Channel::BackCenter,
-			Layout6Point1Front 		= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::FrontLeftOfCenter | (uint32_t)Channel::FrontRightOfCenter | (uint32_t)Channel::LowFrequency,
-			Layout7Point0 			= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight,
-			Layout7Point0Front 		= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::FrontLeftOfCenter | (uint32_t)Channel::FrontRightOfCenter,
-			Layout7Point1 		  	= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::LowFrequency | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight,
-			Layout7Point1Wide 	  	= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::LowFrequency | (uint32_t)Channel::FrontLeftOfCenter | (uint32_t)Channel::FrontRightOfCenter,
-			Layout7Point1WideBack	= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight | (uint32_t)Channel::LowFrequency | (uint32_t)Channel::FrontLeftOfCenter | (uint32_t)Channel::FrontRightOfCenter,
-			LayoutOctagonal 		= (uint32_t)Channel::FrontLeft | (uint32_t)Channel::FrontRight | (uint32_t)Channel::FrontCenter | (uint32_t)Channel::SideLeft | (uint32_t)Channel::SideRight | (uint32_t)Channel::BackLeft | (uint32_t)Channel::BackRight | (uint32_t)Channel::BackCenter,
+			LayoutUnknown		  = MakeAudioChannelLayout(Channel::None),
+			LayoutMono			  = MakeAudioChannelLayout(Channel::FrontCenter),
+			LayoutStereo		  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight),
+			Layout2Point1		  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::LowFrequency),
+			Layout21			  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::BackCenter),
+			LayoutSurround		  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter),
+			Layout3Point1		  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter, Channel::LowFrequency),
+			Layout4Point0		  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter, Channel::BackCenter),
+			Layout4Point1		  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter, Channel::BackCenter, Channel::LowFrequency),
+			Layout22			  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::SideLeft, Channel::SideRight),
+			LayoutQuad			  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::BackLeft, Channel::BackRight),
+			Layout5Point0		  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter, Channel::SideLeft, Channel::SideRight),
+			Layout5Point1		  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter, Channel::SideLeft, Channel::SideRight, Channel::LowFrequency),
+			Layout5Point0Back	  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter, Channel::BackLeft, Channel::BackRight),
+			Layout5Point1Back	  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter, Channel::BackLeft, Channel::BackRight, Channel::LowFrequency),
+			Layout6Point0		  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter, Channel::SideLeft, Channel::SideRight, Channel::BackCenter),
+			Layout6Point0Front	  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::SideLeft, Channel::SideRight, Channel::FrontLeftOfCenter, Channel::FrontRightOfCenter),
+			LayoutHexagonal		  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter, Channel::BackLeft, Channel::BackRight, Channel::BackCenter),
+			Layout6Point1		  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter, Channel::SideLeft, Channel::SideRight, Channel::LowFrequency, Channel::BackCenter),
+			Layout6Point1Back	  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter, Channel::BackLeft, Channel::BackRight, Channel::LowFrequency, Channel::BackCenter),
+			Layout6Point1Front	  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::SideLeft, Channel::SideRight, Channel::FrontLeftOfCenter, Channel::FrontRightOfCenter, Channel::LowFrequency),
+			Layout7Point0		  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter, Channel::SideLeft, Channel::SideRight, Channel::BackLeft, Channel::BackRight),
+			Layout7Point0Front	  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter, Channel::SideLeft, Channel::SideRight, Channel::FrontLeftOfCenter, Channel::FrontRightOfCenter),
+			Layout7Point1		  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter, Channel::SideLeft, Channel::SideRight, Channel::LowFrequency, Channel::BackLeft, Channel::BackRight),
+			Layout7Point1Wide	  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter, Channel::SideLeft, Channel::SideRight, Channel::LowFrequency, Channel::FrontLeftOfCenter, Channel::FrontRightOfCenter),
+			Layout7Point1WideBack = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter, Channel::BackLeft, Channel::BackRight, Channel::LowFrequency, Channel::FrontLeftOfCenter, Channel::FrontRightOfCenter),
+			LayoutOctagonal		  = MakeAudioChannelLayout(Channel::FrontLeft, Channel::FrontRight, Channel::FrontCenter, Channel::SideLeft, Channel::SideRight, Channel::BackLeft, Channel::BackRight, Channel::BackCenter),
 		};
 
+		constexpr static const char *GetLayoutName(Layout layout)
+		{
+			switch (layout)
+			{
+				OV_CASE_RETURN(Layout::LayoutUnknown, "unknown");
+				OV_CASE_RETURN(Layout::LayoutMono, "mono");
+				OV_CASE_RETURN(Layout::LayoutStereo, "stereo");
+				OV_CASE_RETURN(Layout::Layout2Point1, "2.1");
+				OV_CASE_RETURN(Layout::Layout21, "3.0(back)");
+				OV_CASE_RETURN(Layout::LayoutSurround, "3.0");
+				OV_CASE_RETURN(Layout::Layout3Point1, "3.1");
+				OV_CASE_RETURN(Layout::Layout4Point0, "4.0");
+				OV_CASE_RETURN(Layout::Layout4Point1, "4.1");
+				OV_CASE_RETURN(Layout::Layout22, "quad(side)");
+				OV_CASE_RETURN(Layout::LayoutQuad, "quad");
+				OV_CASE_RETURN(Layout::Layout5Point0, "5.0(side)");
+				OV_CASE_RETURN(Layout::Layout5Point1, "5.1(side)");
+				OV_CASE_RETURN(Layout::Layout5Point0Back, "5.0");
+				OV_CASE_RETURN(Layout::Layout5Point1Back, "5.1");
+				OV_CASE_RETURN(Layout::Layout6Point0, "6.0");
+				OV_CASE_RETURN(Layout::Layout6Point0Front, "6.0(front)");
+				OV_CASE_RETURN(Layout::LayoutHexagonal, "hexagonal");
+				OV_CASE_RETURN(Layout::Layout6Point1, "6.1");
+				OV_CASE_RETURN(Layout::Layout6Point1Back, "6.1(back)");
+				OV_CASE_RETURN(Layout::Layout6Point1Front, "6.1(front)");
+				OV_CASE_RETURN(Layout::Layout7Point0, "7.0");
+				OV_CASE_RETURN(Layout::Layout7Point0Front, "7.0(front)");
+				OV_CASE_RETURN(Layout::Layout7Point1, "7.1");
+				OV_CASE_RETURN(Layout::Layout7Point1Wide, "7.1(wide-side)");
+				OV_CASE_RETURN(Layout::Layout7Point1WideBack, "7.1(wide)");
+				OV_CASE_RETURN(Layout::LayoutOctagonal, "octagonal");
+			}
+
+			return "unknown";
+		}
+
 	public:
-		AudioChannel() = default;
+		AudioChannel()	= default;
 		~AudioChannel() = default;
 
 		AudioChannel &operator=(const AudioChannel &audio_channel) noexcept
 		{
 			_layout = audio_channel._layout;
-			_count = audio_channel._count;
-			_name = audio_channel._name;
+			_count	= audio_channel._count;
+			_name	= audio_channel._name;
 
 			return *this;
 		}
@@ -763,33 +891,41 @@ namespace cmn
 
 			switch (_layout)
 			{
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutUnknown, 			_count = 0, _name = "unknown");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutMono, 			_count = 1, _name = "mono");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutStereo, 			_count = 2, _name = "stereo");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout2Point1, 			_count = 3, _name = "2.1");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout21, 				_count = 3, _name = "3.0(back)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutSurround, 		_count = 3, _name = "3.0");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout3Point1, 			_count = 4, _name = "3.1");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout4Point0, 			_count = 4, _name = "4.0");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout4Point1, 			_count = 5, _name = "4.1");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout22, 				_count = 4, _name = "quad(side)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutQuad, 			_count = 4, _name = "quad");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point0, 			_count = 5, _name = "5.0(side)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point1, 			_count = 6, _name = "5.1(side)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point0Back, 		_count = 5, _name = "5.0");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point1Back, 		_count = 6, _name = "5.1");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point0, 			_count = 6, _name = "6.0");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point0Front, 	_count = 6, _name = "6.0(front)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutHexagonal, 		_count = 6, _name = "hexagonal");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point1, 			_count = 7, _name = "6.1");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point1Back, 		_count = 7, _name = "6.1(back)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point1Front, 	_count = 7, _name = "6.1(front)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point0, 			_count = 7, _name = "7.0");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point0Front, 	_count = 7, _name = "7.0(front)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point1, 			_count = 8, _name = "7.1");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point1Wide, 		_count = 8, _name = "7.1(wide-side)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point1WideBack, 	_count = 8, _name = "7.1(wide)");
-				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutOctagonal, 		_count = 8, _name = "octagonal");
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutUnknown, _count = 0, _name = GetLayoutName(Layout::LayoutUnknown));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutMono, _count = 1, _name = GetLayoutName(Layout::LayoutMono));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutStereo, _count = 2, _name = GetLayoutName(Layout::LayoutStereo));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout2Point1, _count = 3, _name = GetLayoutName(Layout::Layout2Point1));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout21, _count = 3, _name = GetLayoutName(Layout::Layout21));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutSurround, _count = 3, _name = GetLayoutName(Layout::LayoutSurround));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout3Point1, _count = 4, _name = GetLayoutName(Layout::Layout3Point1));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout4Point0, _count = 4, _name = GetLayoutName(Layout::Layout4Point0));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout4Point1, _count = 5, _name = GetLayoutName(Layout::Layout4Point1));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout22, _count = 4, _name = GetLayoutName(Layout::Layout22));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutQuad, _count = 4, _name = GetLayoutName(Layout::LayoutQuad));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point0, _count = 5, _name = GetLayoutName(Layout::Layout5Point0));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point1, _count = 6, _name = GetLayoutName(Layout::Layout5Point1));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point0Back, _count = 5, _name = GetLayoutName(Layout::Layout5Point0Back));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout5Point1Back, _count = 6, _name = GetLayoutName(Layout::Layout5Point1Back));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point0, _count = 6, _name = GetLayoutName(Layout::Layout6Point0));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point0Front, _count = 6, _name = GetLayoutName(Layout::Layout6Point0Front));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutHexagonal, _count = 6, _name = GetLayoutName(Layout::LayoutHexagonal));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point1, _count = 7, _name = GetLayoutName(Layout::Layout6Point1));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point1Back, _count = 7, _name = GetLayoutName(Layout::Layout6Point1Back));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout6Point1Front, _count = 7, _name = GetLayoutName(Layout::Layout6Point1Front));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point0, _count = 7, _name = GetLayoutName(Layout::Layout7Point0));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point0Front, _count = 7, _name = GetLayoutName(Layout::Layout7Point0Front));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point1, _count = 8, _name = GetLayoutName(Layout::Layout7Point1));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point1Wide, _count = 8, _name = GetLayoutName(Layout::Layout7Point1Wide));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::Layout7Point1WideBack, _count = 8, _name = GetLayoutName(Layout::Layout7Point1WideBack));
+				OV_MEDIA_TYPE_SET_VALUE(Layout::LayoutOctagonal, _count = 8, _name = GetLayoutName(Layout::LayoutOctagonal));
+			}
+		}
+
+		void SetLayout(std::optional<Layout> layout)
+		{
+			if (layout.has_value())
+			{
+				SetLayout(layout.value());
 			}
 		}
 
@@ -830,8 +966,8 @@ namespace cmn
 		}
 
 	private:
-		Layout _layout = Layout::LayoutStereo;
-		uint32_t _count = 2;
+		Layout _layout	  = Layout::LayoutStereo;
+		uint32_t _count	  = 2;
 		std::string _name = "stereo";
 	};
 

@@ -20,7 +20,8 @@ PROJECT_CXXFLAGS := \
 	-std=c++17
 
 PROJECT_LDFLAGS := \
-	-ldl -lz
+	-ldl -lz \
+	-lstdc++fs				# Compatibility with C++17 and later versions
 
 include $(CLEAR_VARIABLES)
 include $(BUILD_SUB_AMS)

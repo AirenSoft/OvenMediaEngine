@@ -132,11 +132,20 @@ namespace pvd
                     break;
                 }
 
-                auto media_packet = stream_tap->Pop(0);
+                auto media_packet = stream_tap->Pop(100);
                 if (media_packet == nullptr)
                 {
                     continue;
                 }
+
+				if (IsPublished() == false)
+				{
+					if (Publish() == false)
+					{
+						break_loop = true;
+						break;
+					}
+				}
 
                 auto source_track_id = MakeSourceTrackIdUnique(stream_tap->GetId(), media_packet->GetTrackId());
                 auto new_track_id = GetNewTrackId(source_track_id);
@@ -217,7 +226,6 @@ namespace pvd
         }
 
         // Make tracks
-		std::chrono::system_clock::time_point oldest_publish_time = std::chrono::system_clock::time_point::max();
         for (auto &source_stream : source_streams)
         {
             auto stream_tap = source_stream->GetStreamTap();
@@ -231,11 +239,6 @@ namespace pvd
             {
                 continue;
             }
-
-			if (stream_info->GetInputStreamPublishedTime() < oldest_publish_time)
-			{
-				oldest_publish_time = stream_info->GetInputStreamPublishedTime();
-			}
 
             auto tracks = stream_info->GetTracks();
             for (auto &[source_track_id, source_track] : tracks)
@@ -267,22 +270,11 @@ namespace pvd
             }
         }
 		
-		// Mux's published time is the oldest published time of source streams
-		SetPublishedTime(oldest_publish_time);
-
         // Make Playlist
         auto playlists = _multiplex_profile->GetPlaylists();
         for (auto &playlist : playlists)
         {
             AddPlaylist(playlist);
-        }
-
-        // Publish stream
-        if (GetApplication()->AddStream(GetSharedPtr()) == false)
-        {
-            logte("Multiplex Channel : %s/%s: Failed to publish stream", GetApplicationName(), GetName().CStr());
-            Terminate();
-            return false;
         }
 
         logti("Multiplex Channel : %s/%s: Started\n%s", GetApplicationName(), GetName().CStr(), _multiplex_profile->InfoStr().CStr());
@@ -318,4 +310,27 @@ namespace pvd
 
         return true;
     }
+
+	bool MultiplexStream::Publish()
+	{
+		// Now
+		SetPublishedTime(std::chrono::system_clock::now());
+
+        // Publish stream
+        if (GetApplication()->AddStream(GetSharedPtr()) == false)
+        {
+            logte("Multiplex Channel : %s/%s: Failed to publish stream", GetApplicationName(), GetName().CStr());
+            Terminate();
+            return false;
+        }
+
+		_is_published = true;
+
+		return true;
+	}
+	
+	bool MultiplexStream::IsPublished() const
+	{
+		return _is_published;
+	}
 }

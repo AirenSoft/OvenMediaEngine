@@ -11,7 +11,7 @@
 #include "h265_types.h"
 
 
-#define H265_NAL_UNIT_HEADER_SIZE    2
+constexpr size_t H265_NAL_UNIT_HEADER_SIZE = 2;
 struct ProfileTierLevel
 {
 	uint8_t _general_profile_space = 0;
@@ -94,6 +94,16 @@ private:
     uint8_t _temporal_id_plus1 = 0;
 
     friend class H265Parser;
+};
+
+struct H265VPS
+{
+	uint8_t GetId() const
+	{
+		return vps_video_parameter_set_id;
+	}
+
+	uint8_t vps_video_parameter_set_id;
 };
 
 class H265SPS
@@ -189,6 +199,23 @@ private:
     friend class H265Parser;
 };
 
+struct H265PPS
+{
+public:
+	uint32_t GetId() const
+	{
+		return pps_pic_parameter_set_id;
+	}
+
+	uint32_t GetSpsId() const
+	{
+		return pps_seq_parameter_set_id;
+	}
+
+	uint32_t pps_pic_parameter_set_id;
+	uint32_t pps_seq_parameter_set_id;
+};
+
 class H265Parser
 {
 public:
@@ -197,7 +224,10 @@ public:
 	static int FindAnnexBStartCode(const uint8_t *bitstream, size_t length, size_t &start_code_size);
     static bool CheckKeyframe(const uint8_t *bitstream, size_t length);
     static bool ParseNalUnitHeader(const uint8_t *nalu, size_t length, H265NalUnitHeader &header);
+	static bool ParseNalUnitHeader(const std::shared_ptr<const ov::Data> &nalu, H265NalUnitHeader &header);
+	static bool ParseVPS(const uint8_t *nalu, size_t length, H265VPS &vps);
     static bool ParseSPS(const uint8_t *nalu, size_t length, H265SPS &sps);
+	static bool ParsePPS(const uint8_t *nalu, size_t length, H265PPS &pps);
 
 private:
     static bool ParseNalUnitHeader(NalUnitBitstreamParser &parser, H265NalUnitHeader &header);

@@ -8,12 +8,13 @@
 //==============================================================================
 #pragma once
 
+#include <base/common_types.h>
+#include <base/mediarouter/mediarouter_application_interface.h>
+#include <base/ovlibrary/url.h>
+#include <base/publisher/publisher.h>
+#include <modules/srt/srt.h>
 #include <orchestrator/orchestrator.h>
 
-#include "base/common_types.h"
-#include "base/mediarouter/mediarouter_application_interface.h"
-#include "base/ovlibrary/url.h"
-#include "base/publisher/publisher.h"
 #include "srt_application.h"
 #include "srt_session.h"
 
@@ -31,8 +32,6 @@ namespace pub
 
 	private:
 		bool Start() override;
-
-		std::shared_ptr<ov::Url> GetStreamUrlForRemote(const std::shared_ptr<ov::Socket> &remote, bool *is_vhost_form);
 
 		//--------------------------------------------------------------------
 		// Implementation of Publisher
@@ -75,17 +74,14 @@ namespace pub
 
 	private:
 		void AddToDisconnect(const std::shared_ptr<ov::Socket> &remote);
-		
-		std::shared_ptr<StreamMap> GetStreamMap(int port);
+
 		std::shared_ptr<SrtSession> GetSession(const std::shared_ptr<ov::Socket> &remote);
 
 	private:
 		std::mutex _physical_port_list_mutex;
 		std::vector<std::shared_ptr<PhysicalPort>> _physical_port_list;
 
-		std::shared_mutex _stream_map_mutex;
-		// Key: port, Value: StreamMap
-		std::map<int, std::shared_ptr<StreamMap>> _stream_map;
+		modules::srt::StreamUrlResolver _stream_url_resolver;
 
 		std::shared_mutex _session_map_mutex;
 		std::map<session_id_t, std::shared_ptr<SrtSession>> _session_map;
@@ -94,7 +90,7 @@ namespace pub
 		// However, since the client immediately attempts to reconnect, the socket connection is now terminated with a slight delay
 		ov::DelayQueue _disconnect_timer{"SRTDiscnt"};
 		// To minimize the use of mutex, use atomic variables before using mutex
-		std::atomic<bool> _has_socket_list_to_disconnect;
+		std::atomic<bool> _has_socket_list_to_disconnect{false};
 		std::mutex _socket_list_to_disconnect_mutex;
 		std::vector<std::shared_ptr<ov::Socket>> _socket_list_to_disconnect;
 	};

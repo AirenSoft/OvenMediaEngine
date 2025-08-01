@@ -13,332 +13,310 @@
 
 #include "providers/rtmp/rtmp_provider_private.h"
 
-namespace modules
+namespace modules::rtmp
 {
-	namespace rtmp
+	AmfObjectArray::AmfObjectArray(AmfTypeMarker type)
+		: AmfPropertyBase(type)
 	{
-		AmfObjectArray::AmfObjectArray(AmfTypeMarker type)
-			: AmfPropertyBase(type)
-		{
-		}
+	}
 
-		AmfObjectArray::AmfObjectArray(const AmfObjectArray &other)
-			: AmfPropertyBase(other)
+	AmfObjectArray::AmfObjectArray(const AmfObjectArray &other)
+		: AmfPropertyBase(other)
+	{
+		_amf_property_pairs = other._amf_property_pairs;
+	}
+
+	AmfObjectArray::AmfObjectArray(AmfObjectArray &&other) noexcept
+		: AmfPropertyBase(std::move(other))
+	{
+		std::swap(_amf_property_pairs, other._amf_property_pairs);
+	}
+
+	AmfObjectArray &AmfObjectArray::operator=(const AmfObjectArray &other)
+	{
+		if (this != &other)
 		{
+			AmfPropertyBase::operator=(other);
 			_amf_property_pairs = other._amf_property_pairs;
 		}
 
-		AmfObjectArray::AmfObjectArray(AmfObjectArray &&other) noexcept
-			: AmfPropertyBase(std::move(other))
+		return *this;
+	}
+
+	AmfObjectArray &AmfObjectArray::operator=(AmfObjectArray &&other) noexcept
+	{
+		if (this != &other)
 		{
+			AmfPropertyBase::operator=(std::move(other));
 			std::swap(_amf_property_pairs, other._amf_property_pairs);
 		}
 
-		AmfObjectArray &AmfObjectArray::operator=(const AmfObjectArray &other)
-		{
-			if (this != &other)
-			{
-				AmfPropertyBase::operator=(other);
-				_amf_property_pairs = other._amf_property_pairs;
-			}
+		return *this;
+	}
 
-			return *this;
+	bool AmfObjectArray::Append(const char *name, const AmfProperty &property)
+	{
+		if (name == nullptr)
+		{
+			logtd("Could not append the property - name is null");
+			OV_ASSERT2(false);
+			return false;
 		}
 
-		AmfObjectArray &AmfObjectArray::operator=(AmfObjectArray &&other) noexcept
-		{
-			if (this != &other)
-			{
-				AmfPropertyBase::operator=(std::move(other));
-				std::swap(_amf_property_pairs, other._amf_property_pairs);
-			}
+		_amf_property_pairs.emplace_back(name, property);
+		return true;
+	}
 
-			return *this;
+	bool AmfObjectArray::Encode(ov::ByteStream &byte_stream, bool encode_marker) const
+	{
+		if (encode_marker && (EncodeMarker(byte_stream) == false))
+		{
+			logtd("Failed to encode marker");
+			OV_ASSERT2(false);
+			return false;
 		}
 
-		bool AmfObjectArray::Append(const char *name, const AmfProperty &property)
+		// Write the count of items if this is an ECMA array
+		if (_amf_data_type == AmfTypeMarker::EcmaArray)
 		{
-			if (name == nullptr)
+			byte_stream.WriteBE32(_amf_property_pairs.size());
+		}
+
+		for (const auto &property_pair : _amf_property_pairs)
+		{
+			// Encode the name
+			byte_stream.WriteBE16(property_pair.name.GetLength());
+			byte_stream.Write(property_pair.name.CStr(), property_pair.name.GetLength());
+
+			// Encode the value
+			if (property_pair.property.Encode(byte_stream, true) == false)
 			{
-				logtd("Could not append the property - name is null");
-				OV_ASSERT2(false);
 				return false;
 			}
-
-			_amf_property_pairs.emplace_back(name, property);
-			return true;
 		}
 
-		bool AmfObjectArray::Encode(ov::ByteStream &byte_stream, bool encode_marker) const
+		// (UTF-8-empty object-end-marker)
+		return byte_stream.WriteBE16(0) && EncodeMarker(byte_stream, AmfTypeMarker::ObjectEnd);
+	}
+
+	bool AmfObjectArray::Decode(ov::ByteStream &byte_stream, bool decode_marker)
+	{
+		// 1. type == AmfTypeMarker::Object
+		//
+		// object-property			= 	(UTF-8 value-type) |
+		// 								(UTF-8-empty object-end-marker)
+		// anonymous-object-type	=	object-marker *(object-property)
+		//
+		// 2. type == AmfTypeMarker::EcmaArray
+		//
+		// associative-count		=	U32
+		// ecma-array-type			=	associative-count *(object-property)
+		if (decode_marker)
 		{
-			if (encode_marker && (EncodeMarker(byte_stream) == false))
-			{
-				logtd("Failed to encode marker");
-				OV_ASSERT2(false);
-				return false;
-			}
-
-			// Write the count of items if this is an ECMA array
-			if (_amf_data_type == AmfTypeMarker::EcmaArray)
-			{
-				byte_stream.WriteBE32(_amf_property_pairs.size());
-			}
-
-			for (const auto &property_pair : _amf_property_pairs)
-			{
-				// Encode the name
-				byte_stream.WriteBE16(property_pair.name.GetLength());
-				byte_stream.Write(property_pair.name.CStr(), property_pair.name.GetLength());
-
-				// Encode the value
-				if (property_pair.property.Encode(byte_stream, true) == false)
-				{
-					return false;
-				}
-			}
-
-			// (UTF-8-empty object-end-marker)
-			return byte_stream.WriteBE16(0) && EncodeMarker(byte_stream, AmfTypeMarker::ObjectEnd);
-		}
-
-		bool AmfObjectArray::Decode(ov::ByteStream &byte_stream, bool decode_marker)
-		{
-			// 1. type == AmfTypeMarker::Object
-			//
-			// object-property			= 	(UTF-8 value-type) |
-			// 								(UTF-8-empty object-end-marker)
-			// anonymous-object-type	=	object-marker *(object-property)
-			//
-			// 2. type == AmfTypeMarker::EcmaArray
-			//
-			// associative-count		=	U32
-			// ecma-array-type			=	associative-count *(object-property)
-			if (decode_marker)
-			{
-				AmfTypeMarker type;
-				if (DecodeMarker(byte_stream, false, &type) == false)
-				{
-					logtd("Failed to decode marker");
-					return false;
-				}
-
-				// AmfObjectArray can be either an object or an ECMA array, so we need to check the type
-				if (type != _amf_data_type)
-				{
-					OV_ASSERT(type == _amf_data_type, "Type mismatch: expected: %d, actual: %d", _amf_data_type, type);
-					return false;
-				}
-			}
-
-			if (_amf_data_type == AmfTypeMarker::EcmaArray)
-			{
-				if (byte_stream.IsRemained(4) == false)
-				{
-					logtd("Failed to read the count of items");
-					return false;
-				}
-
-				// Ignore the count of items (we don't need it)
-				byte_stream.ReadBE32();
-			}
-
 			AmfTypeMarker type;
-
-			while (byte_stream.IsEmpty() == false)
+			if (DecodeMarker(byte_stream, false, &type) == false)
 			{
-				// Read the length of the name (U16)
-				const auto name_length = byte_stream.ReadBE16();
+				logtd("Failed to decode marker");
+				return false;
+			}
 
-				if (name_length == 0)
+			// AmfObjectArray can be either an object or an ECMA array, so we need to check the type
+			if (type != _amf_data_type)
+			{
+				OV_ASSERT(type == _amf_data_type, "Type mismatch: expected: %d, actual: %d", _amf_data_type, type);
+				return false;
+			}
+		}
+
+		if (_amf_data_type == AmfTypeMarker::EcmaArray)
+		{
+			if (byte_stream.IsRemained(4) == false)
+			{
+				logtd("Failed to read the count of items");
+				return false;
+			}
+
+			// Ignore the count of items (we don't need it)
+			byte_stream.ReadBE32();
+		}
+
+		AmfTypeMarker type;
+
+		while (byte_stream.IsEmpty() == false)
+		{
+			// Read the length of the name (U16)
+			const auto name_length = byte_stream.ReadBE16();
+
+			if (name_length == 0)
+			{
+				// Maybe the object-end-marker, so we need to check the end marker to check if we have reached the end of the array/object
+				if (DecodeMarker(byte_stream, true, &type) && (type == AmfTypeMarker::ObjectEnd))
 				{
-					// Maybe the object-end-marker, so we need to check the end marker to check if we have reached the end of the array/object
-					if (DecodeMarker(byte_stream, true, &type) && (type == AmfTypeMarker::ObjectEnd))
-					{
-						// End marker found
-						byte_stream.Skip(1);
-						break;
-					}
-
-					// Ignore the empty name
-					continue;
+					// End marker found
+					byte_stream.Skip(1);
+					break;
 				}
 
-				if (byte_stream.IsRemained(name_length) == false)
-				{
-					logtd("Failed to read the name");
-					return false;
-				}
-
-				// Read the name
-				ov::String name;
-				name.SetLength(name_length);
-				byte_stream.Read(name.GetBuffer(), name_length);
-
-				// Read the value
-				AmfProperty property;
-				if (property.Decode(byte_stream, true) == false)
-				{
-					// Could not decode the data
-					logtd("Failed to decode the value");
-					return false;
-				}
-
-				Append(name, property);
+				// Ignore the empty name
+				continue;
 			}
 
-			return true;
+			if (byte_stream.IsRemained(name_length) == false)
+			{
+				logtd("Failed to read the name");
+				return false;
+			}
+
+			// Read the name
+			ov::String name;
+			name.SetLength(name_length);
+			byte_stream.Read(name.GetBuffer(), name_length);
+
+			// Read the value
+			AmfProperty property;
+			if (property.Decode(byte_stream, true) == false)
+			{
+				// Could not decode the data
+				logtd("Failed to decode the value");
+				return false;
+			}
+
+			Append(name, property);
 		}
 
-		const AmfPropertyPair *AmfObjectArray::GetPair(const char *name) const
+		return true;
+	}
+
+	const AmfPropertyPair *AmfObjectArray::GetPair(const char *name) const
+	{
+		if (name != nullptr)
 		{
-			if (name != nullptr)
-			{
-				for (auto &property_pair : _amf_property_pairs)
-				{
-					if (property_pair.name == name)
-					{
-						return &property_pair;
-					}
-				}
-			}
-
-			return nullptr;
-		}
-
-		const AmfPropertyPair *AmfObjectArray::GetPair(const char *name, AmfTypeMarker expected_type) const
-		{
-			auto property_pair = GetPair(name);
-
-			if ((property_pair != nullptr) && property_pair->IsTypeOf(expected_type))
-			{
-				return property_pair;
-			}
-
-			return nullptr;
-		}
-
-		std::optional<bool> AmfObjectArray::GetBoolean(const char *name) const
-		{
-			auto pair = GetPair(name, AmfTypeMarker::Boolean);
-
-			if (pair != nullptr)
-			{
-				return pair->property.GetBoolean();
-			}
-
-			return std::nullopt;
-		}
-
-		std::optional<double> AmfObjectArray::GetNumber(const char *name) const
-		{
-			auto pair = GetPair(name, AmfTypeMarker::Number);
-
-			if (pair != nullptr)
-			{
-				return pair->property.GetNumber();
-			}
-
-			return std::nullopt;
-		}
-
-		std::optional<double> AmfObjectArray::GetAsNumber(const char *name) const
-		{
-			auto pair = GetPair(name, AmfTypeMarker::Number);
-
-			if (pair != nullptr)
-			{
-				switch (pair->property.GetType())
-				{
-					case AmfTypeMarker::Number:
-						return pair->property.GetNumber();
-
-					case AmfTypeMarker::Boolean:
-						return pair->property.GetBoolean() ? 1.0 : 0.0;
-
-					case AmfTypeMarker::String:
-						return ov::Converter::ToDouble(pair->property.GetString());
-
-					case AmfTypeMarker::Object:
-						[[fallthrough]];
-					case AmfTypeMarker::MovieClip:
-						[[fallthrough]];
-					case AmfTypeMarker::Null:
-						[[fallthrough]];
-					case AmfTypeMarker::Undefined:
-						[[fallthrough]];
-					case AmfTypeMarker::Reference:
-						[[fallthrough]];
-					case AmfTypeMarker::EcmaArray:
-						[[fallthrough]];
-					case AmfTypeMarker::ObjectEnd:
-						[[fallthrough]];
-					case AmfTypeMarker::StrictArray:
-						[[fallthrough]];
-					case AmfTypeMarker::Date:
-						[[fallthrough]];
-					case AmfTypeMarker::LongString:
-						[[fallthrough]];
-					case AmfTypeMarker::Unsupported:
-						[[fallthrough]];
-					case AmfTypeMarker::Recordset:
-						[[fallthrough]];
-					case AmfTypeMarker::Xml:
-						[[fallthrough]];
-					case AmfTypeMarker::TypedObject:
-						break;
-				}
-			}
-
-			return std::nullopt;
-		}
-
-		std::optional<ov::String> AmfObjectArray::GetString(const char *name) const
-		{
-			auto pair = GetPair(name, AmfTypeMarker::String);
-
-			if (pair != nullptr)
-			{
-				return pair->property.GetString();
-			}
-
-			return std::nullopt;
-		}
-
-		void AmfObjectArray::ToString(ov::String &description, size_t indent) const
-		{
-			auto indent_string = ov::String::Repeat("    ", indent);
-			auto item_indent_string = ov::String::Repeat("    ", indent + 1);
-			auto start_char = (_amf_data_type == AmfTypeMarker::Object) ? '{' : '[';
-			auto end_char = (_amf_data_type == AmfTypeMarker::Object) ? '}' : ']';
-
-			if (_amf_property_pairs.empty())
-			{
-				description.AppendFormat("%c%c  (%s)", start_char, end_char, EnumToString(_amf_data_type));
-				return;
-			}
-
-			description.AppendFormat("%c  (%s)\n", start_char, EnumToString(_amf_data_type));
-
 			for (auto &property_pair : _amf_property_pairs)
 			{
-				description.AppendFormat("%s%s: ", item_indent_string.CStr(), property_pair.name.CStr());
-				property_pair.property.ToString(
-					description,
-					(property_pair.IsTypeOf(AmfTypeMarker::Object) ||
-					 property_pair.IsTypeOf(AmfTypeMarker::EcmaArray))
-						? indent + 1
-						: 0);
-				description.Append('\n');
+				if (property_pair.name == name)
+				{
+					return &property_pair;
+				}
 			}
-
-			description.AppendFormat("%s%c", indent_string.CStr(), end_char);
 		}
 
-		ov::String AmfObjectArray::ToString(size_t indent) const
+		return nullptr;
+	}
+
+	const AmfPropertyPair *AmfObjectArray::GetPair(const char *name, AmfTypeMarker expected_type) const
+	{
+		auto property_pair = GetPair(name);
+
+		if ((property_pair != nullptr) && property_pair->IsTypeOf(expected_type))
 		{
-			ov::String description;
-			ToString(description, indent);
-			return description;
+			return property_pair;
 		}
-	}  // namespace rtmp
-}  // namespace modules
+
+		return nullptr;
+	}
+
+	std::optional<bool> AmfObjectArray::GetBoolean(const char *name) const
+	{
+		auto pair = GetPair(name, AmfTypeMarker::Boolean);
+
+		if (pair != nullptr)
+		{
+			return pair->property.GetBoolean();
+		}
+
+		return std::nullopt;
+	}
+
+	std::optional<double> AmfObjectArray::GetNumber(const char *name) const
+	{
+		auto pair = GetPair(name, AmfTypeMarker::Number);
+
+		if (pair != nullptr)
+		{
+			return pair->property.GetNumber();
+		}
+
+		return std::nullopt;
+	}
+
+	std::optional<double> AmfObjectArray::GetAsNumber(const char *name) const
+	{
+		auto pair = GetPair(name, AmfTypeMarker::Number);
+
+		if (pair != nullptr)
+		{
+			switch (pair->property.GetType())
+			{
+				OV_CASE_RETURN(AmfTypeMarker::Number, pair->property.GetNumber());
+				OV_CASE_RETURN(AmfTypeMarker::Boolean, pair->property.GetBoolean() ? 1.0 : 0.0);
+				OV_CASE_RETURN(AmfTypeMarker::String, ov::Converter::ToDouble(pair->property.GetString()));
+
+				OV_CASE_RETURN(AmfTypeMarker::Object, std::nullopt);
+				OV_CASE_RETURN(AmfTypeMarker::MovieClip, std::nullopt);
+				OV_CASE_RETURN(AmfTypeMarker::Null, std::nullopt);
+				OV_CASE_RETURN(AmfTypeMarker::Undefined, std::nullopt);
+				OV_CASE_RETURN(AmfTypeMarker::Reference, std::nullopt);
+				OV_CASE_RETURN(AmfTypeMarker::EcmaArray, std::nullopt);
+				OV_CASE_RETURN(AmfTypeMarker::ObjectEnd, std::nullopt);
+				OV_CASE_RETURN(AmfTypeMarker::StrictArray, std::nullopt);
+				OV_CASE_RETURN(AmfTypeMarker::Date, std::nullopt);
+				OV_CASE_RETURN(AmfTypeMarker::LongString, std::nullopt);
+				OV_CASE_RETURN(AmfTypeMarker::Unsupported, std::nullopt);
+				OV_CASE_RETURN(AmfTypeMarker::Recordset, std::nullopt);
+				OV_CASE_RETURN(AmfTypeMarker::Xml, std::nullopt);
+				OV_CASE_RETURN(AmfTypeMarker::TypedObject, std::nullopt);
+			}
+		}
+
+		return std::nullopt;
+	}
+
+	std::optional<ov::String> AmfObjectArray::GetString(const char *name) const
+	{
+		auto pair = GetPair(name, AmfTypeMarker::String);
+
+		if (pair != nullptr)
+		{
+			return pair->property.GetString();
+		}
+
+		return std::nullopt;
+	}
+
+	void AmfObjectArray::ToString(ov::String &description, size_t indent) const
+	{
+		auto indent_string = ov::String::Repeat("    ", indent);
+		auto item_indent_string = ov::String::Repeat("    ", indent + 1);
+		auto start_char = (_amf_data_type == AmfTypeMarker::Object) ? '{' : '[';
+		auto end_char = (_amf_data_type == AmfTypeMarker::Object) ? '}' : ']';
+
+		if (_amf_property_pairs.empty())
+		{
+			description.AppendFormat("%c%c  (%s)", start_char, end_char, EnumToString(_amf_data_type));
+			return;
+		}
+
+		description.AppendFormat("%c  (%s)\n", start_char, EnumToString(_amf_data_type));
+
+		for (auto &property_pair : _amf_property_pairs)
+		{
+			description.AppendFormat("%s%s: ", item_indent_string.CStr(), property_pair.name.CStr());
+			property_pair.property.ToString(
+				description,
+				(property_pair.IsTypeOf(AmfTypeMarker::Object) ||
+				 property_pair.IsTypeOf(AmfTypeMarker::EcmaArray))
+					? indent + 1
+					: 0);
+			description.Append('\n');
+		}
+
+		description.AppendFormat("%s%c", indent_string.CStr(), end_char);
+	}
+
+	ov::String AmfObjectArray::ToString(size_t indent) const
+	{
+		ov::String description;
+		ToString(description, indent);
+		return description;
+	}
+}  // namespace modules::rtmp

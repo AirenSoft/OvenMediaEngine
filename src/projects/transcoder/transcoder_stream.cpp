@@ -499,15 +499,12 @@ bool TranscoderStream::SendBufferedPackets()
 }
 
 // Dynamically generated applications are created by default with BYPASS profiles.
-int32_t TranscoderStream::CreateOutputStreamDynamic()
+size_t TranscoderStream::CreateOutputStreamDynamic()
 {
-	// Number of generated output streams
-	int32_t created_count = 0;
-
 	auto output_stream = std::make_shared<info::Stream>(_application_info, StreamSourceType::Transcoder);
 	if (output_stream == nullptr)
 	{
-		return created_count;
+		return 0;
 	}
 
 	output_stream->SetName(_input_stream->GetName());
@@ -539,15 +536,11 @@ int32_t TranscoderStream::CreateOutputStreamDynamic()
 		  _log_prefix.CStr(),
 		  _application_info.GetVHostAppName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
 
-	created_count++;
-
-	return created_count;
+	return _output_streams.size();
 }
 
-int32_t TranscoderStream::CreateOutputStreams()
+size_t TranscoderStream::CreateOutputStreams()
 {
-	int32_t created_count = 0;
-
 	// Get the output profile to make the output stream
 	auto cfg_output_profile_list = GetOutputProfilesCfg()->GetOutputProfileList();
 	
@@ -563,11 +556,9 @@ int32_t TranscoderStream::CreateOutputStreams()
 		_output_streams.insert(std::make_pair(output_stream->GetName(), output_stream));
 
 		logti("%s Output stream has been created. [%s/%s(%u)]", _log_prefix.CStr(), _application_info.GetVHostAppName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
-
-		created_count++;
 	}
 
-	return created_count;
+	return _output_streams.size();
 }
 
 std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vhost::app::oprf::OutputProfile &cfg_output_profile)
@@ -816,10 +807,8 @@ ov::String TranscoderStream::MakeRenditionName(const ov::String &name_template, 
 	return unique_rendition_name;
 }
 
-int32_t TranscoderStream::BuildComposite()
+size_t TranscoderStream::BuildComposite()
 {
-	int32_t created_count = 0;
-
 	for (auto &[key, composite] : _composite_map)
 	{
 		UNUSED_VARIABLE(key)
@@ -860,13 +849,11 @@ int32_t TranscoderStream::BuildComposite()
 				_link_encoder_to_outputs[encoder_id].push_back(output_stream_and_track);
 			}
 		}
-
-		created_count++;
 	}
 
 	logtd("%s", GetInfoStringComposite().CStr());
 
-	return created_count;
+	return _link_input_to_outputs.size() + _link_input_to_decoder.size();
 }
 
 // LOG for DEBUG
@@ -963,10 +950,8 @@ void TranscoderStream::AddComposite(
 	_composite_map[key]->AddOutput(output_stream, output_track);
 }
 
-int32_t TranscoderStream::CreateDecoders()
+size_t TranscoderStream::CreateDecoders()
 {
-	int32_t created_count = 0;
-
 	for (auto &[input_track_id, decoder_id] : _link_input_to_decoder)
 	{
 		// Get Input Track
@@ -982,11 +967,9 @@ int32_t TranscoderStream::CreateDecoders()
 		{
 			continue;
 		}
-
-		created_count++;
 	}
 
-	return created_count;
+	return _decoders.size();;
 }
 
 bool TranscoderStream::CreateDecoder(MediaTrackId decoder_id, std::shared_ptr<info::Stream> input_stream, std::shared_ptr<MediaTrack> input_track)
@@ -1058,9 +1041,8 @@ void TranscoderStream::SetDecoder(MediaTrackId decoder_id, std::shared_ptr<Trans
 	_decoders[decoder_id] = decoder;
 }
 
-int32_t TranscoderStream::CreateEncoders(std::shared_ptr<MediaFrame> buffer)
+size_t TranscoderStream::CreateEncoders(std::shared_ptr<MediaFrame> buffer)
 {
-	int32_t created = 0;
 	MediaTrackId track_id = buffer->GetTrackId();
 
 	for (auto &[key, composite] : _composite_map)
@@ -1094,17 +1076,15 @@ int32_t TranscoderStream::CreateEncoders(std::shared_ptr<MediaFrame> buffer)
 				logte("[%s/%s(%u)] Could not create encoder. Encoder(%d), OutputTrack(%d)", _application_info.GetVHostAppName().CStr(), _input_stream->GetName().CStr(), _input_stream->GetId(), encoder_id, output_track->GetId());
 				continue;
 			}
-
-			created++;
 		}
 	}
 
-	return created;
+	return _encoders.size();;
 }
 
 bool TranscoderStream::CreateEncoder(MediaTrackId encoder_id, std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track)
 {
-	if (GetEncoder(encoder_id).has_value())
+	if (GetEncoder(encoder_id))
 	{
 		logtd("%s Encoder already exists. Encoder(%d)", _log_prefix.CStr(), encoder_id);
 		return true;
@@ -1135,20 +1115,20 @@ bool TranscoderStream::CreateEncoder(MediaTrackId encoder_id, std::shared_ptr<in
 	// These values are used in the Resampler/Rescaler filter.
 	if (output_track->GetMediaType() == cmn::MediaType::Video)
 	{
-		output_track->SetColorspace(encoder->GetSupportedFormat());
+		output_track->SetColorspace(encoder->GetSupportVideoFormat());
 	}
 	else if (output_track->GetMediaType() == cmn::MediaType::Audio)
 	{
-		output_track->GetSample().SetFormat(ffmpeg::Conv::ToAudioSampleFormat(encoder->GetSupportedFormat()));
+		output_track->GetSample().SetFormat(encoder->GetSupportAudioFormat());
 	}
 
 	// Create Paired Filter
-	std::shared_ptr<TranscodeFilter> filter = nullptr;
+	std::shared_ptr<TranscodeFilter> post_filter = nullptr;
 	if(output_track->GetMediaType() == cmn::MediaType::Audio)
 	{
-		filter = TranscodeFilter::Create(encoder_id, output_stream, output_track,
-										 bind(&TranscoderStream::OnPreEncodeFilteredFrame, this, std::placeholders::_1, std::placeholders::_2));
-		if (filter == nullptr)
+		post_filter = TranscodeFilter::Create(encoder_id, output_stream, output_track,
+										 bind(&TranscoderStream::OnPostFilteredFrame, this, std::placeholders::_1, std::placeholders::_2));
+		if (post_filter == nullptr)
 		{
 			// Stop & Release Encoder
 			encoder->Stop();
@@ -1158,14 +1138,14 @@ bool TranscoderStream::CreateEncoder(MediaTrackId encoder_id, std::shared_ptr<in
 		}
 	}
 
-	SetEncoder(encoder_id, filter, encoder);
+	SetPostFilterAndEncoder(encoder_id, post_filter, encoder);
 
 	logtd("%s Created encoder. Encoder(%d) > OutputTrack(%d)", _log_prefix.CStr(), encoder_id, output_track->GetId());
 
 	return true;
 }
 
-std::optional<std::pair<std::shared_ptr<TranscodeFilter>, std::shared_ptr<TranscodeEncoder>>> TranscoderStream::GetEncoder(MediaTrackId encoder_id)
+std::optional<std::pair<std::shared_ptr<TranscodeFilter>, std::shared_ptr<TranscodeEncoder>>> TranscoderStream::GetEncoderSet(MediaTrackId encoder_id)
 {
 	std::shared_lock<std::shared_mutex> encoder_lock(_encoder_map_mutex);
 	if (_encoders.find(encoder_id) == _encoders.end())
@@ -1176,16 +1156,37 @@ std::optional<std::pair<std::shared_ptr<TranscodeFilter>, std::shared_ptr<Transc
 	return _encoders[encoder_id];
 }
 
-void TranscoderStream::SetEncoder(MediaTrackId encoder_id, std::shared_ptr<TranscodeFilter> filter, std::shared_ptr<TranscodeEncoder> encoder)
+std::shared_ptr<TranscodeFilter> TranscoderStream::GetPostFilter(MediaTrackId encoder_id)
+{
+	std::shared_lock<std::shared_mutex> encoder_lock(_encoder_map_mutex);
+	if (_encoders.find(encoder_id) == _encoders.end())
+	{
+		return nullptr;
+	}
+
+	return _encoders[encoder_id].first;
+}
+
+std::shared_ptr<TranscodeEncoder> TranscoderStream::GetEncoder(MediaTrackId encoder_id)
+{
+	std::shared_lock<std::shared_mutex> encoder_lock(_encoder_map_mutex);
+	if (_encoders.find(encoder_id) == _encoders.end())
+	{
+		return nullptr;
+	}
+
+	return _encoders[encoder_id].second;
+}
+
+void TranscoderStream::SetPostFilterAndEncoder(MediaTrackId encoder_id, std::shared_ptr<TranscodeFilter> filter, std::shared_ptr<TranscodeEncoder> encoder)
 {
 	std::unique_lock<std::shared_mutex> encoder_lock(_encoder_map_mutex);
 
 	_encoders[encoder_id] = std::make_pair(filter, encoder);
 }
 
-int32_t TranscoderStream::CreateFilters(std::shared_ptr<MediaFrame> buffer)
+size_t TranscoderStream::CreateFilters(std::shared_ptr<MediaFrame> buffer)
 {
-	int32_t created = 0;
 
 	MediaTrackId decoder_id = buffer->GetTrackId();
 
@@ -1194,8 +1195,7 @@ int32_t TranscoderStream::CreateFilters(std::shared_ptr<MediaFrame> buffer)
 	if (decoder_to_filters_it == _link_decoder_to_filters.end())
 	{ 
 		logtw("%s Could not found filter list related to decoder", _log_prefix.CStr());
-
-		return created;
+		return 0;
 	}
 
 	// 2. Get Output Track of Encoders
@@ -1203,14 +1203,7 @@ int32_t TranscoderStream::CreateFilters(std::shared_ptr<MediaFrame> buffer)
 	for (auto &filter_id : filter_ids)
 	{
 		MediaTrackId encoder_id = _link_filter_to_encoder[filter_id];
-		auto encoder_set = GetEncoder(encoder_id);
-		if(encoder_set.has_value() == false)
-		{
-			logte("%s Failed to create filter. could not found encoder set. Encoder(%d), Filter(%d)", _log_prefix.CStr(), encoder_id, filter_id);
-			continue;
-		}
-
-		auto encoder = encoder_set->second;
+		auto encoder = GetEncoder(encoder_id);
 		if(encoder == nullptr)
 		{
 			logte("%s Failed to create filter. could not found encoder. Encoder(%d), Filter(%d)", _log_prefix.CStr(), encoder_id, filter_id);
@@ -1236,18 +1229,16 @@ int32_t TranscoderStream::CreateFilters(std::shared_ptr<MediaFrame> buffer)
 		{
 			continue;
 		}
-
-		created++;
 	}
 
-	return created;
+	return _filters.size();;
 }
 
 bool TranscoderStream::CreateFilter(MediaTrackId filter_id, std::shared_ptr<MediaTrack> input_track, std::shared_ptr<MediaTrack> output_track)
 {
 	if(GetFilter(filter_id) != nullptr)
 	{
-		logtw("%s Filter already exists. Filter(%d)", _log_prefix.CStr(), filter_id);
+		logtd("%s filters that have already been created. Filter(%d)", _log_prefix.CStr(), filter_id);
 		return true;
 	}
 
@@ -1265,7 +1256,7 @@ bool TranscoderStream::CreateFilter(MediaTrackId filter_id, std::shared_ptr<Medi
 		return false;
 	}
 
-	auto filter = TranscodeFilter::Create(filter_id, input_stream, input_track, output_stream, output_track, bind(&TranscoderStream::OnFilteredFrame, this, std::placeholders::_1, std::placeholders::_2));
+	auto filter = TranscodeFilter::Create(filter_id, input_stream, input_track, output_stream, output_track, bind(&TranscoderStream::OnPreFilteredFrame, this, std::placeholders::_1, std::placeholders::_2));
 	if (filter == nullptr)
 	{
 		logte("%s Failed to create filter. Filter(%d)", _log_prefix.CStr(), filter_id);
@@ -1356,14 +1347,14 @@ void TranscoderStream::UpdateInputTrack(std::shared_ptr<MediaFrame> buffer)
 		{
 			input_track->SetWidth(buffer->GetWidth());
 			input_track->SetHeight(buffer->GetHeight());
-			input_track->SetColorspace(buffer->GetFormat());  // used AVPixelFormat
+			input_track->SetColorspace(buffer->GetFormat<cmn::VideoPixelFormatId>());
 		}
 		break;
 		case cmn::MediaType::Audio: 
 		{
 			input_track->SetSampleRate(buffer->GetSampleRate());
 			input_track->SetChannel(buffer->GetChannels());
-			input_track->GetSample().SetFormat(ffmpeg::Conv::ToAudioSampleFormat(buffer->GetFormat()));
+			input_track->GetSample().SetFormat(buffer->GetFormat<cmn::AudioSample::Format>());
 		}
 		break;
 		default: 
@@ -1607,7 +1598,7 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, MediaTrackId decod
 					int64_t start_pts = decoded_frame->GetPts() - hole_time_tb;
 					int64_t end_pts = decoded_frame->GetPts();
 					int32_t needed_frames = hole_time_tb / duration_per_frame;
-					int32_t created_count = 0;
+					int32_t created_filler = 0;
 
 					logtd("%s Generate filler frame because time diffrence from last frame. Type(%s), needed(%d), last_pts(%lld), curr_pts(%lld), hole_time(%lld), hole_time_tb(%lld), frame_duration(%lld), start_pts(%lld), end_pts(%lld)",
 						  _log_prefix.CStr(), cmn::GetMediaTypeString(input_track->GetMediaType()), needed_frames, last_decoded_frame_time_us, curr_decoded_frame_time_us, hole_time_us, hole_time_tb, duration_per_frame, start_pts, end_pts);
@@ -1639,7 +1630,7 @@ void TranscoderStream::OnDecodedFrame(TranscodeResult result, MediaTrackId decod
 						SpreadToFilters(decoder_id, clone_frame);
 
 						// Prevent infinite loop
-						if(created_count++ >= MAX_FILLER_FRAMES)
+						if(created_filler++ >= MAX_FILLER_FRAMES)
 						{
 							break;
 						}
@@ -1722,7 +1713,7 @@ std::shared_ptr<MediaTrack> TranscoderStream::GetInputTrackOfFilter(MediaTrackId
 	return filter->GetInputTrack();
 }
 
-TranscodeResult TranscoderStream::FilterFrame(MediaTrackId filter_id, std::shared_ptr<MediaFrame> decoded_frame)
+TranscodeResult TranscoderStream::PreFilterFrame(MediaTrackId filter_id, std::shared_ptr<MediaFrame> decoded_frame)
 {
 	auto filter = GetFilter(filter_id);
 	if (filter == nullptr)
@@ -1738,7 +1729,7 @@ TranscodeResult TranscoderStream::FilterFrame(MediaTrackId filter_id, std::share
 	return TranscodeResult::DataReady;
 }
 
-void TranscoderStream::OnFilteredFrame(MediaTrackId filter_id, std::shared_ptr<MediaFrame> filtered_frame)
+void TranscoderStream::OnPreFilteredFrame(MediaTrackId filter_id, std::shared_ptr<MediaFrame> filtered_frame)
 {
 	if(_is_updating == true)
 	{
@@ -1748,10 +1739,10 @@ void TranscoderStream::OnFilteredFrame(MediaTrackId filter_id, std::shared_ptr<M
 
 	filtered_frame->SetTrackId(filter_id);
 
-	PreEncodeFilterFrame(std::move(filtered_frame));
+	PostFilterFrame(std::move(filtered_frame));
 }
 
-TranscodeResult TranscoderStream::PreEncodeFilterFrame(std::shared_ptr<MediaFrame> frame)
+TranscodeResult TranscoderStream::PostFilterFrame(std::shared_ptr<MediaFrame> frame)
 {
 	auto filter_id = frame->GetTrackId();
 
@@ -1763,28 +1754,21 @@ TranscodeResult TranscoderStream::PreEncodeFilterFrame(std::shared_ptr<MediaFram
 	}
 	auto encoder_id = filter_to_encoder_it->second;
 
-	// Get EncoderSet
-	auto encoder_set = GetEncoder(encoder_id);
-	if(encoder_set.has_value() == false)
-	{
-		return TranscodeResult::NoData;
-	}
-
 	// If the encoder has a pre-encode filter, it is passed to the filter.
-	auto encode_filter = encoder_set->first;
-	if (encode_filter != nullptr)
+	auto post_filter = GetPostFilter(encoder_id);
+	if (post_filter != nullptr)
 	{
-		encode_filter->SendBuffer(std::move(frame));
+		post_filter->SendBuffer(std::move(frame));
 
 		return TranscodeResult::DataReady;
 	}
-
-	OnPreEncodeFilteredFrame(encoder_id, std::move(frame));
+	
+	OnPostFilteredFrame(encoder_id, std::move(frame));
 	
 	return TranscodeResult::DataReady;
 }
 
-void TranscoderStream::OnPreEncodeFilteredFrame(MediaTrackId encoder_id, std::shared_ptr<MediaFrame> filtered_frame)
+void TranscoderStream::OnPostFilteredFrame(MediaTrackId encoder_id, std::shared_ptr<MediaFrame> filtered_frame)
 {
 	if(_is_updating == true)
 	{
@@ -1802,13 +1786,7 @@ TranscodeResult TranscoderStream::EncodeFrame(std::shared_ptr<const MediaFrame> 
 	auto encoder_id = frame->GetTrackId();
 
 	// Get Encoder
-	auto encoder_set = GetEncoder(encoder_id);
-	if (encoder_set.has_value() == false)
-	{
-		return TranscodeResult::NoData;
-	}
-
-	auto encoder = encoder_set->second;
+	auto encoder = GetEncoder(encoder_id);
 	if (encoder == nullptr)
 	{
 		return TranscodeResult::NoData;
@@ -1903,7 +1881,7 @@ void TranscoderStream::SpreadToFilters(MediaTrackId decoder_id, std::shared_ptr<
 			continue;
 		}
 
-		FilterFrame(filter_id, std::move(frame_clone));
+		PreFilterFrame(filter_id, std::move(frame_clone));
 	}
 }
 

@@ -55,8 +55,8 @@ namespace pvd
             bool operator==(const Item &rhs) const
             {
                 if (url != rhs.url ||
-                    start_time_ms != rhs.start_time_ms ||
-                    duration_ms != rhs.duration_ms)
+                    start_time_ms_conf != rhs.start_time_ms_conf ||
+                    duration_ms_conf != rhs.duration_ms_conf)
                 {
                     return false;
                 }
@@ -72,11 +72,17 @@ namespace pvd
 
             ov::String url;
             ov::String file_path;
-            int64_t start_time_ms;
-            int64_t duration_ms;
             bool fallback_on_err = true; // default true
             bool file = true;
             bool fallback = false;
+
+			// setting values
+			int64_t start_time_ms_conf;
+            int64_t duration_ms_conf;
+
+			// calculated values
+			int64_t start_time_ms = 0;
+			int64_t duration_ms = 0;
         };
 
         struct Stream
@@ -111,42 +117,15 @@ namespace pvd
             
         struct Program
         {
-            std::shared_ptr<Item> GetNextItem()
-            {
-                if (items.empty())
-                {
-                    return nullptr;
-                }
-
-                if (size_t(current_item_index) >= items.size())
-                {
-                    if (repeat)
-                    {
-                        current_item_index = 0;
-                    }
-                    else
-                    {
-                        off_air = true;
-                        return nullptr;
-                    }
-                }
-
-                auto item = items[current_item_index];
-                current_item_index++;
-
-                return item;
-            }
-
-            bool IsOffAir() const
-            {
-                return off_air;
-            }
+			std::shared_ptr<Item> GetFirstItem();
+            std::shared_ptr<Item> GetNextItem();
+            bool IsOffAir() const;
 
             // == operator
             bool operator==(const Program &rhs) const
             {
                 if (scheduled_time != rhs.scheduled_time ||
-                    //duration_ms != rhs.duration_ms || // duration_ms is changed by next program
+                    //duration_ms != rhs.duration_ms || // duration_ms can be changed by next program
                     repeat != rhs.repeat || 
                     items.size() != rhs.items.size())
                 {
@@ -177,6 +156,8 @@ namespace pvd
             std::chrono::system_clock::time_point end_time;
             bool repeat;
             std::vector<std::shared_ptr<Item>> items;
+			int64_t total_item_duration_ms = 0;
+			bool unlimited_duration = false; // if live with no duration, it will be played until the end of the program
 
         private:
             int current_item_index = 0;
@@ -226,7 +207,7 @@ namespace pvd
         Stream MakeStream(const ov::String &name, bool bypass_transcoder, bool video_track, bool audio_track) const;
         std::shared_ptr<Program> MakeFallbackProgram() const;
         std::shared_ptr<Program> MakeProgram(const ov::String &name, const ov::String &scheduled_time, const ov::String &next_scheduled_time, bool repeat, bool last) const;
-        std::shared_ptr<Item> MakeItem(const ov::String &url, int64_t start_time_ms, int64_t duration_ms, bool fallback_on_err) const;
+        std::shared_ptr<Item> MakeItem(const ov::String &url, int64_t start_time_ms_conf, int64_t duration_ms_conf, bool fallback_on_err) const;
 
         Stream _stream;
         std::shared_ptr<Program> _fallback_program;

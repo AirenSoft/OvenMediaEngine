@@ -20,11 +20,11 @@ namespace cfg
 				{
 				protected:
 					// 0 means no-cache no-store
-					int _master_playlist_max_age = 0;
-					int _chunklist_max_age = 0;
+					int _master_playlist_max_age		   = 0;
+					int _chunklist_max_age				   = 0;
 					int _chunklist_with_directives_max_age = 60;
-					int _segment_max_age = -1;
-					int _partial_segment_max_age = -1;
+					int _segment_max_age				   = -1;
+					int _partial_segment_max_age		   = -1;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetMasterPlaylistMaxAge, _master_playlist_max_age)
@@ -41,10 +41,9 @@ namespace cfg
 						Register<Optional>("ChunklistWithDirectivesMaxAge", &_chunklist_with_directives_max_age);
 						Register<Optional>("SegmentMaxAge", &_segment_max_age);
 						Register<Optional>("PartialSegmentMaxAge", &_partial_segment_max_age);
-						
 					}
 				};
 			}  // namespace pub
-		} // namespace app
-	} // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

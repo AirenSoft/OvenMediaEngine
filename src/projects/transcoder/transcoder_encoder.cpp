@@ -41,7 +41,7 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 {
 	logtd("Track(%d) Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s), Encode.Modules(%s)",
 		  track->GetId(),
-		  GetCodecIdToString(track->GetCodecId()),
+		  cmn::GetCodecIdString(track->GetCodecId()),
 		  hwaccels_enable ? "true" : "false",
 		  hwaccles_modules.CStr(),
 		  track->GetCodecModules().CStr());
@@ -123,11 +123,11 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 		}
 		else  if(cmn::IsSupportHWAccels(module_id) == true && hwaccels_enable == true)
 		{
-			for (int i = 0; i < TranscodeGPU::GetInstance()->GetDeviceCount(module_id); i++)
+			for (int device_id = 0; device_id < TranscodeGPU::GetInstance()->GetDeviceCount(module_id); device_id++)
 			{
-				if ((gpu_id == ALL_GPU_ID || gpu_id == i) && TranscodeGPU::GetInstance()->IsSupported(module_id, i) == true)
+				if ((gpu_id == ALL_GPU_ID || gpu_id == device_id) && TranscodeGPU::GetInstance()->IsSupported(module_id, device_id) == true)
 				{
-					candidate_modules->push_back(std::make_shared<CodecCandidate>(track->GetCodecId(), module_id, i));
+					candidate_modules->push_back(std::make_shared<CodecCandidate>(track->GetCodecId(), module_id, device_id));
 				}
 			}
 		}
@@ -143,9 +143,9 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 		(void)(candidate);
 		
 		logtd("Candidate module: %s(%d), %s(%d):%d",
-			  cmn::GetCodecIdToString(candidate->GetCodecId()),
+			  cmn::GetCodecIdString(candidate->GetCodecId()),
 			  candidate->GetCodecId(),
-			  cmn::GetStringFromCodecModuleId(candidate->GetModuleId()),
+			  cmn::GetCodecModuleIdString(candidate->GetModuleId()),
 			  candidate->GetModuleId(),
 			  candidate->GetDeviceId());
 	}
@@ -294,16 +294,27 @@ done:
 
 		logti("The encoder has been created. track(#%d), codec(%s), module(%s:%d)",
 			track->GetId(),
-			cmn::GetCodecIdToString(track->GetCodecId()),
-			cmn::GetStringFromCodecModuleId(track->GetCodecModuleId()),
+			cmn::GetCodecIdString(track->GetCodecId()),
+			cmn::GetCodecModuleIdString(track->GetCodecModuleId()),
 			track->GetCodecDeviceId());		
 	}
 
 	return encoder;
 }
 
-TranscodeEncoder::TranscodeEncoder(info::Stream stream_info) : 
-	_stream_info(stream_info)
+TranscodeEncoder::TranscodeEncoder(info::Stream stream_info)
+	: _encoder_id(-1),
+	  _stream_info(stream_info),
+	  _track(nullptr),
+	  _bitstream_format(cmn::BitstreamFormat::Unknown),
+	  _packet_type(cmn::PacketType::Unknown),
+	  _kill_flag(false),
+	  _complete_handler(nullptr),
+	  _force_keyframe_by_time_interval(0),
+	  _accumulate_frame_duration(-1),
+	  _codec_context(nullptr),
+	  _packet(nullptr),
+	  _frame(nullptr)
 {
 }
 
@@ -332,12 +343,8 @@ bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track)
 	_track = output_track;	
 	_track->SetOriginBitstream(GetBitstreamFormat());
 
-	auto name = ov::String::FormatString("enc_%s_%d", ::avcodec_get_name(GetCodecID()), _track->GetId());
-	auto urn = std::make_shared<info::ManagedQueue::URN>(
-		_stream_info.GetApplicationInfo().GetVHostAppName(),
-		_stream_info.GetName(),
-		"trs",
-		name);
+	auto name = ov::String::FormatString("enc_%s_t%d", cmn::GetCodecIdString(GetCodecID()), _track->GetId());
+	auto urn = std::make_shared<info::ManagedQueue::URN>(_stream_info.GetApplicationInfo().GetVHostAppName(), _stream_info.GetName(), "trs", name);
 	_input_buffer.SetUrn(urn);
 	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
 
@@ -398,7 +405,7 @@ void TranscodeEncoder::Stop()
 	if (_codec_thread.joinable())
 	{
 		_codec_thread.join();
-		logtd(ov::String::FormatString("encoder %s thread has ended", avcodec_get_name(GetCodecID())).CStr());
+		logtd(ov::String::FormatString("encoder %s thread has ended", cmn::GetCodecIdString(GetCodecID())).CStr());
 	}
 }
 
@@ -406,7 +413,6 @@ bool TranscodeEncoder::InitCodecInteral()
 {
 	_packet = ::av_packet_alloc();
 	_frame = ::av_frame_alloc();
-	_codec_par = ::avcodec_parameters_alloc();
 
 	// Called the codec specific initialization function.
 	return InitCodec();
@@ -414,26 +420,18 @@ bool TranscodeEncoder::InitCodecInteral()
 
 void TranscodeEncoder::DeinitCodec()
 {
-	// Flush the codc.
-	if (_codec_context != nullptr && _codec_context->codec != nullptr)
+	if (_codec_context != nullptr)
 	{
-		if (_codec_context->codec->capabilities & AV_CODEC_CAP_ENCODER_FLUSH)
+		if (_codec_context->codec != nullptr && _codec_context->codec->capabilities & AV_CODEC_CAP_ENCODER_FLUSH)
 		{
 			::avcodec_flush_buffers(_codec_context);
 		}
-	}
 
-	// Close the codec 
-	if (_codec_context != nullptr)
-	{
-		avcodec_close(_codec_context);
-		
 		OV_SAFE_FUNC(_codec_context, nullptr, ::avcodec_free_context, &);
 	}
 
 	OV_SAFE_FUNC(_frame, nullptr, ::av_frame_free, &);
 	OV_SAFE_FUNC(_packet, nullptr, ::av_packet_free, &);
-	OV_SAFE_FUNC(_codec_par, nullptr, ::avcodec_parameters_free, &);
 }
 
 void TranscodeEncoder::Flush()
@@ -456,7 +454,7 @@ bool TranscodeEncoder::PushProcess(std::shared_ptr<const MediaFrame> media_frame
 		return true;
 	}
 
-	auto av_frame = ffmpeg::Conv::ToAVFrame(GetRefTrack()->GetMediaType(), media_frame);
+	auto av_frame = ffmpeg::compat::ToAVFrame(GetRefTrack()->GetMediaType(), media_frame);
 	if (!av_frame)
 	{
 		logte("Could not allocate the video frame data");
@@ -467,12 +465,15 @@ bool TranscodeEncoder::PushProcess(std::shared_ptr<const MediaFrame> media_frame
 	if (GetRefTrack()->GetMediaType() == cmn::MediaType::Video)
 	{
 		av_frame->pict_type = AV_PICTURE_TYPE_NONE;
+
+		// If _force_keyframe_by_time_interval value is > 0,
+		// Enabled force keyframe by time interval.
 		if (_force_keyframe_by_time_interval > 0)
 		{
-			if (_accumulate_frame_duration >= _force_keyframe_by_time_interval ||
-				_accumulate_frame_duration == -1)  // First Frame
+			if (_accumulate_frame_duration >= _force_keyframe_by_time_interval ||  // Accumulated duration exceeds keyframe interval
+				_accumulate_frame_duration == -1)								   // Force keyframe the first frame
 			{
-				av_frame->pict_type = AV_PICTURE_TYPE_I;
+				av_frame->pict_type		   = AV_PICTURE_TYPE_I;
 				_accumulate_frame_duration = 0;
 			}
 			_accumulate_frame_duration += media_frame->GetDuration();
@@ -501,11 +502,11 @@ bool TranscodeEncoder::PopProcess()
 	}
 	else if (ret < 0)
 	{
-		logte("Error receiving a packet for decoding : %s", ffmpeg::Conv::ErrorToString(ret).CStr());
+		logte("Error receiving a packet for decoding : %s", ffmpeg::compat::AVErrorToString(ret).CStr());
 		return false;
 	}
 
-	auto media_packet = ffmpeg::Conv::ToMediaPacket(_packet, GetRefTrack()->GetMediaType(), _bitstream_format, _packet_type);
+	auto media_packet = ffmpeg::compat::ToMediaPacket(_packet, GetRefTrack()->GetMediaType(), _bitstream_format, _packet_type);
 	if (media_packet == nullptr)
 	{
 		logte("Could not allocate the media packet");
@@ -530,22 +531,33 @@ bool TranscodeEncoder::PopProcess()
 
 void TranscodeEncoder::CodecThread()
 {
-	// Initialize the codec and notify the main thread.
-	if(_codec_init_event.Submit(InitCodecInteral()) == false)
+	// Initialize the codec and notify to the main thread.
+	if (_codec_init_event.Submit(InitCodecInteral()) == false)
 	{
 		return;
 	}
 
-	// Initialize for force keyframe by time interval.
+	// Initialize for Force Keyframe by time interval.
 	if ((GetRefTrack()->GetMediaType() == cmn::MediaType::Video) &&
 		(GetRefTrack()->GetKeyFrameIntervalTypeByConfig() == cmn::KeyFrameIntervalType::TIME))
 	{
-		auto timebase_timescale = GetRefTrack()->GetTimeBase().GetTimescale();
-		auto key_frame_interval = GetRefTrack()->GetKeyFrameInterval();
-		_force_keyframe_by_time_interval = static_cast<int64_t>(timebase_timescale * (double)key_frame_interval / 1000.0);
+		// Enable force keyframe by time interval.
+		auto key_frame_interval_ms		 = GetRefTrack()->GetKeyFrameInterval();
+		auto timebase_timescale			 = GetRefTrack()->GetTimeBase().GetTimescale();
+		_force_keyframe_by_time_interval = static_cast<int64_t>(timebase_timescale * (double)key_frame_interval_ms / 1000.0);
 
 		// Insert keyframe in first frame
-		_accumulate_frame_duration = -1;
+		_accumulate_frame_duration		 = -1;
+
+		logti("Force keyframe by time interval is enabled. interval(%lld ms)", key_frame_interval_ms);
+	}
+	else
+	{
+		// Disable force keyframe by time interval.
+		_force_keyframe_by_time_interval = 0;
+		_accumulate_frame_duration		 = -1;
+
+		logti("Force keyframe by time interval is disabled.");
 	}
 
 	[[maybe_unused]] 
@@ -564,7 +576,7 @@ void TranscodeEncoder::CodecThread()
 		// Recreate the codec context if the source id is changed.
 		// Xilinx VCU does not support frame buffer sharing between xvbm multi sclaler filter.
 		///////////////////////////////////////////////////
-		if (GetSupportedFormat() == AV_PIX_FMT_XVBM_8)
+		if (GetSupportVideoFormat() == cmn::VideoPixelFormatId::XVBM_8 || GetSupportVideoFormat() == cmn::VideoPixelFormatId::XVBM_10)
 		{
 			if (curr_source_id != media_frame->GetSourceId() && curr_source_id != 0)
 			{

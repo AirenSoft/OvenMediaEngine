@@ -28,9 +28,9 @@ namespace cfg
 					int _bitrate = 0;
 					ov::String _bitrate_string;
 					int _samplerate = 0;
-					int _channel = 0;
+					int _channel	= 0;
 					BypassIfMatch _bypass_if_match;
-					
+
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsBypass, _bypass)
@@ -42,13 +42,34 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetChannel, _channel)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBypassIfMatch, _bypass_if_match)
 
-					void SetName(const ov::String &name){_name = name;}
-					void SetBypass(bool bypass){_bypass = bypass;}
-					void SetCodec(const ov::String &codec){_codec = codec;}
-					void SetBitrate(int bitrate){_bitrate = bitrate;}
-					void SetBitrateString(const ov::String &bitrate_string){_bitrate_string = bitrate_string;}
-					void SetSamplerate(int samplerate){_samplerate = samplerate;}
-					void SetChannel(int channel){_channel = channel;}
+					void SetName(const ov::String &name)
+					{
+						_name = name;
+					}
+					void SetBypass(bool bypass)
+					{
+						_bypass = bypass;
+					}
+					void SetCodec(const ov::String &codec)
+					{
+						_codec = codec;
+					}
+					void SetBitrate(int bitrate)
+					{
+						_bitrate = bitrate;
+					}
+					void SetBitrateString(const ov::String &bitrate_string)
+					{
+						_bitrate_string = bitrate_string;
+					}
+					void SetSamplerate(int samplerate)
+					{
+						_samplerate = samplerate;
+					}
+					void SetChannel(int channel)
+					{
+						_channel = channel;
+					}
 
 				protected:
 					void MakeList() override
@@ -69,7 +90,7 @@ namespace cfg
 							[=]() -> std::shared_ptr<ConfigError> {
 								auto bitrate_string = _bitrate_string.UpperCaseString();
 
-								int multiplier = 1;
+								int multiplier		= 1;
 								if (bitrate_string.HasSuffix("K"))
 								{
 									multiplier = 1024;
@@ -89,6 +110,6 @@ namespace cfg
 					}
 				};
 			}  // namespace oprf
-		}	   // namespace app
-	}		   // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

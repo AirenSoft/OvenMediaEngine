@@ -62,11 +62,7 @@ namespace cfg
 						Register<Optional>("Ulpfec", &_ulpfec);
 						Register<Optional>("PlayoutDelay", &_playout_delay);
 						Register<Optional>("CreateDefaultPlaylist", &_create_default_playlist);
-						Register<Optional>("BandwidthEstimation", &_bwe,	
-							[=]() -> std::shared_ptr<ConfigError> {
-								return nullptr;
-							},
-							[=]() -> std::shared_ptr<ConfigError> {
+						Register<Optional>("BandwidthEstimation", &_bwe, [=]() -> std::shared_ptr<ConfigError> { return nullptr; }, [=]() -> std::shared_ptr<ConfigError> {
 								if (_bwe.UpperCaseString() == "REMB")
 								{
 									_bandwidth_estimation_type = WebRtcBandwidthEstimationType::REMB;
@@ -82,13 +78,12 @@ namespace cfg
 									return CreateConfigErrorPtr("Invalid value for BWE. Valid values are 'TransportCC' or 'REMB'");
 								}
 
-								return nullptr;
-							});
+								return nullptr; });
 					}
 
-					int _timeout = 30000;
-					bool _rtx = false;
-					bool _ulpfec = false;
+					int _timeout		= 30000;
+					bool _rtx			= false;
+					bool _ulpfec		= false;
 					bool _jitter_buffer = false;
 					ov::String _bwe;
 
@@ -97,6 +92,6 @@ namespace cfg
 					bool _create_default_playlist = true;
 				};
 			}  // namespace pub
-		} // namespace app
-	} // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

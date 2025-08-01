@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 	CheckKernelVersion();
 
 	auto server_config = cfg::ConfigManager::GetInstance()->GetServer();
-	auto orchestrator = ocst::Orchestrator::GetInstance();
+	auto orchestrator  = ocst::Orchestrator::GetInstance();
 
 	logti("Server ID : %s", server_config->GetID().CStr());
 
@@ -194,7 +194,7 @@ int main(int argc, char *argv[])
 	RELEASE_MODULE(llhls_publisher, "LLHLS Publisher");
 	RELEASE_MODULE(ovt_publisher, "OVT Publisher");
 	RELEASE_MODULE(file_publisher, "File Publisher");
-	RELEASE_MODULE(push_publisher, "Push Publisher");	
+	RELEASE_MODULE(push_publisher, "Push Publisher");
 	RELEASE_MODULE(thumbnail_publisher, "Thumbnail Publisher");
 	RELEASE_MODULE(hls_publisher, "HLS Publisher");
 	RELEASE_MODULE(srt_publisher, "SRT Publisher");
@@ -227,6 +227,35 @@ static ov::Daemon::State Initialize(int argc, char *argv[], ParseOption *parse_o
 		::printf("    -i          Ignores and executes the settings of %s\n", CFG_LAST_CONFIG_FILE_NAME);
 		::printf("                (The JSON file is automatically generated when RESTful API is called)\n");
 		return ov::Daemon::State::PARENT_FAIL;
+	}
+
+	// Set the environment variables
+	auto env_path = parse_option->env_path;
+	if (env_path.IsEmpty() == false)
+	{
+		env_path = ov::PathManager::IsAbsolute(env_path)
+					   ? env_path
+					   : ov::PathManager::Combine(ov::PathManager::GetCurrentPath(), env_path);
+
+		try
+		{
+			auto env = ParseEnvFile(env_path);
+
+			for (const auto &pair : env)
+			{
+				if (::setenv(pair.first.CStr(), pair.second.CStr(), 1) != 0)
+				{
+					auto error = ov::Error::CreateErrorFromErrno();
+					logte("Could not set environment variable \"%s\"=\"%s\" (%s)", pair.first.CStr(), pair.second.CStr(), error->What());
+					return ov::Daemon::State::PARENT_FAIL;
+				}
+			}
+		}
+		catch (const std::shared_ptr<ov::Error> &error)
+		{
+			logte("Could not load environment variables from file: %s (%s)", env_path.CStr(), error->What());
+			return ov::Daemon::State::PARENT_FAIL;
+		}
 	}
 
 	{
@@ -305,7 +334,7 @@ static void CheckKernelVersion()
 	}
 
 	ov::String release = name.release;
-	auto tokens = release.Split(".");
+	auto tokens		   = release.Split(".");
 
 	if (tokens.size() > 1)
 	{

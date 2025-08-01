@@ -1,9 +1,6 @@
 #pragma once
 
 #include <base/info/media_track.h>
-#include <base/publisher/session.h>
-#include <modules/ffmpeg/ffmpeg_writer.h>
-
 #include "base/info/record.h"
 
 namespace pub

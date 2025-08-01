@@ -94,9 +94,17 @@ public:
 	int32_t GetWidth();
 	int32_t GetHeight();
 
+	std::tuple<std::shared_ptr<ov::Data>, FragmentationHeader> GetVpsSpsPpsAsAnnexB();
+	bool AddVpsSpsPpsAnnexB(const std::shared_ptr<ov::Data> &data, FragmentationHeader *fragmentation_header);
+	bool AddAudAnnexB(const std::shared_ptr<ov::Data> &data, FragmentationHeader *fragmentation_header);
+
 private:
 	MAY_THROWS(ov::BitReaderError)
 	bool ParseV2Internal(ov::BitReader &reader);
+
+	bool AddVPS(const std::shared_ptr<ov::Data> &nalu);
+	bool AddSPS(const std::shared_ptr<ov::Data> &nalu);
+	bool AddPPS(const std::shared_ptr<ov::Data> &nalu);
 
 private:
 	// Used to serialize
@@ -122,5 +130,19 @@ private:
 	std::map<uint8_t, std::vector<std::shared_ptr<ov::Data>>> _nal_units;
 
 	// Extra data
-	H265SPS _sps;
+	std::vector<std::shared_ptr<ov::Data>>	_vps_data_list;
+	// vps_id, vps
+	std::map<uint8_t, H265VPS> _vps_map;
+
+	std::vector<std::shared_ptr<ov::Data>>	_sps_data_list;
+	// sps_id, sps
+	std::map<uint8_t, H265SPS> _sps_map;
+
+	std::vector<std::shared_ptr<ov::Data>>	_pps_data_list;
+	// pps_id, pps
+	std::map<uint8_t, H265PPS> _pps_map;
+
+	H265SPS _h265_sps;
+	std::shared_ptr<ov::Data> _vps_sps_pps_annexb_data = nullptr;
+	FragmentationHeader _vps_sps_pps_annexb_frag_header;
 };

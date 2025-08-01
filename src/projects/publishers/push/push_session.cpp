@@ -75,7 +75,7 @@ namespace pub
 			return false;
 		}
 
-		if (writer->SetUrl(dest_url, ffmpeg::Conv::GetFormatByProtocolType(GetPush()->GetProtocolType())) == false)
+		if (writer->SetUrl(dest_url, ffmpeg::compat::GetFormatByProtocolType(GetPush()->GetProtocolType())) == false)
 		{
 			SetState(SessionState::Error);
 			GetPush()->SetState(info::Push::PushState::Error);

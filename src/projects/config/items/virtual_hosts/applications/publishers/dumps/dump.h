@@ -27,7 +27,7 @@ namespace cfg
 					mutable ov::Regex _target_stream_name_regex;
 					ov::String _output_path;
 					Playlists _playlists;
-					
+
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetId, _id);
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsEnabled, _enabled);
@@ -87,14 +87,14 @@ namespace cfg
 				protected:
 					void MakeList() override
 					{
-						Register<Optional>("Id", &_id, nullptr, 
-							[=]() -> std::shared_ptr<ConfigError> {
-								if (_id.IsEmpty())
-								{
-									_id = ov::Random::GenerateString(8);
-								}
-								return nullptr;
-						});
+						Register<Optional>("Id", &_id, nullptr,
+										   [=]() -> std::shared_ptr<ConfigError> {
+											   if (_id.IsEmpty())
+											   {
+												   _id = ov::Random::GenerateString(8);
+											   }
+											   return nullptr;
+										   });
 
 						Register("Enable", &_enabled);
 						Register("TargetStreamName", &_target_stream_name);
@@ -103,6 +103,6 @@ namespace cfg
 					}
 				};
 			}  // namespace pub
-		} // namespace app
-	} // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

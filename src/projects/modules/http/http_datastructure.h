@@ -434,7 +434,8 @@ namespace http
 		{
 			Completed,
 			Error,
-			Moved  // Control is transferred to another thread so DO NOT close the connection
+			Moved,  	// Control is transferred to another thread so DO NOT close the connection
+			NotFound	// Handler not found
 		};
 	}  // namespace svr
 

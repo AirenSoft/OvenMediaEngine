@@ -8,9 +8,9 @@
 //==============================================================================
 #pragma once
 
-#include "./output_profile.h"
-#include "./hwaccels/hwaccels.h"
 #include "./decodes/decodes.h"
+#include "./hwaccels/hwaccels.h"
+#include "./output_profile.h"
 
 namespace cfg
 {
@@ -27,6 +27,7 @@ namespace cfg
 					HWAccels _hwaccels;
 					std::vector<OutputProfile> _output_profiles;
 					Decodes _decodes;
+
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsHardwareAcceleration, _hwaccel);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetHWAccels, _hwaccels);
@@ -39,17 +40,16 @@ namespace cfg
 						// Deprecated
 						// Changed to <HWAccels> option.
 						Register<Optional>("HardwareAcceleration", &_hwaccel, nullptr,
-							[=]() -> std::shared_ptr<ConfigError> {
-								logw("Config", "The 'HardwareAcceleration' option is deprecated. Please use the 'HWAccels' option.");
-								return nullptr;
-							}
-						);
+										   [=]() -> std::shared_ptr<ConfigError> {
+											   logw("Config", "The 'HardwareAcceleration' option is deprecated. Please use the 'HWAccels' option.");
+											   return nullptr;
+										   });
 						Register<Optional>({"HWAccels", "hwaccels"}, &_hwaccels);
 						Register<Optional>("OutputProfile", &_output_profiles);
 						Register<Optional>({"Decodes", "decodes"}, &_decodes);
 					}
 				};
 			}  // namespace oprf
-		}	   // namespace app
-	}		   // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

@@ -477,8 +477,12 @@ install_base_fedora()
 install_base_rhel()
 {
     sudo dnf install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake libuuid-devel
-    sudo dnf install -y perl-IPC-Cmd perl-FindBin
+    sudo dnf install -y perl-IPC-Cmd
 	sudo dnf install -y git
+
+    if [[ "${OSVERSION}" == "9" ]]; then
+        sudo dnf install -y perl-FindBin
+    fi
 }
 
 install_base_amazon()
@@ -531,11 +535,11 @@ check_version()
         proceed_yn
     fi
 
-    if [[ "${OSNAME}" == "Rocky Linux" && "${OSVERSION}" != "9" ]]; then
+    if [[ "${OSNAME}" == "Rocky Linux" && "${OSVERSION}" != "8" && "${OSVERSION}" != "9" ]]; then
         proceed_yn
     fi
 
-    if [[ "${OSNAME}" == "AlmaLinux" && "${OSVERSION}" != "9" ]]; then
+    if [[ "${OSNAME}" == "AlmaLinux" && "${OSVERSION}" != "8" && "${OSVERSION}" != "9" ]]; then
         proceed_yn
     fi
 
@@ -554,7 +558,7 @@ check_version()
 
 proceed_yn()
 {
-    read -p "This program [$0] is tested on [Ubuntu 18/20.04/22.04, Rocky Linux 9, AlmaLinux OS 9, Fedora 28, Amazon Linux 2]
+    read -p "This program [$0] is tested on [Ubuntu 18/20.04/22.04, Rocky Linux 8, AlmaLinux OS 8, Fedora 28, Amazon Linux 2]
 Do you want to continue [y/N] ? " ANS
     if [[ "${ANS}" != "y" && "$ANS" != "yes" ]]; then
         cd ${CURRENT}

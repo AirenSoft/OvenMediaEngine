@@ -153,9 +153,7 @@ namespace pvd
 			return false;
 		}
 
-		StartTimer();
-
-		return Provider::Start();
+		return PushProvider::Start();
 	}
 
 	bool MpegTsProvider::Stop()
@@ -174,9 +172,7 @@ namespace pvd
 			}
 		}
 
-		StopTimer();
-
-		return true;
+		return PushProvider::Stop();
 	}
 
 	bool MpegTsProvider::OnCreateHost(const info::Host &host_info)
@@ -313,9 +309,6 @@ namespace pvd
 		{
 			logti("A MPEG-TS client has connected");  // %s", remote->ToString().CStr());
 			stream_port_item->OnClientConnected(channel_id);
-			// If this stream does not send data for 3 seconds, it is determined that the connection has been lost.
-			// Because the stream is over UDP
-			SetChannelTimeout(stream, 3);
 		}
 
 		return true;
@@ -347,12 +340,12 @@ namespace pvd
 		PushProvider::OnDataReceived(channel_id, data);
 	}
 
-	void MpegTsProvider::OnTimer(const std::shared_ptr<PushStream> &channel)
+	void MpegTsProvider::OnTimedOut(const std::shared_ptr<PushStream> &channel)
 	{
 		auto mpegts_stream = std::dynamic_pointer_cast<MpegTsStream>(channel);
 
 		logti("The client has not sent data for %d seconds. Stream has been deleted: [%s/%s], remote: ",  //%s",
-			  mpegts_stream->GetElapsedSecSinceLastReceived(),
+			  mpegts_stream->GetElapsedMsSinceLastReceived(),
 			  mpegts_stream->GetApplicationName(), mpegts_stream->GetName().CStr());
 		//mpegts_stream->GetClientSock()->ToString().CStr());
 
@@ -364,8 +357,6 @@ namespace pvd
 		}
 
 		stream_port_item->OnClientDisconnected();
-
-		PushProvider::OnChannelDeleted(channel);
 	}
 
 	// This function is not called by PhysicalPort when the protocol is udp (MPEGTS/UDP)

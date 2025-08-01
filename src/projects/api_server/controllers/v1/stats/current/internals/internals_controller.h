@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "../../../../controller.h"
+#include "../../../../controller_base.h"
 
 namespace api
 {
@@ -16,7 +16,7 @@ namespace api
 	{
 		namespace stats
 		{
-			class InternalsController : public Controller<InternalsController>
+			class InternalsController : public ControllerBase<InternalsController>
 			{
 			public:
 				void PrepareHandlers() override;
@@ -26,5 +26,5 @@ namespace api
 				ApiResponse OnGetQueues(const std::shared_ptr<http::svr::HttpExchange> &client);
 			};
 		}  // namespace stats
-	}	   // namespace v1
+	}  // namespace v1
 }  // namespace api

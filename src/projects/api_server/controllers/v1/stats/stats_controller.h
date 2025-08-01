@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include "../../controller.h"
+#include "../../controller_base.h"
 
 namespace api
 {
@@ -16,11 +16,11 @@ namespace api
 	{
 		namespace stats
 		{
-			class StatsController : public Controller<StatsController>
+			class StatsController : public ControllerBase<StatsController>
 			{
 			public:
 				void PrepareHandlers() override;
 			};
 		}  // namespace stats
-	}	   // namespace v1
+	}  // namespace v1
 }  // namespace api

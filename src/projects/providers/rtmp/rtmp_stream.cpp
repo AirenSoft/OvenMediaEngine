@@ -1657,27 +1657,27 @@ namespace pvd
 			dts *= video_track->GetVideoTimestampScale();
 			pts *= video_track->GetVideoTimestampScale();
 
-			if (_is_incoming_timestamp_used == false)
-			{
-				AdjustTimestamp(pts, dts);
-			}
-
 			cmn::PacketType packet_type = cmn::PacketType::Unknown;
-			if (flv_video.PacketType() == flv::AvcPacketType::SequenceHeader)
 			{
-				packet_type = cmn::PacketType::SEQUENCE_HEADER;
-			}
-			else if (flv_video.PacketType() == flv::AvcPacketType::NALU)
-			{
-				packet_type = cmn::PacketType::NALU;
-			}
-			else if (flv_video.PacketType() == flv::AvcPacketType::EndOfSequence)
-			{
-				// what can I do?
-				return true;
+				const auto flv_packet_type = flv_video.PacketType();
+
+				if (flv_packet_type == flv::AvcPacketType::SequenceHeader)
+				{
+					packet_type = cmn::PacketType::SEQUENCE_HEADER;
+				}
+				else if (flv_packet_type == flv::AvcPacketType::NALU)
+				{
+					packet_type = cmn::PacketType::NALU;
+					AdjustTimestamp(video_track->GetId(), pts, dts);
+				}
+				else if (flv_packet_type == flv::AvcPacketType::EndOfSequence)
+				{
+					// what can I do?
+					return true;
+				}
 			}
 
-			auto data = std::make_shared<ov::Data>(flv_video.Payload(), flv_video.PayloadLength());
+			auto data		 = std::make_shared<ov::Data>(flv_video.Payload(), flv_video.PayloadLength());
 			auto video_frame = std::make_shared<MediaPacket>(GetMsid(),
 															 cmn::MediaType::Video,
 															 RTMP_VIDEO_TRACK_ID,
@@ -1840,17 +1840,6 @@ namespace pvd
 
 			auto data = std::make_shared<ov::Data>(flv_audio.Payload(), flv_audio.PayloadLength());
 
-			cmn::PacketType packet_type = cmn::PacketType::Unknown;
-
-			if (flv_audio.PacketType() == flv::AACPacketType::SequenceHeader)
-			{
-				packet_type = cmn::PacketType::SEQUENCE_HEADER;
-			}
-			else if (flv_audio.PacketType() == flv::AACPacketType::Raw)
-			{
-				packet_type = cmn::PacketType::RAW;
-			}
-
 			int64_t dts = message->header->completed.timestamp;
 			int64_t pts = dts;
 
@@ -1859,9 +1848,19 @@ namespace pvd
 				pts += ADJUST_PTS;
 			}
 
-			if (_is_incoming_timestamp_used == false)
+			cmn::PacketType packet_type = cmn::PacketType::Unknown;
 			{
-				AdjustTimestamp(pts, dts);
+				const auto flv_packet_type = flv_audio.PacketType();
+
+				if (flv_packet_type == flv::AACPacketType::SequenceHeader)
+				{
+					packet_type = cmn::PacketType::SEQUENCE_HEADER;
+				}
+				else if (flv_packet_type == flv::AACPacketType::Raw)
+				{
+					packet_type = cmn::PacketType::RAW;
+					AdjustTimestamp(audio_track->GetId(), pts, dts);
+				}
 			}
 
 			auto frame = std::make_shared<MediaPacket>(GetMsid(),
@@ -1894,17 +1893,9 @@ namespace pvd
 	}
 
 	// Make PTS/DTS of first frame are 0
-	void RtmpStream::AdjustTimestamp(int64_t &pts, int64_t &dts)
+	void RtmpStream::AdjustTimestamp(uint32_t track_id, int64_t &pts, int64_t &dts)
 	{
-		if (_first_frame == true)
-		{
-			_first_frame = false;
-			_first_pts_offset = pts;
-			_first_dts_offset = dts;
-		}
-
-		pts -= _first_pts_offset;
-		dts -= _first_dts_offset;
+		AdjustTimestampByBase(track_id, pts, dts, std::numeric_limits<int64_t>::max());
 	}
 
 	bool RtmpStream::PublishStream()
@@ -1936,7 +1927,6 @@ namespace pvd
 		const auto &rtmp_provider = application->GetConfig().GetProviders().GetRtmpProvider();
 
 		_event_generator = rtmp_provider.GetEventGenerator();
-		_is_incoming_timestamp_used = rtmp_provider.IsIncomingTimestampUsed();
 
 		SetName(_publish_url->Stream());
 

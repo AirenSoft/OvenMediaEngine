@@ -275,24 +275,25 @@ public:
 private:
 	AVFrame *_priv_data = nullptr;
 
-	// Data plane, Data
+	// This shows the ID of the module that made the media frame. It can be a decoder or a filter. 
+	// The encoder uses this value to check if the filter has changed.
+	int32_t _source_id = 0;
+
+	// Common
 	cmn::MediaType _media_type = cmn::MediaType::Unknown;
+	int32_t _flags = 0;	 // Key, non-Key
 	int32_t _track_id = 0;
 	int64_t _pts = 0LL;
 	int64_t _duration = 0LL;
 
+	// Video 
 	int32_t _width = 0;
 	int32_t _height = 0;
 	int32_t _format = 0;
 
+	// Autio 
 	int32_t _bytes_per_sample = 0;
 	int32_t _nb_samples = 0;
 	cmn::AudioChannel _channels;
 	int32_t _sample_rate = 0;
-
-	int32_t _flags = 0;	 // Key, non-Key
-
-	// This shows the ID of the module that made the media frame. It can be a decoder or a filter. 
-	// The encoder uses this value to check if the filter has changed.
-	int32_t _source_id = 0;
 };

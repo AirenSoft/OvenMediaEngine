@@ -1,9 +1,9 @@
-#include "ffmpeg_writer.h"
+#include "writer.h"
 
 #include <modules/bitstream/aac/aac_converter.h>
 #include <modules/bitstream/nalu/nal_stream_converter.h>
 #include <modules/bitstream/opus/opus_specific_config.h>
-#include <modules/ffmpeg/ffmpeg_conv.h>
+#include <modules/ffmpeg/compat.h>
 
 #define OV_LOG_TAG "FFmpegWriter"
 
@@ -88,7 +88,7 @@ namespace ffmpeg
 		int error = avformat_alloc_output_context2(&av_format, nullptr, (_format != nullptr) ? _format.CStr() : nullptr, _url.CStr());
 		if (error < 0)
 		{
-			logte("Could not create output context. error(%s), url(%s)", ffmpeg::Conv::AVErrorToString(error).CStr(), _url.CStr());
+			logte("Could not create output context. error(%s), url(%s)", ffmpeg::compat::AVErrorToString(error).CStr(), _url.CStr());
 
 			return false;
 		}
@@ -139,7 +139,7 @@ namespace ffmpeg
 		}
 
 		// Convert MediaTrack to AVStream
-		if (ffmpeg::Conv::ToAVStream(media_track, av_stream) == false)
+		if (ffmpeg::compat::ToAVStream(media_track, av_stream) == false)
 		{
 			logte("Could not convert track info to AVStream");
 
@@ -175,7 +175,7 @@ namespace ffmpeg
 		// Set Interrupt Callback
 		_interrupt_cb = {InterruptCallback, this};
 
-		// The codec_tag value added in the ffmpeg::Conv::ToAVStream function is removed when using the RTMP (FLV) format
+		// The codec_tag value added in the ffmpeg::compat::ToAVStream function is removed when using the RTMP (FLV) format
 		// Related log. "Tag avc1 incompatible with output codec id '27'"
 		for (uint32_t i = 0; i < av_format->nb_streams; i++)
 		{
@@ -193,7 +193,7 @@ namespace ffmpeg
 			{
 				SetState(WriterStateError);
 				
-				logte("Error opening file. error(%s), url(%s)", ffmpeg::Conv::AVErrorToString(error).CStr(), av_format->url);
+				logte("Error opening file. error(%s), url(%s)", ffmpeg::compat::AVErrorToString(error).CStr(), av_format->url);
 
 				return false;
 			}
@@ -270,8 +270,18 @@ namespace ffmpeg
 		AVPacket av_packet = {0};
 		if (ToAVPacket(av_packet, av_stream, packet, media_track, start_time) == false)
 		{
-			logte("Failed to convert packet to av packet");
+			logte("Failed to convert MediaPacket to AVPacket");
 			return false;
+		}
+
+		// When a packet with a higher PTS from one of several tracks is sent first, the start time is set. 
+		// If a later packet arrives but actually comes from an earlier time than the first one, it is dropped. 
+		// But this is not treated as an error.
+		if(av_packet.pts < 0 || av_packet.dts < 0 || av_packet.size <= 0)
+		{
+			logtw("To avoid negative timestamps, the packet is dropped. track:%d, pts:%lld, dts:%lld", media_track->GetId(), av_packet.pts, av_packet.dts);
+			av_packet_unref(&av_packet);
+			return true;
 		}
 
 		std::shared_ptr<const ov::Data> new_data = nullptr;
@@ -405,7 +415,7 @@ namespace ffmpeg
 		{
 			SetState(WriterStateError);
 
-			logte("Send packet error(%s)", ffmpeg::Conv::AVErrorToString(error).CStr());
+			logte("Send packet error(%s)", ffmpeg::compat::AVErrorToString(error).CStr());
 
 			return false;
 		}
@@ -446,9 +456,9 @@ namespace ffmpeg
 				av_write_trailer(av_format_ptr);
 			}
 
-			if (need_to_close)
+			if (need_to_close && av_format_ptr->pb != nullptr)
 			{
-				avformat_close_input(&av_format_ptr);
+				avio_closep(&av_format_ptr->pb);
 			}
 			
 			avformat_free_context(av_format_ptr);

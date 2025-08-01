@@ -86,6 +86,7 @@ namespace ov
 
 		int GetWorkerCount() const
 		{
+			std::lock_guard lock_guard(_worker_list_mutex);
 			return static_cast<int>(_worker_list.size());
 		}
 
@@ -127,7 +128,7 @@ namespace ov
 
 			if (_worker_list.size() == 0)
 			{
-				OV_ASSERT(_worker_list.size() > 0, "Worker list is not initialized");
+				OV_ASSERT(_initialized, "Worker list is not initialized");
 				return nullptr;
 			}
 
@@ -139,7 +140,7 @@ namespace ov
 			return worker;
 		}
 
-		bool UninitializeInternal();
+		bool UninitializeWorkers(const std::vector<std::shared_ptr<SocketPoolWorker>> &worker_list);
 
 		ov::String _name;
 

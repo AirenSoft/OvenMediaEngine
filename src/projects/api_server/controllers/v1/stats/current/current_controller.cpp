@@ -8,8 +8,8 @@
 //==============================================================================
 #include "current_controller.h"
 
-#include "vhosts/vhosts_controller.h"
 #include "internals/internals_controller.h"
+#include "vhosts/vhosts_controller.h"
 
 namespace api
 {
@@ -31,5 +31,5 @@ namespace api
 				return ::serdes::JsonFromMetrics(serverMetric);
 			}
 		}  // namespace stats
-	}	   // namespace v1
+	}  // namespace v1
 }  // namespace api

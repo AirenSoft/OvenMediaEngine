@@ -14,7 +14,7 @@
 #include <base/mediarouter/media_buffer.h>
 #include <base/mediarouter/media_type.h>
 #include <base/ovlibrary/ovlibrary.h>
-#include <modules/ffmpeg/ffmpeg_conv.h>
+#include <modules/ffmpeg/compat.h>
 #include <modules/managed_queue/managed_queue.h>
 
 #include <algorithm>
@@ -44,7 +44,7 @@ enum class TranscodeResult : int32_t
 class CodecCandidate
 {
 public:
-	CodecCandidate(cmn::MediaCodecId codec_id, cmn::MediaCodecModuleId module_id, int32_t device_id)
+	CodecCandidate(cmn::MediaCodecId codec_id, cmn::MediaCodecModuleId module_id, cmn::DeviceId device_id)
 		: _codec_id(codec_id),
 		  _module_id(module_id),
 		  _device_id(device_id)
@@ -56,7 +56,7 @@ public:
 		return _module_id;
 	}
 
-	int32_t GetDeviceId() const
+	cmn::DeviceId GetDeviceId() const
 	{
 		return _device_id;
 	}
@@ -69,7 +69,7 @@ public:
 private:
 	cmn::MediaCodecId _codec_id;
 	cmn::MediaCodecModuleId _module_id;
-	int32_t _device_id;
+	cmn::DeviceId _device_id;
 };
 
 
@@ -79,7 +79,7 @@ class TranscodeBase
 public:
 	virtual ~TranscodeBase() = default;
 
-	virtual AVCodecID GetCodecID() const noexcept = 0;
+	virtual cmn::MediaCodecId GetCodecID() const noexcept = 0;
 
 	virtual bool Configure(std::shared_ptr<MediaTrack> track) = 0;
 

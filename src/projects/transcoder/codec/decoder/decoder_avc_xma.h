@@ -19,9 +19,9 @@ public:
 	{
 	}
 
-	AVCodecID GetCodecID() const noexcept override
+	cmn::MediaCodecId GetCodecID() const noexcept override
 	{
-		return AV_CODEC_ID_H264;
+		return cmn::MediaCodecId::H264;
 	}
 
 	bool InitCodec();

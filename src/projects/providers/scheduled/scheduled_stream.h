@@ -8,7 +8,7 @@
 //==============================================================================
 #pragma once
 
-#include <modules/ffmpeg/ffmpeg_conv.h>
+#include <modules/ffmpeg/compat.h>
 #include <orchestrator/orchestrator.h>
 #include <mediarouter/mediarouter_stream_tap.h>
 #include <base/provider/stream.h>
@@ -87,6 +87,9 @@ namespace pvd
         
         int FindTrackIdByOriginId(int origin_id) const;
 
+		bool SetDurationToAllItems(const std::shared_ptr<Schedule::Program> &program);
+		int64_t GetFileItemDurationMS(const std::shared_ptr<Schedule::Item> &item) const;
+
         std::shared_ptr<Schedule> _schedule;
         mutable std::shared_mutex _schedule_mutex;
 
@@ -113,6 +116,7 @@ namespace pvd
 		int64_t _biggest_timestamp = -1LL;
 
         ov::StopWatch _realtime_clock;
+		std::map<uint32_t, int64_t> _global_track_offset_us_map;
         ov::StopWatch _failback_check_clock;
 
         std::map<uint32_t, std::shared_ptr<MediaPacket>> _last_packet_map;

@@ -13,7 +13,7 @@
 bool EncoderFFOPUS::SetCodecParams()
 {
 	_codec_context->bit_rate = GetRefTrack()->GetBitrate();
-	_codec_context->sample_fmt = (AVSampleFormat)GetSupportedFormat();
+	_codec_context->sample_fmt = (AVSampleFormat)GetSupportAudioFormat();
 	_codec_context->sample_rate = GetRefTrack()->GetSampleRate();
 	::av_channel_layout_default(&_codec_context->ch_layout, GetRefTrack()->GetChannel().GetCounts());
 	
@@ -44,30 +44,29 @@ bool EncoderFFOPUS::SetCodecParams()
 
 bool EncoderFFOPUS::InitCodec()
 {
-	auto codec_id = GetCodecID();
-	const AVCodec *codec = ::avcodec_find_encoder(codec_id);
+	const AVCodec *codec = ::avcodec_find_encoder(ffmpeg::compat::ToAVCodecId(GetCodecID()));
 	if (codec == nullptr)
 	{
-		logte("Codec not found: %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		logte("Codec not found: %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
 	_codec_context = ::avcodec_alloc_context3(codec);
 	if (_codec_context == nullptr)
 	{
-		logte("Could not allocate codec context for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		logte("Could not allocate codec context for %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
 	if (SetCodecParams() == false)
 	{
-		logte("Could not set codec parameters for %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		logte("Could not set codec parameters for %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
-	if (::avcodec_open2(_codec_context, codec, nullptr) < 0)
+	if (::avcodec_open2(_codec_context, nullptr, nullptr) < 0)
 	{
-		logte("Could not open codec: %s (%d)", ::avcodec_get_name(codec_id), codec_id);
+		logte("Could not open codec: %s", cmn::GetCodecIdString(GetCodecID()));
 		return false;
 	}
 
@@ -88,7 +87,7 @@ bool EncoderFFOPUS::Configure(std::shared_ptr<MediaTrack> output_context)
 		_kill_flag = false;
 
 		_codec_thread = std::thread(&EncoderFFOPUS::CodecThread, this);
-		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("ENC-%s-t%d", avcodec_get_name(GetCodecID()), _track->GetId()).CStr());
+		pthread_setname_np(_codec_thread.native_handle(), ov::String::FormatString("ENC-%s-t%d", cmn::GetCodecIdString(GetCodecID()), _track->GetId()).CStr());
 
 		// Initialize the codec and wait for completion.
 		if(_codec_init_event.Get() == false)

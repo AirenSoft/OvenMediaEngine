@@ -76,18 +76,18 @@ namespace cfg
 		std::string result;
 		std::regex r(R"(\$\{env:([^}]*)\})");
 
-		auto start = str.cbegin();
+		auto start					  = str.cbegin();
 
 		std::sregex_iterator iterator = std::sregex_iterator(start, str.cend(), r);
 
 		while (iterator != std::sregex_iterator())
 		{
 			std::smatch matches = *iterator;
-			auto match = matches[0];
-			auto token = matches[1];
+			auto match			= matches[0];
+			auto token			= matches[1];
 
-			auto env_key = token.str();
-			auto position = env_key.find_first_of(':');
+			auto env_key		= token.str();
+			auto position		= env_key.find_first_of(':');
 
 			std::string default_value;
 			bool is_default_value = false;
@@ -95,10 +95,10 @@ namespace cfg
 			if (position != std::string::npos)
 			{
 				default_value = env_key.substr(position + 1);
-				env_key = env_key.substr(0, position);
+				env_key		  = env_key.substr(0, position);
 			}
 
-			auto key = env_key.c_str();
+			auto key		 = env_key.c_str();
 			ov::String value = GetEnv(key, default_value.c_str(), &is_default_value);
 
 			result.append(start, match.first);
@@ -137,7 +137,7 @@ namespace cfg
 	{
 		ov::String result = PreprocessForEnv(value);
 
-		result = PreprocessForMacros(result);
+		result			  = PreprocessForMacros(result);
 
 		if (resolve_path)
 		{
@@ -179,7 +179,6 @@ namespace cfg
 					return true;
 				}
 
-
 				// Otherwise, use the value as-is
 			}
 			catch (const CastException &cast_exception)
@@ -190,22 +189,22 @@ namespace cfg
 		return false;
 	}
 
-	Variant Process(
+	Variant ProcessNode(
 		const ov::String &current_file_path,
 		const pugi::xml_node &node,
 		const std::function<Variant(const ov::String &value)> converter,
 		const bool resolve_path,
 		Json::Value *original_value)
 	{
+		if (NeedToIgnore(current_file_path, node, resolve_path))
+		{
+			return {};
+		}
+
 		if (node.empty())
 		{
 			// Nothing to do
 			*original_value = Json::nullValue;
-			return {};
-		}
-
-		if (NeedToIgnore(current_file_path, node, resolve_path))
-		{
 			return {};
 		}
 
@@ -217,6 +216,52 @@ namespace cfg
 		return (converter != nullptr) ? converter(preprocessed) : preprocessed;
 	}
 
+	Variant ProcessNodes(
+		const ov::String &current_file_path,
+		const pugi::xml_object_range<pugi::xml_named_node_iterator> &nodes,
+		const std::function<Variant(const ov::String &value)> converter,
+		const bool resolve_path,
+		Json::Value *original_value)
+	{
+		for (auto &node : nodes)
+		{
+			if (NeedToIgnore(current_file_path, node, resolve_path))
+			{
+				continue;
+			}
+
+			if (node.empty())
+			{
+				// Nothing to do
+				*original_value = Json::nullValue;
+				break;
+			}
+
+			const auto &child_value = node.child_value();
+			SET_ORIGINAL_VALUE_IF_NOT_NULL(child_value);
+
+			auto preprocessed = Preprocess(current_file_path, child_value, resolve_path);
+
+			return (converter != nullptr) ? converter(preprocessed) : preprocessed;
+		}
+
+		return {};
+	}
+
+	Variant Process(
+		const ov::String &current_file_path,
+		const bool is_child,
+		const pugi::xml_node &node,
+		const ov::String &name,
+		const std::function<Variant(const ov::String &value)> converter,
+		const bool resolve_path,
+		Json::Value *original_value)
+	{
+		return is_child
+				   ? ProcessNodes(current_file_path, node.children(name), converter, resolve_path, original_value)
+				   : ProcessNode(current_file_path, node, converter, resolve_path, original_value);
+	}
+
 	Variant DataSource::GetValueFromXml(ValueType value_type, const ov::String &name, bool is_child, bool resolve_path, Json::Value *original_value) const
 	{
 		switch (value_type)
@@ -226,34 +271,19 @@ namespace cfg
 				return {};
 
 			case ValueType::String:
-				return Process(
-					_current_file_path, is_child ? _node.child(name) : _node,
-					nullptr,
-					resolve_path, original_value);
+				return Process(_current_file_path, is_child, _node, name, nullptr, resolve_path, original_value);
 
 			case ValueType::Integer:
-				return Process(
-					_current_file_path, is_child ? _node.child(name) : _node,
-					[](const ov::String &value) { return ov::Converter::ToInt32(value); },
-					resolve_path, original_value);
+				return Process(_current_file_path, is_child, _node, name, [](const ov::String &value) { return ov::Converter::ToInt32(value); }, resolve_path, original_value);
 
 			case ValueType::Long:
-				return Process(
-					_current_file_path, is_child ? _node.child(name) : _node,
-					[](const ov::String &value) { return ov::Converter::ToInt64(value); },
-					resolve_path, original_value);
+				return Process(_current_file_path, is_child, _node, name, [](const ov::String &value) { return ov::Converter::ToInt64(value); }, resolve_path, original_value);
 
 			case ValueType::Boolean:
-				return Process(
-					_current_file_path, is_child ? _node.child(name) : _node,
-					[](const ov::String &value) { return ov::Converter::ToBool(value); },
-					resolve_path, original_value);
+				return Process(_current_file_path, is_child, _node, name, [](const ov::String &value) { return ov::Converter::ToBool(value); }, resolve_path, original_value);
 
 			case ValueType::Double:
-				return Process(
-					_current_file_path, is_child ? _node.child(name) : _node,
-					[](const ov::String &value) { return ov::Converter::ToDouble(value); },
-					resolve_path, original_value);
+				return Process(_current_file_path, is_child, _node, name, [](const ov::String &value) { return ov::Converter::ToDouble(value); }, resolve_path, original_value);
 
 			case ValueType::Attribute: {
 				if (NeedToIgnore(_current_file_path, _node, resolve_path) == false)
@@ -273,10 +303,7 @@ namespace cfg
 			}
 
 			case ValueType::Text:
-				return Process(
-					_current_file_path, is_child ? _node.child(name) : _node,
-					nullptr,
-					resolve_path, original_value);
+				return Process(_current_file_path, is_child, _node, name, nullptr, resolve_path, original_value);
 
 			case ValueType::Item: {
 				if (
@@ -525,7 +552,7 @@ namespace cfg
 
 	void DataSource::LoadFromXmlFile(const ov::String &file_name, const ov::String &root_name)
 	{
-		auto document = std::make_shared<pugi::xml_document>();
+		auto document				  = std::make_shared<pugi::xml_document>();
 
 		pugi::xml_parse_result result = document->load_file(file_name);
 
@@ -536,7 +563,7 @@ namespace cfg
 		}
 
 		_document = document;
-		_node = document->root().child(root_name);
+		_node	  = document->root().child(root_name);
 
 		if (_node.empty())
 		{
@@ -693,43 +720,43 @@ namespace cfg
 				return {};
 
 			case ValueType::String: {
-				auto &json = is_child ? GetJsonValue(_json, name) : _json;
+				auto &json		= is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
 				return json.isNull() ? Variant() : ov::Converter::ToString(Preprocess(_current_file_path, ov::Converter::ToString(json), resolve_path));
 			}
 
 			case ValueType::Integer: {
-				auto &json = is_child ? GetJsonValue(_json, name) : _json;
+				auto &json		= is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
 				return json.isNull() ? Variant() : ov::Converter::ToInt32(json);
 			}
 
 			case ValueType::Long: {
-				auto &json = is_child ? GetJsonValue(_json, name) : _json;
+				auto &json		= is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
 				return json.isNull() ? Variant() : ov::Converter::ToInt64(json);
 			}
 
 			case ValueType::Boolean: {
-				auto &json = is_child ? GetJsonValue(_json, name) : _json;
+				auto &json		= is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
 				return json.isNull() ? Variant() : ov::Converter::ToBool(json);
 			}
 
 			case ValueType::Double: {
-				auto &json = is_child ? GetJsonValue(_json, name) : _json;
+				auto &json		= is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
 				return json.isNull() ? Variant() : ov::Converter::ToDouble(json);
 			}
 
 			case ValueType::Attribute: {
-				auto attribute = GetJsonAttribute(_json, name);
+				auto attribute	= GetJsonAttribute(_json, name);
 				*original_value = attribute;
 				return attribute.isNull() ? Variant() : Preprocess(_current_file_path, ov::Converter::ToString(attribute), resolve_path);
 			}
 
 			case ValueType::Text: {
-				auto &json = is_child ? GetJsonValue(_json, name) : _json;
+				auto &json		= is_child ? GetJsonValue(_json, name) : _json;
 				*original_value = json;
 				return json.isNull() ? Variant() : Preprocess(_current_file_path, ov::Converter::ToString(json), resolve_path);
 			}
@@ -755,7 +782,7 @@ namespace cfg
 
 		if (include_file_pattern.HasValue())
 		{
-			auto current_path = GetCurrentPath() + "/";
+			auto current_path			 = GetCurrentPath() + "/";
 
 			// Load from the include file
 			ov::String include_file_path = include_file_pattern.TryCast<ov::String>();

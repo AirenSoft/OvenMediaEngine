@@ -10,9 +10,9 @@
 
 #include "../../../common/cross_domain_support.h"
 #include "dumps/dumps.h"
-#include "hls_options/dvr.h"
-#include "hls_options/default_query_string.h"
 #include "hls_options/cache_control.h"
+#include "hls_options/default_query_string.h"
+#include "hls_options/dvr.h"
 #include "publisher.h"
 
 namespace cfg
@@ -26,9 +26,9 @@ namespace cfg
 				struct HlsPublisher : public Publisher, public cmn::CrossDomainSupport
 				{
 				protected:
-					bool _origin_mode = false;
+					bool _origin_mode		 = false;
 
-					int _segment_count = 5;
+					int _segment_count		 = 5;
 					double _segment_duration = 10;
 
 					Dvr _dvr;
@@ -55,7 +55,6 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetDefaultQueryString, _default_query_string)
 					CFG_DECLARE_CONST_REF_GETTER_OF(ShouldCreateDefaultPlaylist, _create_default_playlist)
 
-
 				protected:
 					virtual void MakeList() override
 					{
@@ -74,6 +73,6 @@ namespace cfg
 					}
 				};
 			}  // namespace pub
-		} // namespace app
-	} // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

@@ -21,7 +21,7 @@ VideoTrack::VideoTrack()
 	  _key_frame_interval_type_conf(cmn::KeyFrameIntervalType::FRAME),
 	  _b_frames(0),
 	  _has_bframe(false),
-	  _colorspace(0),	  
+	  _colorspace(cmn::VideoPixelFormatId::None),	  
 	  _preset(""),
 	  _thread_count(0),
 	  _skip_frames_conf(-1), // Default value is -1
@@ -168,12 +168,12 @@ int32_t VideoTrack::GetBFrames()
 	return _b_frames;
 }
 
-void VideoTrack::SetColorspace(int colorspace)
+void VideoTrack::SetColorspace(cmn::VideoPixelFormatId colorspace)
 {
 	_colorspace = colorspace;
 }
 
-int VideoTrack::GetColorspace() const
+cmn::VideoPixelFormatId VideoTrack::GetColorspace() const
 {
 	return _colorspace;
 }

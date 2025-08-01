@@ -18,19 +18,19 @@ You can set the following environment variables.
 
 ### Environment Variables
 
-| Env                                | Default Value   |
-| ---------------------------------- | --------------- |
-| OME\_HOST\_IP                      | \*              |
-| OME\_ORIGIN\_PORT                  | 9000            |
-| OME\_RTMP\_PROV\_PORT              | 1935            |
-| OME\_SRT\_PROV\_PORT               | 9999/udp        |
-| OME\_MPEGTS\_PROV\_PORT            | 4000/udp        |
-| OME\_LLHLS\_STREAM\_PORT           | 3333            |
-| OME\_LLHLS\_STREAM\_TLS\_PORT      | 3334            |
-| OME\_WEBRTC\_SIGNALLING\_PORT      | 3333            |
-| OME\_WEBRTC\_SIGNALLING\_TLS\_PORT | 3334            |
-| OME\_WEBRTC\_TCP\_RELAY\_PORT      | 3478            |
-| OME\_WEBRTC\_CANDIDATE\_PORT       | 10000-10004/udp |
+| Env                              | Default Value     |
+| -------------------------------- | ----------------- |
+| `OME_HOST_IP`                    | `*`               |
+| `OME_ORIGIN_PORT`                | `9000`            |
+| `OME_RTMP_PROV_PORT`             | `1935`            |
+| `OME_SRT_PROV_PORT`              | `9999/udp`        |
+| `OME_MPEGTS_PROV_PORT`           | `4000/udp`        |
+| `OME_LLHLS_STREAM_PORT`          | `3333`            |
+| `OME_LLHLS_STREAM_TLS_PORT`      | `3334`            |
+| `OME_WEBRTC_SIGNALLING_PORT`     | `3333`            |
+| `OME_WEBRTC_SIGNALLING_TLS_PORT` | `3334`            |
+| `OME_WEBRTC_TCP_RELAY_PORT`      | `3478`            |
+| `OME_WEBRTC_CANDIDATE_PORT`      | `10000-10004/udp` |
 
 ## Getting Started with Complex Configuration
 
@@ -38,13 +38,13 @@ When you need to install a certificate in OME or apply a complex configuration, 
 
 OvenMediaEngine docker container loads configuration files from the following path.
 
-| Type               | Path / Description                                                                                                                                                                           |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Server.xml         | `/opt/ovenmediaengine/bin/origin_conf/Server.xml`                                                                                                                                            |
-| Logger.xml         | `/opt/ovenmediaengine/bin/origin_conf/Logger.xml`                                                                                                                                            |
-| Server Certificate | <p><code>/opt/ovenmediaengine/bin/origin_conf/cert.crt</code><br><code></code><br><code></code>Server certificate file in PEM format. The intermediate certificate must not be included.</p> |
-| Private Key        | <p><code>/opt/ovenmediaengine/bin/origin_conf/cert.key</code><br><code></code><br><code></code>This is the private key file of the certificate.</p>                                          |
-| CA Bundle          | <p><code>/opt/ovenmediaengine/bin/origin_conf/cert.ca-bundle</code><br><code></code><br><code></code>A file containing root and intermediate certificates.</p>                               |
+| Type               | Path / Description                                                                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Server.xml`       | `/opt/ovenmediaengine/bin/origin_conf/Server.xml`                                                                                                                  |
+| `Logger.xml`       | `/opt/ovenmediaengine/bin/origin_conf/Logger.xml`                                                                                                                  |
+| Server Certificate | <p><code>/opt/ovenmediaengine/bin/origin_conf/cert.crt</code><br><br>Server certificate file in PEM format. The intermediate certificate must not be included.</p> |
+| Private Key        | <p><code>/opt/ovenmediaengine/bin/origin_conf/cert.key</code><br><br>This is the private key file of the certificate.</p>                                          |
+| CA Bundle          | <p><code>/opt/ovenmediaengine/bin/origin_conf/cert.ca-bundle</code><br><br>A file containing root and intermediate certificates.</p>                               |
 
 There are many ways to change files inside a Docker container, but this document describes how to change them using Docker's bind mounts.
 
@@ -78,7 +78,7 @@ docker rm -f tmp-ome
 
 #### Copy the certificate files to the directory
 
-Copy your PEM certificate files to the path below  if you need to enable TLS. The destination file names must match if using the default configuration. If you want to change the file name, you can do so by editing the Server.xml configuration file. See [TLS Encryption](../configuration/tls-encryption.md) for details.
+Copy your PEM certificate files to the path below if you need to enable TLS. The destination file names must match if using the default configuration. If you want to change the file name, you can do so by editing the Server.xml configuration file. See [TLS Encryption](../configuration/tls-encryption.md) for details.
 
 ```sh
 cp /your/server_certificate_file.crt $OME_DOCKER_HOME/conf/cert.crt

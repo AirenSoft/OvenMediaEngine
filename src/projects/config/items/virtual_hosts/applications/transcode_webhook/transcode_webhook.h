@@ -33,10 +33,10 @@ namespace cfg
 					bool enabled = false;
 					ov::String control_server_url;
 					ov::String secret_key;
-					int timeout = 1500;
+					int timeout									  = 1500;
 					bool use_local_profiles_on_connection_failure = true;
-					bool use_local_profiles_on_server_disallow = false;
-					bool use_local_profiles_on_error_response = false;
+					bool use_local_profiles_on_server_disallow	  = false;
+					bool use_local_profiles_on_error_response	  = false;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsEnabled, enabled)
@@ -60,6 +60,6 @@ namespace cfg
 					}
 				};
 			}  // namespace trwh
-		} // namespace app
-	} // namespace vhost
+		}  // namespace app
+	}  // namespace vhost
 }  // namespace cfg

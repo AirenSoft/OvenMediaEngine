@@ -11,7 +11,7 @@
 
 #include <base/info/application.h>
 #include <base/ovlibrary/byte_io.h>
-#include <modules/ffmpeg/ffmpeg_conv.h>
+#include <modules/ffmpeg/compat.h>
 #include <modules/rtp_rtcp/rtp_depacketizer_mpeg4_generic_audio.h>
 
 #include "file_private.h"
@@ -197,7 +197,7 @@ namespace pvd
 				continue;
 			}
 
-			if (ffmpeg::Conv::ToMediaTrack(stream, media_track) == false)
+			if (ffmpeg::compat::ToMediaTrack(stream, media_track) == false)
 			{
 				continue;
 			}
@@ -259,7 +259,7 @@ namespace pvd
 			AVStream *stream = _format_context->streams[track_id];
 
 #if FILE_FIXED_TRACK_ID
-			auto fix_track_id = GetFixedTrackIdOfMediaType(ffmpeg::Conv::ToMediaType(stream->codecpar->codec_type));
+			auto fix_track_id = GetFixedTrackIdOfMediaType(ffmpeg::compat::ToMediaType(stream->codecpar->codec_type));
 			auto track = GetTrack(fix_track_id);
 #else
 			auto track = GetTrack(track_id);
@@ -375,7 +375,7 @@ namespace pvd
 			}
 
 #if FILE_FIXED_TRACK_ID
-			auto fix_track_id = GetFixedTrackIdOfMediaType(ffmpeg::Conv::ToMediaType(_format_context->streams[packet.stream_index]->codecpar->codec_type));
+			auto fix_track_id = GetFixedTrackIdOfMediaType(ffmpeg::compat::ToMediaType(_format_context->streams[packet.stream_index]->codecpar->codec_type));
 			auto track = GetTrack(fix_track_id);
 #else			
 			auto track = GetTrack(packet.stream_index);
@@ -408,7 +408,7 @@ namespace pvd
 					continue;
 			}
 
-			auto media_packet = ffmpeg::Conv::ToMediaPacket(GetMsid(), track->GetId(), &packet, track->GetMediaType(), bitstream_format, packet_type);
+			auto media_packet = ffmpeg::compat::ToMediaPacket(GetMsid(), track->GetId(), &packet, track->GetMediaType(), bitstream_format, packet_type);
 			::av_packet_unref(&packet);
 
 			// Calculate PTS/DTS + Base Timestamp
