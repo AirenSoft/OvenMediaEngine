@@ -16,18 +16,14 @@ Server.xml
    <FILE>  
       <!-- [Optional] -->
       <RootPath>/mnt/shared_volumes</RootPath>
-      
-      <!-- [Optional] Recording settings for file-based automatic recording -->
-      <StreamMap>
-         <Enable>true</Enable>
-         <Path>./record_map.xml</Path>
-      </StreamMap>
-      
-      <!-- Deprecated -->
+           
+      <!-- [Optional] Specify the path where the recording will be saved.
+           If not specified here, it must be provided when calling the REST API -->
       <FilePath>/${VirtualHost}/${Application}/${Stream}/
          ${StartTime:YYYYMMDDhhmmss}_${EndTime:YYYYMMDDhhmmss}.ts</FilePath>
+
+      <!-- [Optional] Specify the path for storing recording metadata -->
       <InfoPath>/${VirtualHost}/${Application}/${Stream}.xml</InfoPath>
-      
    </FILE>
 </Publishers>
 ```
@@ -46,12 +42,40 @@ For how to use the API, please refer to the link below.
 [recording.md](rest-api/v1/virtualhost/application/recording.md)
 {% endcontent-ref %}
 
+## Split Recording
+
+Split recording methods provide `SegmentInterval` and `SegmentSchedule`. The interval method splits files based on the accumulated recording time. The Schedule method then splits files according to scheduling options based on system time. The scheduling option is the same as the pattern used in crontab. However, only three options are used: seconds/minutes/hour.\
+You can set the `SegmentRule` parameter to determine whether the start timestamp of the separated recording files will start anew from 0 (**discontinuity**)  or continue from where the previous file left off (**continuity**).
+
+{% hint style="info" %}
+**SegmentInterval**  and **SegmentSchedule** methods cannot be used simultaneously.
+{% endhint %}
+
 ## Automated Recording
 
 Provides a way to automatically start and stop recording upon input stream that matches your file-based settings. In the above settings, the XML file path is specified in `StreamMap.Path`.  You can create the XML file at the specified path and configure automatic recording as follows.
 
+```xml
+Server.xml
+
+<Publishers>
+   <FILE>  
+      <!-- [Optional] -->
+      <RootPath>/mnt/shared_volumes</RootPath>
+
+      <!-- Recording settings for Automatic recording -->
+      <StreamMap>
+         <Enable>true</Enable>
+         <Path>./record_map.xml</Path>
+      </StreamMap>      
+   </FILE>
+</Publishers>
+```
+
 {% code fullWidth="false" %}
 ```xml
+record_map.xml
+
 <?xml version="1.0" encoding="UTF-8"?>
 <RecordInfo>
   <Record>
@@ -98,14 +122,7 @@ Provides a way to automatically start and stop recording upon input stream that 
 ```
 {% endcode %}
 
-## Split Recording
-
-Split recording methods provide `SegmentInterval` and `SegmentSchedule`. The interval method splits files based on the accumulated recording time. The Schedule method then splits files according to scheduling options based on system time. The scheduling option is the same as the pattern used in crontab. However, only three options are used: seconds/minutes/hour.\
-You can set the `SegmentRule` parameter to determine whether the start timestamp of the separated recording files will start anew from 0 (**discontinuity**)  or continue from where the previous file left off (**continuity**).
-
-{% hint style="info" %}
-**SegmentInterval**  and **SegmentSchedule** methods cannot be used simultaneously.
-{% endhint %}
+***
 
 ## Appendix A. Macro definition for the recording path
 
