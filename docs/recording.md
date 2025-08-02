@@ -17,19 +17,17 @@ Server.xml
       <!-- [Optional] -->
       <RootPath>/mnt/shared_volumes</RootPath>
       
-      <!-- [Must] Recorded file and info path 
-           When recording starts via the API, the following path is used as 
-           the default path. If a path is set via the API, it will not be used.
-      -->
-      <FilePath>/${VirtualHost}/${Application}/${Stream}/
-         ${StartTime:YYYYMMDDhhmmss}_${EndTime:YYYYMMDDhhmmss}.ts</FilePath>
-      <InfoPath>/${VirtualHost}/${Application}/${Stream}.xml</InfoPath>
-      
       <!-- [Optional] Recording settings for file-based automatic recording -->
       <StreamMap>
          <Enable>true</Enable>
          <Path>./record_map.xml</Path>
       </StreamMap>
+      
+      <!-- Deprecated -->
+      <FilePath>/${VirtualHost}/${Application}/${Stream}/
+         ${StartTime:YYYYMMDDhhmmss}_${EndTime:YYYYMMDDhhmmss}.ts</FilePath>
+      <InfoPath>/${VirtualHost}/${Application}/${Stream}.xml</InfoPath>
+      
    </FILE>
 </Publishers>
 ```
