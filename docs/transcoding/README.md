@@ -4,7 +4,7 @@ OvenMediaEngine supports Live Transcoding for Adaptive Bitrate(ABR) streaming an
 
 This document explains how to configure encoding settings, set up playlists.
 
-<figure><img src="../.gitbook/assets/image (65).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (66).png" alt=""><figcaption></figcaption></figure>
 
 <p align="center"><sub><mark style="color:$info;">Transcoding and Adaptive Streaming Architecture</mark></sub></p>
 
