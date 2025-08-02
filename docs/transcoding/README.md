@@ -4,7 +4,9 @@ OvenMediaEngine supports Live Transcoding for Adaptive Bitrate(ABR) streaming an
 
 This document explains how to configure encoding settings, set up playlists.
 
-<figure><img src="../.gitbook/assets/image (4) (1).png" alt=""><figcaption><p>Transcoding and Adaptive Streaming Architecture</p></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (65).png" alt=""><figcaption></figcaption></figure>
+
+<p align="center"><sub><mark style="color:$info;">Transcoding and Adaptive Streaming Architecture</mark></sub></p>
 
 ### Transcoding
 
@@ -65,9 +67,9 @@ These are the types of supported decoding and encoding codecs.
 These are the types of hardware accelerators officially supported.
 
 * NVIDIA GPU
-* Xilinx Alveo U30 MA
-* NILOGAN (<mark style="color:blue;">experiment</mark>)
-* Quick Sync Video (<mark style="color:orange;">deprecated</mark>)
+* Xilinx Alveo U30 MA <sub><mark style="color:blue;">enterpise only<mark style="color:blue;"></sub>
+* NILOGAN <sub><mark style="color:blue;">experiment<mark style="color:blue;"></sub>
+* Quick Sync Video <sub><mark style="color:orange;">deprecated<mark style="color:orange;"></sub>
 
 
 
