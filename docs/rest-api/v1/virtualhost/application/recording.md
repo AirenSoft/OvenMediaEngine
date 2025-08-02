@@ -19,11 +19,12 @@ Authorization: Basic {credentials}
     Credentials for HTTP Basic Authentication created with <AccessToken>
 ```
 
-#### Body : Output the recorded video to a single file
+#### Body :  Single file recording&#x20;
+
+#### &#x20;    {
 
 {% code overflow="wrap" %}
 ```json
-{
     "id": "{unique_record_id}",
     "stream": {
         "name": "{output_stream_name}",
@@ -45,7 +46,7 @@ Authorization: Basic {credentials}
 ```
 {% endcode %}
 
-#### Body : Output the recorded video to a file at intervals
+#### Body : Interval based split recording
 
 ```json
 {
@@ -56,18 +57,6 @@ Authorization: Basic {credentials}
   "interval": 60000,
   "segmentationRule": "discontinuity"
 }
-
-# id (required)
-    unique ID to identify the recording task
-    
-# stream (required)
-    ## name (required)
-        output stream name
-        
-    ## variantNames (optional)
-        Array of track names to record. If empty, all tracks will be 
-        recorded. This value is Encodes.[Video|Audio|Data].Name in the
-        OutputProfile setting.
 
 # interval (optional)
     Recording time per file (milliseconds). Not allowed to use with schedule
@@ -80,7 +69,7 @@ Authorization: Basic {credentials}
     discontinuity(default) : timestamp starts anew for each recorded file
 ```
 
-#### Body : Output the recorded video to a file at the scheduled time
+#### Body : Schedule based split recording
 
 ```json
 {
@@ -92,29 +81,31 @@ Authorization: Basic {credentials}
   "segmentationRule": "continuity"
 }
 
-# id (required)
-    unique ID to identify the recording task
-    
-# stream (required)
-    ## name (required)
-        output stream name
-        
-    ## variantNames (optional)
-        Array of track names to record. If empty, all tracks will be 
-        recorded. This value is Encodes.[Video|Audio|Data].Name in the
-        OutputProfile setting.
-
 # schedule (optional)
     <Second Minute Hour> format, same as crontab syntax
     "10 */1 *" means to output the recorded file every 10 minutes of the hour
     Not allowed to use with schedule
-    
-# segmentationRule (optional)
-    Define the policy for continuously or discontinuously timestamp 
-    in divided recorded files.
-    
-    continuity : timestamp of recorded files is continuous
-    discontinuity(default) : timestamp starts anew for each recorded file
+```
+
+#### Body : Recoding file path setting
+
+```json
+{
+  "id": "{unique_record_id}",
+  "stream": {
+    "name": "{output_stream_name}"
+  },
+  "filePath" : "/path/to/file_name.mp4"
+  "infoPath": "/path/to/file_name.xml"
+}
+
+# filePath(optional)
+    The path for recorded files can be specified. 
+    Please refer to the Recording Guide for details on using macros
+
+# infoPath(optional)
+    The path for recorded infomation file can be specified. 
+    Please refer to the Recording Guide for details on using macros
 ```
 
 </details>
