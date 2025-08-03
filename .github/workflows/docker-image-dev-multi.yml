@@ -20,7 +20,7 @@ env:
   SLACK_WEBHOOK_URL: ${{ secrets.ACTION_STATE_NOTIFICATION_SLACK_WEBHOOK_URL }}
 
 jobs:
-    set-vars:
+  set-vars:
     runs-on: ubuntu-22.04
     outputs:
       ref: ${{ steps.vars.outputs.ref }}
@@ -46,7 +46,6 @@ jobs:
             echo "tag=dev" >> $GITHUB_OUTPUT
             echo "branch=dev" >> $GITHUB_OUTPUT
           fi
-
   build_amd64:
     name: Build amd64 Image
     runs-on: ubuntu-22.04
