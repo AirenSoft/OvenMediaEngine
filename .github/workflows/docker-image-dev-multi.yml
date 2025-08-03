@@ -11,6 +11,10 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: dev-build-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   IMAGE_NAME: airensoft/ovenmediaengine
   SLACK_WEBHOOK_URL: ${{ secrets.ACTION_STATE_NOTIFICATION_SLACK_WEBHOOK_URL }}
@@ -21,16 +25,18 @@ jobs:
     outputs:
       ref: ${{ steps.vars.outputs.ref }}
       tag: ${{ steps.vars.outputs.tag }}
+      branch: ${{ steps.vars.outputs.branch }}
     steps:
       - id: vars
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "ref=${{ github.event.inputs.commit_hash }}" >> $GITHUB_OUTPUT
             echo "tag=${{ github.event.inputs.commit_hash }}" >> $GITHUB_OUTPUT
+            echo "branch=manual" >> $GITHUB_OUTPUT
           else
             echo "ref=${{ github.sha }}" >> $GITHUB_OUTPUT
-            echo "tag=dev" >> $GITHUB_OUTPUT
-          fi
+            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "branch=dev" >> $GITHUB_OUTPUT
 
   build_amd64:
     name: Build amd64 Image
@@ -42,7 +48,7 @@ jobs:
         with:
           payload: |
             {
-              "branch": "${{ needs.set-vars.outputs.ref }}",
+              "branch": "${{ needs.set-vars.outputs.branch }}",
               "tag": "${{ needs.set-vars.outputs.tag }} (amd64 by ${{ github.actor }})",
               "state": "Started"
             }
@@ -74,7 +80,7 @@ jobs:
         with:
           payload: |
             {
-              "branch": "${{ needs.set-vars.outputs.ref }}",
+              "branch": "${{ needs.set-vars.outputs.branch }}",
               "tag": "${{ needs.set-vars.outputs.tag }} (amd64 by ${{ github.actor }})",
               "state": "${{ job.status }}"
             }
@@ -91,7 +97,7 @@ jobs:
         with:
           payload: |
             {
-              "branch": "${{ needs.set-vars.outputs.ref }}",
+              "branch": "${{ needs.set-vars.outputs.branch }}",
               "tag": "${{ needs.set-vars.outputs.tag }} (arm64 by ${{ github.actor }})",
               "state": "Started"
             }
@@ -123,7 +129,7 @@ jobs:
         with:
           payload: |
             {
-              "branch": "${{ needs.set-vars.outputs.ref }}",
+              "branch": "${{ needs.set-vars.outputs.branch }}",
               "tag": "${{ needs.set-vars.outputs.tag }} (arm64 by ${{ github.actor }})",
               "state": "${{ job.status }}"
             }
@@ -140,7 +146,7 @@ jobs:
         with:
           payload: |
             {
-              "branch": "${{ needs.set-vars.outputs.ref }}",
+              "branch": "${{ needs.set-vars.outputs.branch }}",
               "tag": "${{ needs.set-vars.outputs.tag }} (merge by ${{ github.actor }})",
               "state": "Started"
             }
@@ -167,7 +173,7 @@ jobs:
         with:
           payload: |
             {
-              "branch": "${{ needs.set-vars.outputs.ref }}",
+              "branch": "${{ needs.set-vars.outputs.branch }}",
               "tag": "${{ needs.set-vars.outputs.tag }} (merge by ${{ github.actor }})",
               "state": "${{ job.status }}"
             }
