@@ -120,13 +120,13 @@ jobs:
     runs-on: ubuntu-22.04
     needs: [build_amd64, build_arm64]
     steps:
-      - name: Notify Start (manifest)
+      - name: Notify Start (Merge)
         uses: slackapi/slack-github-action@v1.26.0
         with:
           payload: |
             {
               "branch": "${{ env.VERSION }}",
-              "tag": "${{ env.VERSION }} (manifest by ${{ github.actor }})",
+              "tag": "${{ env.VERSION }} (merge by ${{ github.actor }})",
               "state": "Started"
             }
         env:
@@ -143,10 +143,11 @@ jobs:
 
       - name: Create and push manifest
         run: |
-          docker manifest create ${{ env.IMAGE_NAME }}:${{ env.VERSION }} \
-            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 \
-            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64
-          docker manifest push ${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+          docker buildx imagetools create \
+          --tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }} \
+          ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 \
+          ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64
+          # manifest already pushed via imagetools
 
           # Tag and push latest
           docker tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }} ${{ env.IMAGE_NAME }}:latest
@@ -159,7 +160,7 @@ jobs:
           payload: |
             {
               "branch": "${{ env.VERSION }}",
-              "tag": "${{ env.VERSION }} (manifest by ${{ github.actor }})",
+              "tag": "${{ env.VERSION }} (merge by ${{ github.actor }})",
               "state": "${{ job.status }}"
             }
         env:
