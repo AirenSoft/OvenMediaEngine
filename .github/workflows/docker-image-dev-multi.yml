@@ -20,7 +20,7 @@ env:
   SLACK_WEBHOOK_URL: ${{ secrets.ACTION_STATE_NOTIFICATION_SLACK_WEBHOOK_URL }}
 
 jobs:
-  set-vars:
+    set-vars:
     runs-on: ubuntu-22.04
     outputs:
       ref: ${{ steps.vars.outputs.ref }}
@@ -31,17 +31,19 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             if [[ -n "${{ github.event.inputs.commit_hash }}" ]]; then
+              short_tag=$(echo "${{ github.event.inputs.commit_hash }}" | cut -c1-7)
               echo "ref=${{ github.event.inputs.commit_hash }}" >> $GITHUB_OUTPUT
-              echo "tag=${{ github.event.inputs.commit_hash }}" >> $GITHUB_OUTPUT
+              echo "tag=${short_tag}" >> $GITHUB_OUTPUT
               echo "branch=manual" >> $GITHUB_OUTPUT
             else
+              short_tag=$(echo "${{ github.sha }}" | cut -c1-7)
               echo "ref=${{ github.sha }}" >> $GITHUB_OUTPUT
-              echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+              echo "tag=${short_tag}" >> $GITHUB_OUTPUT
               echo "branch=manual-latest" >> $GITHUB_OUTPUT
             fi
           else
             echo "ref=${{ github.sha }}" >> $GITHUB_OUTPUT
-            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "tag=dev" >> $GITHUB_OUTPUT
             echo "branch=dev" >> $GITHUB_OUTPUT
           fi
 
