@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to tag (e.g., v1.3.1)'
+        description: 'Version to tag (e.g., v0.19.0)'
         required: true
         type: string
 
@@ -24,8 +24,8 @@ jobs:
         with:
           payload: |
             {
-              "branch": "${{ github.ref_name || 'manual' }}",
-              "tag": "${{ github.event.release.tag_name || github.event.inputs.version || 'unknown' }}",
+              "branch": "${{ env.VERSION }}",
+              "tag": "${{ env.VERSION }} (amd64 by ${{ github.actor }})",
               "state": "Started"
             }
         env:
@@ -58,8 +58,8 @@ jobs:
         with:
           payload: |
             {
-              "branch": "${{ github.ref_name || 'manual' }}",
-              "tag": "${{ env.VERSION }}",
+              "branch": "${{ env.VERSION }}",
+              "tag": "${{ env.VERSION }} (amd64 by ${{ github.actor }})",
               "state": "${{ job.status }}"
             }
         env:
@@ -74,8 +74,8 @@ jobs:
         with:
           payload: |
             {
-              "branch": "${{ github.ref_name || 'manual' }}",
-              "tag": "${{ github.event.release.tag_name || github.event.inputs.version || 'unknown' }}",
+              "branch": "${{ env.VERSION }}",
+              "tag": "${{ env.VERSION }} (arm64 by ${{ github.actor }})",
               "state": "Started"
             }
         env:
@@ -108,8 +108,8 @@ jobs:
         with:
           payload: |
             {
-              "branch": "${{ github.ref_name || 'manual' }}",
-              "tag": "${{ env.VERSION }}",
+              "branch": "${{ env.VERSION }}",
+              "tag": "${{ env.VERSION }} (arm64 by ${{ github.actor }})",
               "state": "${{ job.status }}"
             }
         env:
@@ -125,8 +125,8 @@ jobs:
         with:
           payload: |
             {
-              "branch": "${{ github.ref_name || 'manual' }}",
-              "tag": "${{ env.VERSION }}",
+              "branch": "${{ env.VERSION }}",
+              "tag": "${{ env.VERSION }} (manifest by ${{ github.actor }})",
               "state": "Started"
             }
         env:
@@ -156,8 +156,8 @@ jobs:
         with:
           payload: |
             {
-              "branch": "${{ github.ref_name || 'manual' }}",
-              "tag": "${{ env.VERSION }}",
+              "branch": "${{ env.VERSION }}",
+              "tag": "${{ env.VERSION }} (manifest by ${{ github.actor }})",
               "state": "${{ job.status }}"
             }
         env:
