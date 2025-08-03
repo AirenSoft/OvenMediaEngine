@@ -64,10 +64,9 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ${{ env.TAG }}
-          platforms: linux/amd64
-          #platforms: |
-          #  linux/amd64
-          #  linux/arm64
+          platforms: |
+           linux/amd64
+           linux/arm64
 
       - name: Notify to Slack
         if: always()
