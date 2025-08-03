@@ -144,15 +144,15 @@ jobs:
       - name: Create and push manifest
         run: |
           docker buildx imagetools create \
-          --tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }} \
-          ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 \
-          ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64
-          # manifest already pushed via imagetools
+            --tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }} \
+            ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 \
+            ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64
 
-          # Tag and push latest
-          docker tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }} ${{ env.IMAGE_NAME }}:latest
-          docker push ${{ env.IMAGE_NAME }}:latest
-
+          docker buildx imagetools create \
+            --tag ${{ env.IMAGE_NAME }}:latest \
+            ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 \
+            ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64
+            
       - name: Notify Done (manifest)
         if: always()
         uses: slackapi/slack-github-action@v1.26.0
