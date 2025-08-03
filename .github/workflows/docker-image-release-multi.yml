@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to tag (e.g., v0.19.0)'
+        description: 'Version or tag to use (e.g., v0.19.0)'
         required: true
         type: string
 
@@ -49,7 +49,7 @@ jobs:
           docker buildx build \
             --platform linux/amd64 \
             --push \
-            --tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 \
+            --tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64-raw \
             .
 
       - name: Notify Done (amd64)
@@ -99,7 +99,7 @@ jobs:
           docker buildx build \
             --platform linux/arm64 \
             --push \
-            --tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 \
+            --tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64-raw \
             .
 
       - name: Notify Done (arm64)
@@ -144,9 +144,11 @@ jobs:
       - name: Create and push manifest
         run: |
           docker manifest create ${{ env.IMAGE_NAME }}:${{ env.VERSION }} \
-            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 \
-            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64
+            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64-raw \
+            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64-raw
           docker manifest push ${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+
+          # Tag and push latest
           docker tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }} ${{ env.IMAGE_NAME }}:latest
           docker push ${{ env.IMAGE_NAME }}:latest
 
