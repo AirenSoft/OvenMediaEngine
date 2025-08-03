@@ -48,8 +48,8 @@ jobs:
         run: |
           docker buildx build \
             --platform linux/amd64 \
-            --push \
-            --tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64-raw \
+            --output=type=image,push=true \
+            --tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 \
             .
 
       - name: Notify Done (amd64)
@@ -98,8 +98,8 @@ jobs:
         run: |
           docker buildx build \
             --platform linux/arm64 \
-            --push \
-            --tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64-raw \
+            --output=type=image,push=true \
+            --tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64 \
             .
 
       - name: Notify Done (arm64)
@@ -144,8 +144,8 @@ jobs:
       - name: Create and push manifest
         run: |
           docker manifest create ${{ env.IMAGE_NAME }}:${{ env.VERSION }} \
-            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64-raw \
-            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64-raw
+            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-amd64 \
+            --amend ${{ env.IMAGE_NAME }}:${{ env.VERSION }}-arm64
           docker manifest push ${{ env.IMAGE_NAME }}:${{ env.VERSION }}
 
           # Tag and push latest
