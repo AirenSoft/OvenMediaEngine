@@ -6,14 +6,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to tag (e.g., v0.19.0)'
+        description: 'Version to tag (e.g., v1.3.1)'
         required: true
         type: string
 
 env:
   IMAGE_NAME: airensoft/ovenmediaengine
   VERSION: ${{ github.event.release.tag_name || github.event.inputs.version }}
-  BRANCH_LABEL: ${{ github.ref_name || 'manual' }}
 
 jobs:
   build_amd64:
@@ -25,9 +24,8 @@ jobs:
         with:
           payload: |
             {
-              "branch": "${{ env.BRANCH_LABEL }}",
-              "version": "${{ env.VERSION }}",
-              "platform": "amd64",
+              "branch": "${{ github.ref_name || 'manual' }}",
+              "tag": "${{ github.event.release.tag_name || github.event.inputs.version || 'unknown' }}",
               "state": "Started"
             }
         env:
@@ -60,9 +58,8 @@ jobs:
         with:
           payload: |
             {
-              "branch": "${{ env.BRANCH_LABEL }}",
-              "version": "${{ env.VERSION }}",
-              "platform": "amd64",
+              "branch": "${{ github.ref_name || 'manual' }}",
+              "tag": "${{ env.VERSION }}",
               "state": "${{ job.status }}"
             }
         env:
@@ -71,16 +68,14 @@ jobs:
   build_arm64:
     name: Build arm64 Image
     runs-on: ubuntu-22.04-arm
-    needs: build_amd64
     steps:
       - name: Notify Start (arm64)
         uses: slackapi/slack-github-action@v1.26.0
         with:
           payload: |
             {
-              "branch": "${{ env.BRANCH_LABEL }}",
-              "version": "${{ env.VERSION }}",
-              "platform": "arm64",
+              "branch": "${{ github.ref_name || 'manual' }}",
+              "tag": "${{ github.event.release.tag_name || github.event.inputs.version || 'unknown' }}",
               "state": "Started"
             }
         env:
@@ -113,9 +108,8 @@ jobs:
         with:
           payload: |
             {
-              "branch": "${{ env.BRANCH_LABEL }}",
-              "version": "${{ env.VERSION }}",
-              "platform": "arm64",
+              "branch": "${{ github.ref_name || 'manual' }}",
+              "tag": "${{ env.VERSION }}",
               "state": "${{ job.status }}"
             }
         env:
@@ -131,9 +125,8 @@ jobs:
         with:
           payload: |
             {
-              "branch": "${{ env.BRANCH_LABEL }}",
-              "version": "${{ env.VERSION }}",
-              "platform": "manifest",
+              "branch": "${{ github.ref_name || 'manual' }}",
+              "tag": "${{ env.VERSION }}",
               "state": "Started"
             }
         env:
@@ -163,9 +156,8 @@ jobs:
         with:
           payload: |
             {
-              "branch": "${{ env.BRANCH_LABEL }}",
-              "version": "${{ env.VERSION }}",
-              "platform": "manifest",
+              "branch": "${{ github.ref_name || 'manual' }}",
+              "tag": "${{ env.VERSION }}",
               "state": "${{ job.status }}"
             }
         env:
