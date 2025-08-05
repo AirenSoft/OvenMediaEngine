@@ -127,7 +127,7 @@ namespace pub
 		}
 
 		auto application = item->second;
-		_applications[app_info.GetId()]->Stop();
+		application->Stop();
 		_applications.erase(item);
 
 		lock.unlock();

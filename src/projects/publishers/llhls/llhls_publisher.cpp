@@ -200,13 +200,6 @@ std::shared_ptr<pub::Application> LLHlsPublisher::OnCreatePublisherApplication(c
 
 bool LLHlsPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)
 {
-	auto llhls_application = std::static_pointer_cast<LLHlsApplication>(application);
-	if (llhls_application == nullptr)
-	{
-		logte("Could not found llhls application. app:%s", llhls_application->GetVHostAppName().CStr());
-		return false;
-	}
-
 	return true;
 }
 

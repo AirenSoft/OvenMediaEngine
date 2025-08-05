@@ -70,15 +70,6 @@ namespace pub
 
 	bool PushPublisher::OnDeletePublisherApplication(const std::shared_ptr<pub::Application> &application)
 	{
-		auto push_application = std::static_pointer_cast<PushApplication>(application);
-		if (push_application == nullptr)
-		{
-			logte("Could not found application. app:%s", push_application->GetVHostAppName().CStr());
-			return false;
-		}
-
-		// Applications and child streams must be terminated.
-
 		return true;
 	}
 }  // namespace pub
