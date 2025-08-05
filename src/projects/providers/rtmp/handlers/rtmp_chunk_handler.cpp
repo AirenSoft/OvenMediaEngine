@@ -1436,13 +1436,13 @@ namespace pvd::rtmp
 					auto pts		  = media_packet->GetPts();
 					auto dts		  = media_packet->GetDts();
 
-					_recent_pts_in_ms = std::max(_recent_pts_in_ms, pts);
-					_recent_pts_clock.StartOrUpdate();
-
 					_stream->AdjustTimestamp(track_id, pts, dts);
 
 					media_packet->SetPts(pts);
 					media_packet->SetDts(dts);
+
+					_recent_pts_in_ms = std::max(_recent_pts_in_ms, pts);
+					_recent_pts_clock.StartOrUpdate();
 				}
 
 				_stream->SendFrame(media_packet);
