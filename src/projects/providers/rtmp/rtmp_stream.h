@@ -179,9 +179,9 @@ namespace pvd
 		int64_t _first_dts_offset = 0;
 
 		// Data frame
-		int64_t _last_video_pts = 0;
+		int64_t _last_video_pts_in_ms = 0;
 		ov::StopWatch _last_video_pts_clock;
-		int64_t _last_audio_pts = 0;
+		int64_t _last_audio_pts_in_ms = 0;
 		ov::StopWatch _last_audio_pts_clock;
 
 		// For statistics

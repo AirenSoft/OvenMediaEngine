@@ -866,14 +866,14 @@ namespace pvd
 
 	bool RtmpStream::OnAmfTextData(const std::shared_ptr<const RtmpChunkHeader> &header, const AmfDocument &document)
 	{
-		int64_t pts = 0;
-		if (_last_video_pts > _last_audio_pts)
+		int64_t pts_in_ms = 0;
+		if (_last_video_pts_in_ms > _last_audio_pts_in_ms)
 		{
-			pts = _last_video_pts + _last_video_pts_clock.Elapsed();
+			pts_in_ms = _last_video_pts_in_ms + _last_video_pts_clock.Elapsed();
 		}
 		else
 		{
-			pts = _last_audio_pts + _last_audio_pts_clock.Elapsed();
+			pts_in_ms = _last_audio_pts_in_ms + _last_audio_pts_clock.Elapsed();
 		}
 
 		ov::ByteStream byte_stream;
@@ -882,19 +882,19 @@ namespace pvd
 			return false;
 		}
 
-		return SendDataFrame(pts, cmn::BitstreamFormat::AMF, cmn::PacketType::EVENT, byte_stream.GetDataPointer(), false);
+		return SendDataFrame(pts_in_ms, cmn::BitstreamFormat::AMF, cmn::PacketType::EVENT, byte_stream.GetDataPointer(), false);
 	}
 
 	bool RtmpStream::OnAmfCuePoint(const std::shared_ptr<const RtmpChunkHeader> &header, const AmfDocument &document)
 	{
-		int64_t pts = 0;
-		if (_last_video_pts > _last_audio_pts)
+		int64_t pts_in_ms = 0;
+		if (_last_video_pts_in_ms > _last_audio_pts_in_ms)
 		{
-			pts = _last_video_pts + _last_video_pts_clock.Elapsed();
+			pts_in_ms = _last_video_pts_in_ms + _last_video_pts_clock.Elapsed();
 		}
 		else
 		{
-			pts = _last_audio_pts + _last_audio_pts_clock.Elapsed();
+			pts_in_ms = _last_audio_pts_in_ms + _last_audio_pts_clock.Elapsed();
 		}
 
 		ov::ByteStream byte_stream;
@@ -903,7 +903,7 @@ namespace pvd
 			return false;
 		}
 
-		return SendDataFrame(pts, cmn::BitstreamFormat::AMF, cmn::PacketType::EVENT, byte_stream.GetDataPointer(), false);
+		return SendDataFrame(pts_in_ms, cmn::BitstreamFormat::AMF, cmn::PacketType::EVENT, byte_stream.GetDataPointer(), false);
 	}
 
 	off_t RtmpStream::ReceiveHandshakePacket(const std::shared_ptr<const ov::Data> &data)
@@ -1510,12 +1510,12 @@ namespace pvd
 			int64_t pts = 0;
 			if (packet_type == cmn::PacketType::VIDEO_EVENT)
 			{
-				pts = _last_video_pts;
+				pts = _last_video_pts_in_ms;
 				pts += _last_video_pts_clock.Elapsed();
 			}
 			else if (packet_type == cmn::PacketType::AUDIO_EVENT)
 			{
-				pts = _last_audio_pts;
+				pts = _last_audio_pts_in_ms;
 				pts += _last_audio_pts_clock.Elapsed();
 			}
 
@@ -1697,7 +1697,7 @@ namespace pvd
 			// 	  pts,
 			// 	  dts);
 
-			_last_video_pts = dts;
+			_last_video_pts_in_ms = dts;
 
 			if (_last_video_pts_clock.IsStart() == false)
 			{
@@ -1874,7 +1874,7 @@ namespace pvd
 
 			SendFrame(frame);
 
-			_last_audio_pts = dts;
+			_last_audio_pts_in_ms = dts;
 
 			if (_last_audio_pts_clock.IsStart() == false)
 			{
@@ -2038,6 +2038,7 @@ namespace pvd
 
 			data_track->SetId(RTMP_DATA_TRACK_ID);
 			data_track->SetMediaType(cmn::MediaType::Data);
+			// Since elsewhere, such as in `SendDataFrame()`, the data track’s timebase is assumed to be 1/1000, you must not arbitrarily change the timebase
 			data_track->SetTimeBase(1, 1000);
 			data_track->SetOriginBitstream(cmn::BitstreamFormat::Unknown);
 

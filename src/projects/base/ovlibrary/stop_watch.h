@@ -14,12 +14,14 @@ namespace ov
 		StopWatch() = default;
 		explicit StopWatch(String tag);
 
-		bool IsStart();
-		bool IsPaused();
+		bool IsStart() const;
+		bool IsPaused() const;
 		void Start();
 		void Restart();
 		void Stop();
 		bool Update();
+		// Start if not started, or update the last time if already started.
+		bool StartOrUpdate();
 
 		void Pause();
 		void Resume();

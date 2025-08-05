@@ -597,6 +597,24 @@ namespace pvd::rtmp
 		return (_meta_data_context.waiting_audio_track_count + _meta_data_context.waiting_video_track_count);
 	}
 
+	int64_t RtmpChunkHandler::EstimateCurrentPts() const
+	{
+		if (_recent_pts_in_ms == INT64_MIN)
+		{
+			return 0;
+		}
+
+		if (_recent_pts_clock.IsStart() == false)
+		{
+			// If `_recent_pts_in_ms` is set, the clock must have started.
+			OV_ASSERT2(_recent_pts_clock.IsStart());
+
+			return _recent_pts_in_ms;
+		}
+
+		return _recent_pts_in_ms + _recent_pts_clock.Elapsed();
+	}
+
 	bool RtmpChunkHandler::OnAmfConnect(const std::shared_ptr<const modules::rtmp::ChunkHeader> &header, modules::rtmp::AmfDocument &document, double transaction_id)
 	{
 		double object_encoding = 0.0;
@@ -684,6 +702,28 @@ namespace pvd::rtmp
 		_stream->_remote->Close();
 
 		return true;
+	}
+
+	bool RtmpChunkHandler::OnAmfTextData(const std::shared_ptr<const modules::rtmp::ChunkHeader> &header, const modules::rtmp::AmfDocument &document)
+	{
+		ov::ByteStream byte_stream;
+		if (document.Encode(byte_stream) == false)
+		{
+			return false;
+		}
+
+		return _stream->SendDataFrame(EstimateCurrentPts(), cmn::BitstreamFormat::AMF, cmn::PacketType::EVENT, byte_stream.GetDataPointer(), false);
+	}
+
+	bool RtmpChunkHandler::OnAmfCuePoint(const std::shared_ptr<const modules::rtmp::ChunkHeader> &header, const modules::rtmp::AmfDocument &document)
+	{
+		ov::ByteStream byte_stream;
+		if (document.Encode(byte_stream) == false)
+		{
+			return false;
+		}
+
+		return _stream->SendDataFrame(EstimateCurrentPts(), cmn::BitstreamFormat::AMF, cmn::PacketType::EVENT, byte_stream.GetDataPointer(), false);
 	}
 
 	bool RtmpChunkHandler::OnAmfPublish(const std::shared_ptr<const modules::rtmp::ChunkHeader> &header, modules::rtmp::AmfDocument &document, double transaction_id)
@@ -995,18 +1035,7 @@ namespace pvd::rtmp
 				}
 			}
 
-			int64_t pts = 0;
-
-			if (packet_type == cmn::PacketType::VIDEO_EVENT)
-			{
-				pts = _last_video_pts + _last_video_pts_clock.Elapsed();
-			}
-			else if (packet_type == cmn::PacketType::AUDIO_EVENT)
-			{
-				pts = _last_audio_pts + _last_audio_pts_clock.Elapsed();
-			}
-
-			_stream->SendDataFrame(pts, cmn::BitstreamFormat::ID3v2, packet_type, tag.Serialize(), false);
+			_stream->SendDataFrame(EstimateCurrentPts(), cmn::BitstreamFormat::ID3v2, packet_type, tag.Serialize(), false);
 		}
 	}
 
@@ -1404,8 +1433,11 @@ namespace pvd::rtmp
 
 				if ((packet_type == cmn::PacketType::NALU) || (packet_type == cmn::PacketType::RAW))
 				{
-					auto pts = media_packet->GetPts();
-					auto dts = media_packet->GetDts();
+					auto pts		  = media_packet->GetPts();
+					auto dts		  = media_packet->GetDts();
+
+					_recent_pts_in_ms = std::max(_recent_pts_in_ms, pts);
+					_recent_pts_clock.StartOrUpdate();
 
 					_stream->AdjustTimestamp(track_id, pts, dts);
 
@@ -1538,15 +1570,6 @@ namespace pvd::rtmp
 		OV_ASSERT2(_stream->IsPublished());
 
 		SendFrames(rtmp_track_to_send_map);
-
-		if (_last_audio_pts_clock.IsStart() == false)
-		{
-			_last_audio_pts_clock.Start();
-		}
-		else
-		{
-			_last_audio_pts_clock.Update();
-		}
 
 		_stats.last_audio_timestamp = message->header->completed.timestamp;
 		_stats.audio_frame_count++;
@@ -1699,15 +1722,6 @@ namespace pvd::rtmp
 		OV_ASSERT2(_stream->IsPublished());
 
 		auto has_key_frame = SendFrames(rtmp_track_to_send_map);
-
-		if (_last_video_pts_clock.IsStart() == false)
-		{
-			_last_video_pts_clock.Start();
-		}
-		else
-		{
-			_last_video_pts_clock.Update();
-		}
 
 		// Statistics for debugging
 		if (has_key_frame)
@@ -1872,17 +1886,6 @@ namespace pvd::rtmp
 
 	bool RtmpChunkHandler::OnTextData(const std::shared_ptr<const modules::rtmp::ChunkHeader> &header, const modules::rtmp::AmfDocument &document)
 	{
-		int64_t pts = 0;
-
-		if (_last_video_pts > _last_audio_pts)
-		{
-			pts = _last_video_pts + _last_video_pts_clock.Elapsed();
-		}
-		else
-		{
-			pts = _last_audio_pts + _last_audio_pts_clock.Elapsed();
-		}
-
 		ov::ByteStream byte_stream;
 
 		if (document.Encode(byte_stream) == false)
@@ -1890,7 +1893,7 @@ namespace pvd::rtmp
 			return false;
 		}
 
-		return _stream->SendDataFrame(pts, cmn::BitstreamFormat::AMF, cmn::PacketType::EVENT, byte_stream.GetDataPointer(), false);
+		return _stream->SendDataFrame(EstimateCurrentPts(), cmn::BitstreamFormat::AMF, cmn::PacketType::EVENT, byte_stream.GetDataPointer(), false);
 	}
 
 	bool RtmpChunkHandler::OnCuePoint(const std::shared_ptr<const modules::rtmp::ChunkHeader> &header, const modules::rtmp::AmfDocument &document)
@@ -1901,10 +1904,6 @@ namespace pvd::rtmp
 			return false;
 		}
 
-		int64_t pts = (_last_video_pts > _last_audio_pts)
-						  ? (_last_video_pts + _last_video_pts_clock.Elapsed())
-						  : (_last_audio_pts + _last_audio_pts_clock.Elapsed());
-
-		return _stream->SendDataFrame(pts, cmn::BitstreamFormat::AMF, cmn::PacketType::EVENT, byte_stream.GetDataPointer(), false);
+		return _stream->SendDataFrame(EstimateCurrentPts(), cmn::BitstreamFormat::AMF, cmn::PacketType::EVENT, byte_stream.GetDataPointer(), false);
 	}
 }  // namespace pvd::rtmp

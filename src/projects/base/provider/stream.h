@@ -65,7 +65,8 @@ namespace pvd
 		virtual bool Stop();
 		virtual bool Terminate();
 
-		bool SendDataFrame(int64_t timestamp, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent, const MediaPacketFlag packet_flag = MediaPacketFlag::NoFlag);
+		// Given that the data track’s timebase is 1/1000, timestamps are treated in milliseconds
+		bool SendDataFrame(int64_t timestamp_in_ms, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent, const MediaPacketFlag packet_flag = MediaPacketFlag::NoFlag);
 
 		// Provider can override this function to handle the event if needed.
 		virtual bool SendEvent(const std::shared_ptr<MediaEvent> &event);

@@ -11,12 +11,12 @@ namespace ov
 	{
 	}
 
-	bool StopWatch::IsStart()
+	bool StopWatch::IsStart() const
 	{
 		return _is_valid;
 	}
 
-	bool StopWatch::IsPaused()
+	bool StopWatch::IsPaused() const
 	{
 		return _is_paused;
 	}
@@ -74,6 +74,13 @@ namespace ov
 	bool StopWatch::Update()
 	{
 		_last = std::chrono::high_resolution_clock::now();
+		return _is_valid;
+	}
+
+	bool StopWatch::StartOrUpdate()
+	{
+		IsStart() ? (void)Update() : Start();
+
 		return _is_valid;
 	}
 

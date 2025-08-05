@@ -449,6 +449,7 @@ namespace pvd::rtmp
 
 			data_track->SetId(TRACK_ID_FOR_DATA);
 			data_track->SetMediaType(cmn::MediaType::Data);
+			// Since elsewhere, such as in SendDataFrame(), the data track’s timebase is assumed to be 1/1000, you must not arbitrarily change the timebase
 			data_track->SetTimeBase(1, 1000);
 			data_track->SetOriginBitstream(cmn::BitstreamFormat::Unknown);
 

@@ -110,7 +110,7 @@ namespace pvd
 		return _last_media_timestamp_ms + _elapsed_from_last_media_timestamp.Elapsed();
 	}
 
-	bool Stream::SendDataFrame(int64_t timestamp, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent, const MediaPacketFlag packet_flag)
+	bool Stream::SendDataFrame(int64_t timestamp_in_ms, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent, const MediaPacketFlag packet_flag)
 	{
 		if (frame == nullptr)
 		{
@@ -124,20 +124,21 @@ namespace pvd
 			return false;
 		}
 
-		if (timestamp == -1)
+		if (timestamp_in_ms == -1)
 		{
-			timestamp = GetCurrentTimestampMs();
-			if (timestamp == -1)
+			timestamp_in_ms = GetCurrentTimestampMs();
+			if (timestamp_in_ms == -1)
 			{
 				logte("Could not send data frame. %s/%s(%u) - Media is not started yet", GetApplicationName(), GetName().CStr(), GetId());
 				return false;
 			}
 
-			logtd("SendDataFrame - %s/%s(%u) - last_media_timestamp_ms: %lld, elapsed_from_last_media_timestamp: %lld, timestamp: %lld",
+			logtd("SendDataFrame - %s/%s(%u) - last_media_timestamp_ms: %lld, elapsed_from_last_media_timestamp: %lld, timestamp: %lld ms",
 				  GetApplicationName(), GetName().CStr(), GetId(),
-				  _last_media_timestamp_ms, _elapsed_from_last_media_timestamp.Elapsed(), timestamp);
+				  _last_media_timestamp_ms, _elapsed_from_last_media_timestamp.Elapsed(), timestamp_in_ms);
 		}
 
+		auto timestamp_in_tb = static_cast<int64_t>(timestamp_in_ms * data_track->GetTimeBase().GetTimescale() / 1000.0);
 
 		if (format == cmn::BitstreamFormat::SCTE35 || format == cmn::BitstreamFormat::CUE)
 		{
@@ -147,12 +148,12 @@ namespace pvd
 			auto first_video_track = GetFirstTrackByType(cmn::MediaType::Video);
 			if (first_video_track != nullptr)
 			{
-				double keyframe_interval_duration_ms = GetFirstTrackByType(cmn::MediaType::Video)->GetKeyframeIntervalDurationMs();
+				double keyframe_interval_duration_ms = first_video_track->GetKeyframeIntervalDurationMs();
 				double keyframe_interval_duration = keyframe_interval_duration_ms / 1000.0 * data_track->GetTimeBase().GetTimescale();
-				timestamp += std::ceil(keyframe_interval_duration);
+				timestamp_in_tb += std::ceil(keyframe_interval_duration);
 
-				logti("SendDataFrame - %s/%s(%u) - timestamp: %lld, keyframe_interval_duration_ms: %f, keyframe_interval_duration: %f, keyframe_interval: %f, framerate: %f",
-				GetApplicationName(), GetName().CStr(), GetId(), timestamp, keyframe_interval_duration_ms, std::ceil(keyframe_interval_duration), first_video_track->GetKeyFrameInterval(), first_video_track->GetFrameRate());
+				logti("SendDataFrame - %s/%s(%u) - timestamp: %lld tb, keyframe_interval_duration_ms: %f ms, keyframe_interval_duration: %f tb, keyframe_interval: %f, framerate: %f",
+				GetApplicationName(), GetName().CStr(), GetId(), timestamp_in_tb, keyframe_interval_duration_ms, std::ceil(keyframe_interval_duration), first_video_track->GetKeyFrameInterval(), first_video_track->GetFrameRate());
 			}
 		}
 
@@ -160,8 +161,8 @@ namespace pvd
 															cmn::MediaType::Data,
 															data_track->GetId(),
 															frame, 
-															timestamp,
-															timestamp,
+															timestamp_in_tb,
+															timestamp_in_tb,
 															format,
 															packet_type);
 		event_message->SetFlag(packet_flag);

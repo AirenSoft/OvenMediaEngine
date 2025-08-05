@@ -117,10 +117,15 @@ namespace pvd::rtmp
 		bool SendAmfOnFCPublish(uint32_t chunk_stream_id, uint32_t stream_id, double client_id);
 		bool SendAmfOnStatus(uint32_t chunk_stream_id, uint32_t stream_id, const char *level, const char *code, const char *description, double client_id);
 
+		// Unit: milliseconds
+		int64_t EstimateCurrentPts() const;
+
 		// The `OnAmf*` functions are called by the `HandleAmf0*` functions
 		bool OnAmfConnect(const std::shared_ptr<const modules::rtmp::ChunkHeader> &header, modules::rtmp::AmfDocument &document, double transaction_id);
 		bool OnAmfCreateStream(const std::shared_ptr<const modules::rtmp::ChunkHeader> &header, modules::rtmp::AmfDocument &document, double transaction_id);
 		bool OnAmfDeleteStream(const std::shared_ptr<const modules::rtmp::ChunkHeader> &header, modules::rtmp::AmfDocument &document, double transaction_id);
+		bool OnAmfTextData(const std::shared_ptr<const modules::rtmp::ChunkHeader> &header, const modules::rtmp::AmfDocument &document);
+		bool OnAmfCuePoint(const std::shared_ptr<const modules::rtmp::ChunkHeader> &header, const modules::rtmp::AmfDocument &document);
 		bool OnAmfPublish(const std::shared_ptr<const modules::rtmp::ChunkHeader> &header, modules::rtmp::AmfDocument &document, double transaction_id);
 		bool OnAmfFCPublish(const std::shared_ptr<const modules::rtmp::ChunkHeader> &header, modules::rtmp::AmfDocument &document, double transaction_id);
 		bool OnAmfMetadata(const std::shared_ptr<const modules::rtmp::ChunkHeader> &header, const modules::rtmp::AmfProperty *property);
@@ -167,10 +172,8 @@ namespace pvd::rtmp
 		RtmpMetaDataContext _meta_data_context;
 
 		// Data frame
-		int64_t _last_video_pts = 0;
-		ov::StopWatch _last_video_pts_clock;
-		int64_t _last_audio_pts = 0;
-		ov::StopWatch _last_audio_pts_clock;
+		int64_t _recent_pts_in_ms = INT64_MIN;
+		ov::StopWatch _recent_pts_clock;
 
 		// For statistics
 		Stats _stats;
