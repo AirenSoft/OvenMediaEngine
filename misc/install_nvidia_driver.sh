@@ -199,8 +199,8 @@ install_base_rocky()
         sudo dnf module install nvidia-driver:${NVIDIA_DRIVER_VERSION} -y
     fi     
 
-    # Install CUDA toolkit (optional)
-    sudo dnf install cuda-toolkit -y
+    # Install CUDA toolkit 
+    sudo dnf install cuda-toolkit-11-7 -y
  
     success_exit
 }
