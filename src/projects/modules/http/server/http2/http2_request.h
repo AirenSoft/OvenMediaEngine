@@ -57,7 +57,7 @@ namespace http
 				// encoding in HTTP/2.
 
 				// So _headers is a map of case insentitive header key and value
-				std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> _headers;
+				HttpHeaderMap _headers;
 				StatusCode _parse_status = StatusCode::PartialContent;
 			};
 		} // namespace h1

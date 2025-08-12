@@ -14,9 +14,12 @@
 
 #include <functional>
 #include <memory>
+#include <unordered_map>
 
 namespace http
 {
+	using HttpHeaderMap = std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual>;
+
 	enum class ConnectionType : uint8_t
 	{
 		Unknown = 0,
@@ -438,11 +441,4 @@ namespace http
 			NotFound	// Handler not found
 		};
 	}  // namespace svr
-
-	class HttpError;
-
-	namespace clnt
-	{
-		using ResponseHandler = std::function<void(StatusCode status_code, const std::shared_ptr<ov::Data> &data, const std::shared_ptr<const ov::Error> &error)>;
-	}
 }  // namespace http

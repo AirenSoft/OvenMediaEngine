@@ -80,7 +80,7 @@ namespace http
 
 			ov::String Http1Request::GetHeader(const ov::String &key) const noexcept
 			{
-				return _http_header_parser.GetHeader(key);
+				return _http_header_parser.GetHeader(key).value_or("");
 			}
 
 			bool Http1Request::IsHeaderExists(const ov::String &key) const noexcept

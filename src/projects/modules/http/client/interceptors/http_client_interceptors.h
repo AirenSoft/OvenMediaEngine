@@ -3,13 +3,10 @@
 //  OvenMediaEngine
 //
 //  Created by Hyunjun Jang
-//  Copyright (c) 2021 AirenSoft. All rights reserved.
+//  Copyright (c) 2025 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once
 
-#include "client/http_client.h"
-#include "client/http_client_v2.h"
-#include "cors/cors_manager.h"
-#include "server/http_server.h"
-#include "server/http_server_manager.h"
+#include "./http_client_file_interceptor.h"
+#include "./http_client_memory_interceptor.h"

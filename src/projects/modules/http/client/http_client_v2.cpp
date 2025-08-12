@@ -3,10 +3,10 @@
 //  OvenMediaEngine
 //
 //  Created by Hyunjun Jang
-//  Copyright (c) 2021 AirenSoft. All rights reserved.
+//  Copyright (c) 2025 AirenSoft. All rights reserved.
 //
 //==============================================================================
-#include "http_client.h"
+#include "http_client_v2.h"
 
 #include "./http_client_private.h"
 
@@ -19,65 +19,65 @@ namespace http
 {
 	namespace clnt
 	{
-		HttpClient::HttpClient()
+		HttpClientV2::HttpClientV2(PrivateToken token)
 			: _socket_pool(ov::SocketPool::GetTcpPool())
 		{
 			// Default request headers
-			_request_header["User-Agent"] = "OvenMediaEngine";
-			_request_header["Accept"] = "*/*";
+			_request_header_map["User-Agent"] = "OvenMediaEngine";
+			_request_header_map["Accept"]	  = "*/*";
 		}
 
-		HttpClient::HttpClient(const std::shared_ptr<ov::SocketPool> &socket_pool)
+		HttpClientV2::HttpClientV2(PrivateToken token, const std::shared_ptr<ov::SocketPool> &socket_pool)
 			: _socket_pool(socket_pool)
 		{
 			OV_ASSERT2(socket_pool != nullptr);
 		}
 
-		HttpClient::~HttpClient()
+		HttpClientV2::~HttpClientV2()
 		{
 		}
 
-		void HttpClient::SetBlockingMode(ov::BlockingMode mode)
+		void HttpClientV2::SetBlockingMode(ov::BlockingMode mode)
 		{
 			_blocking_mode = mode;
 		}
 
-		ov::BlockingMode HttpClient::GetBlockingMode() const
+		ov::BlockingMode HttpClientV2::GetBlockingMode() const
 		{
 			return _blocking_mode;
 		}
 
-		void HttpClient::SetConnectionTimeout(int timeout_in_msec)
+		void HttpClientV2::SetConnectionTimeout(int timeout_in_msec)
 		{
 			_connection_timeout_msec = timeout_in_msec;
 		}
 
-		int HttpClient::GetConnectionTimeout() const
+		int HttpClientV2::GetConnectionTimeout() const
 		{
 			return _connection_timeout_msec;
 		}
 
-		void HttpClient::SetRecvTimeout(int timeout_msec)
+		void HttpClientV2::SetRecvTimeout(int timeout_msec)
 		{
 			_recv_timeout_msec = timeout_msec;
 		}
 
-		int HttpClient::GetRecvTimeout() const
+		int HttpClientV2::GetRecvTimeout() const
 		{
 			return _recv_timeout_msec;
 		}
 
-		void HttpClient::SetMethod(http::Method method)
+		void HttpClientV2::SetMethod(http::Method method)
 		{
 			_method = method;
 		}
 
-		http::Method HttpClient::GetMethod() const
+		http::Method HttpClientV2::GetMethod() const
 		{
 			return _method;
 		}
 
-		void HttpClient::SetRequestHeader(const ov::String &key, const ov::String &value)
+		void HttpClientV2::SetRequestHeader(const ov::String &key, const ov::String &value)
 		{
 			std::lock_guard lock_guard(_request_mutex);
 
@@ -88,58 +88,81 @@ namespace http
 			}
 
 #if DEBUG
-			auto iterator = _request_header.find(key);
+			auto iterator = _request_header_map.find(key);
 
-			if (iterator != _request_header.end())
+			if (iterator != _request_header_map.end())
 			{
 				logtw("Old value found: %s for key: %s", iterator->second.CStr(), key.CStr());
 			}
 #endif	// DEBUG
 
-			_request_header[key] = value;
+			_request_header_map[key] = value;
 		}
 
-		ov::String HttpClient::GetRequestHeader(const ov::String &key)
+		std::optional<ov::String> HttpClientV2::GetRequestHeader(const ov::String &key)
 		{
-			auto iterator = _request_header.find(key);
+			auto iterator = _request_header_map.find(key);
 
-			if (iterator == _request_header.end())
+			if (iterator == _request_header_map.end())
 			{
-				return "";
+				return std::nullopt;
 			}
 
 			return iterator->second;
 		}
 
-		const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> &HttpClient::GetRequestHeaders() const
+		const HttpHeaderMap &HttpClientV2::GetRequestHeaders() const
 		{
-			return _request_header;
+			return _request_header_map;
 		}
 
-		std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> &HttpClient::GetRequestHeaders()
+		HttpHeaderMap &HttpClientV2::GetRequestHeaders()
 		{
-			return _request_header;
+			return _request_header_map;
 		}
 
-		void HttpClient::SetRequestBody(const std::shared_ptr<const ov::Data> &body)
+		void HttpClientV2::SetRequestBody(const std::shared_ptr<const ov::Data> &body)
 		{
 			_request_body = body->Clone();
 		}
 
-		void HttpClient::OnConnected(const std::shared_ptr<const ov::SocketError> &error)
+		void HttpClientV2::OnConnected(const std::shared_ptr<const ov::SocketError> &error)
 		{
+			std::shared_ptr<const ov::Error> detail_error;
+
 			if (error == nullptr)
 			{
-				OnReadable();
-				return;
+				_connected_callback_called = true;
+
+				{
+					std::shared_lock lock(_interceptor_list_mutex);
+					for (auto &interceptor : _interceptor_list)
+					{
+						auto error = interceptor->OnConnected();
+
+						if ((error != nullptr) && (detail_error == nullptr))
+						{
+							detail_error = error;
+						}
+					}
+				}
+
+				if (detail_error == nullptr)
+				{
+					OnReadable();
+					return;
+				}
 			}
 
-			auto detail_error = ov::Error::CreateError("HTTP", error->GetCode(), "Could not connect to %s (in callback): %s", _url.CStr(), error->GetMessage().CStr());
+			if (detail_error == nullptr)
+			{
+				detail_error = ov::Error::CreateError("HTTP", error->GetCode(), "Could not connect to %s (in callback): %s", _url.CStr(), error->GetMessage().CStr());
+			}
 
 			HandleError(detail_error);
 		}
 
-		void HttpClient::OnReadable()
+		void HttpClientV2::OnReadable()
 		{
 			auto error = TryTlsConnect();
 
@@ -162,12 +185,13 @@ namespace http
 			RecvResponse();
 		}
 
-		void HttpClient::OnClosed()
+		void HttpClientV2::OnClosed()
 		{
-			// Ignore
+			// This event called from `ov::Socket` is only called in non-blocking mode,
+			// and it may occur after `RequestFinished()`, so we do not call `OnClosed()` here.
 		}
 
-		ssize_t HttpClient::OnTlsReadData(void *data, int64_t length)
+		ssize_t HttpClientV2::OnTlsReadData(void *data, int64_t length)
 		{
 			auto socket = _socket;
 
@@ -185,7 +209,7 @@ namespace http
 			return -1;
 		}
 
-		ssize_t HttpClient::OnTlsWriteData(const void *data, int64_t length)
+		ssize_t HttpClientV2::OnTlsWriteData(const void *data, int64_t length)
 		{
 			auto socket = _socket;
 
@@ -200,7 +224,7 @@ namespace http
 			return -1;
 		}
 
-		std::shared_ptr<const ov::Error> HttpClient::PrepareForRequest(const ov::String &url, ov::SocketAddress *address)
+		std::shared_ptr<const ov::Error> HttpClientV2::PrepareForRequest(const ov::String &url, ov::SocketAddress *address)
 		{
 			if (_requested)
 			{
@@ -224,8 +248,30 @@ namespace http
 				return ov::Error::CreateError("HTTP", "Could not parse URL: %s", url.CStr());
 			}
 
+			{
+				std::shared_ptr<const ov::Error> first_error;
+
+				{
+					std::shared_lock lock(_interceptor_list_mutex);
+					for (auto &interceptor : _interceptor_list)
+					{
+						auto error = interceptor->OnRequestStarted(parsed_url);
+
+						if ((error != nullptr) && (first_error == nullptr))
+						{
+							first_error = error;
+						}
+					}
+				}
+
+				if (first_error != nullptr)
+				{
+					return first_error;
+				}
+			}
+
 			bool is_https = false;
-			auto scheme = parsed_url->Scheme().UpperCaseString();
+			auto scheme	  = parsed_url->Scheme().UpperCaseString();
 
 			if (scheme == "HTTPS")
 			{
@@ -240,16 +286,16 @@ namespace http
 				return ov::Error::CreateError("HTTP", "Unknown scheme: %s, URL: %s", parsed_url->Scheme().CStr(), url.CStr());
 			}
 
-			auto port = parsed_url->Port();
-			bool use_default_port = (port == 0);
-			if (use_default_port)
+			auto port			   = parsed_url->Port();
+			bool is_port_specified = (port != 0);
+			if (is_port_specified == false)
 			{
 				port = is_https ? 443 : 80;
 				parsed_url->SetPort(port);
 			}
 
 			auto host_port_string = ov::String::FormatString("%s:%d", parsed_url->Host().CStr(), port);
-			auto socket_address = ov::SocketAddress::CreateAndGetFirst(host_port_string);
+			auto socket_address	  = ov::SocketAddress::CreateAndGetFirst(host_port_string);
 
 			if (socket_address.IsValid() == false)
 			{
@@ -293,18 +339,41 @@ namespace http
 				*address = socket_address;
 			}
 
-			_url = url;
+			_url		= url;
 			_parsed_url = parsed_url;
 
-			_request_header["Host"] =
-				use_default_port
-					? ov::String::FormatString("%s", _parsed_url->Host().CStr())
-					: ov::String::FormatString("%s:%d", _parsed_url->Host().CStr(), _parsed_url->Port());
+			SetRequestHeader("Host",
+							 is_port_specified
+								 ? ov::String::FormatString("%s:%d", _parsed_url->Host().CStr(), _parsed_url->Port())
+								 : _parsed_url->Host());
 
 			return nullptr;
 		}
 
-		void HttpClient::SendRequestIfNeeded()
+		void HttpClientV2::CallCloseFinish()
+		{
+			std::shared_lock lock(_interceptor_list_mutex);
+
+#ifdef DEBUG
+			OV_ASSERT2(_request_finished_callback_called == false);
+			_request_finished_callback_called = true;
+#endif	// DEBUG
+
+			if (_connected_callback_called)
+			{
+				for (auto &interceptor : _interceptor_list)
+				{
+					interceptor->OnClosed();
+				}
+			}
+
+			for (auto &interceptor : _interceptor_list)
+			{
+				interceptor->OnRequestFinished();
+			}
+		}
+
+		void HttpClientV2::SendRequestIfNeeded()
 		{
 			if (_requested)
 			{
@@ -313,7 +382,7 @@ namespace http
 
 			_requested = true;
 
-			auto path = _parsed_url->Path();
+			auto path  = _parsed_url->Path();
 
 			if (path.IsEmpty())
 			{
@@ -336,12 +405,12 @@ namespace http
 
 			if (_request_body != nullptr)
 			{
-				_request_header["Content-Length"] = ov::Converter::ToString(_request_body->GetLength());
+				_request_header_map["Content-Length"] = ov::Converter::ToString(_request_body->GetLength());
 			}
 
-			logtd("Request headers: total %zu item(s):", _request_header.size());
+			logtd("Request headers: total %zu item(s):", _request_header_map.size());
 
-			for (auto header : _request_header)
+			for (auto header : _request_header_map)
 			{
 				request_header.AppendFormat("%s: %s" HTTP_CLIENT_NEW_LINE, header.first.CStr(), header.second.CStr());
 				logtd("  >> %s: %s", header.first.CStr(), header.second.CStr());
@@ -353,7 +422,7 @@ namespace http
 			SendData(_request_body);
 		}
 
-		std::shared_ptr<const ov::OpensslError> HttpClient::TryTlsConnect()
+		std::shared_ptr<const ov::OpensslError> HttpClientV2::TryTlsConnect()
 		{
 			auto tls_data = _tls_data;
 
@@ -366,13 +435,21 @@ namespace http
 			return tls_data->Connect();
 		}
 
-		void HttpClient::Request(const ov::String &url, ResponseHandler response_handler)
+		std::shared_ptr<CancelToken> HttpClientV2::Request(const ov::String &url)
 		{
+			auto cancel_token = std::make_shared<CancelToken>();
+
+			{
+				std::shared_lock lock(_interceptor_list_mutex);
+				for (auto &interceptor : _interceptor_list)
+				{
+					interceptor->SetCancelToken(cancel_token);
+				}
+			}
+
 			std::lock_guard lock_guard(_request_mutex);
 
 			ov::SocketAddress address;
-
-			_response_handler = response_handler;
 
 			auto error = PrepareForRequest(url, &address);
 
@@ -385,7 +462,7 @@ namespace http
 
 				// Convert milliseconds to timeval
 				_socket->SetRecvTimeout(
-					{.tv_sec = _recv_timeout_msec / 1000,
+					{.tv_sec  = _recv_timeout_msec / 1000,
 					 .tv_usec = _recv_timeout_msec % 1000});
 
 				error = _socket->Connect(address, _connection_timeout_msec);
@@ -394,33 +471,37 @@ namespace http
 				{
 					if (_socket->GetBlockingMode() == ov::BlockingMode::NonBlocking)
 					{
-						// Data will be downloaded in OnReadable()
-						return;
+						// `OnConnected()` will be called when the connection is established
+
+						// Data will be downloaded in `OnReadable()`
+						return std::make_shared<CancelToken>();
 					}
 
 					OnConnected(nullptr);
-					return;
+					return nullptr;
 				}
 
 				error = ov::Error::CreateError("HTTP", error->GetCode(), "Could not connect to %s: %s", url.CStr(), error->GetMessage().CStr());
 			}
 
 			HandleError(error);
+
+			return nullptr;
 		}
 
-		ov::String HttpClient::GetResponseHeader(const ov::String &key)
+		std::optional<ov::String> HttpClientV2::GetResponseHeader(const ov::String &key) const
 		{
-			return _parser.GetHeader(key).value_or("");
+			return _parser.GetHeader(key);
 		}
 
-		const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> &HttpClient::GetResponseHeaders() const
+		const HttpHeaderMap &HttpClientV2::GetResponseHeaders() const
 		{
 			return _parser.GetHeaders();
 		}
 
-		void HttpClient::RecvResponse()
+		void HttpClientV2::RecvResponse()
 		{
-			auto socket = _socket;
+			auto socket	  = _socket;
 			auto tls_data = _tls_data;
 			std::shared_ptr<ov::Data> data;
 			std::shared_ptr<const ov::Data> process_data;
@@ -476,16 +557,22 @@ namespace http
 					switch (socket->GetState())
 					{
 						case ov::SocketState::Closed:
+							// Ignore the error
+							error = nullptr;
+							[[fallthrough]];
+						case ov::SocketState::Connected:
 							[[fallthrough]];
 						case ov::SocketState::Disconnected:
-							// Ignore the error
 							need_to_callback = true;
-							error = nullptr;
+
+							if ((_parser.GetStatus() == StatusCode::OK) && (_parser.HasContentLength() == false))
+							{
+								// If the response does not have a content length, we assume that the response is complete
+								error = nullptr;
+							}
 							break;
 
 						default:
-							// Free the allocated data
-							_response_body = nullptr;
 							break;
 					}
 
@@ -493,8 +580,7 @@ namespace http
 				}
 
 				if (
-					((_response_body != nullptr) &&
-					 ((_parser.HasContentLength() && (_response_body->GetLength() >= _parser.GetContentLength())) ||
+					(((_parser.HasContentLength() && (_response_body_size >= _parser.GetContentLength())) ||
 					  (_chunk_parse_status == ChunkParseStatus::Completed))) ||
 					need_to_callback)
 				{
@@ -503,24 +589,33 @@ namespace http
 				}
 			}
 
-			auto response_handler = _response_handler;
-
-			if (response_handler != nullptr)
+			if (error != nullptr)
 			{
-				response_handler(_parser.GetStatusCode(), _response_body, error);
+				HandleError(error);
+				return;
+			}
+
+			{
+				std::shared_lock lock(_interceptor_list_mutex);
+				for (auto &interceptor : _interceptor_list)
+				{
+					interceptor->OnCompleted();
+				}
 			}
 
 			CleanupVariables();
+
+			CallCloseFinish();
 		}
 
-		std::shared_ptr<const ov::Error> HttpClient::ProcessChunk(const std::shared_ptr<const ov::Data> &data, size_t *processed_bytes)
+		std::shared_ptr<const ov::Error> HttpClientV2::ProcessChunk(const std::shared_ptr<const ov::Data> &data, size_t *processed_bytes)
 		{
-			auto remained = data->GetLength();
-			auto sub_data = data->GetDataAs<char>();
+			auto remaining	 = data->GetLength();
+			auto sub_data	 = data->GetDataAs<char>();
 
 			*processed_bytes = 0L;
 
-			while (remained > 0L)
+			while (remaining > 0L)
 			{
 				switch (_chunk_parse_status)
 				{
@@ -530,7 +625,7 @@ namespace http
 
 					case ChunkParseStatus::Header: {
 						// ov::String is binary-safe
-						ov::String temp_header(sub_data, remained);
+						ov::String temp_header(sub_data, remaining);
 
 						auto position = temp_header.IndexOf(HTTP_CLIENT_NEW_LINE);
 						if (position >= 0)
@@ -540,7 +635,7 @@ namespace http
 
 							_chunk_header.Append(sub_data, position);
 							sub_data += position + HTTP_CLIENT_NEW_LINE_LENGTH;
-							remained -= position + HTTP_CLIENT_NEW_LINE_LENGTH;
+							remaining -= position + HTTP_CLIENT_NEW_LINE_LENGTH;
 							*processed_bytes += position + HTTP_CLIENT_NEW_LINE_LENGTH;
 
 							_chunk_length = ::strtoll(_chunk_header, nullptr, 16);
@@ -553,9 +648,9 @@ namespace http
 						}
 						else
 						{
-							_chunk_header.Append(sub_data, remained);
-							remained = 0;
-							*processed_bytes += remained;
+							_chunk_header.Append(sub_data, remaining);
+							remaining = 0;
+							*processed_bytes += remaining;
 						}
 
 						if (_chunk_header.GetLength() > HTTP_CLIENT_MAX_CHUNK_HEADER_LENGTH)
@@ -567,12 +662,19 @@ namespace http
 					}
 
 					case ChunkParseStatus::Body: {
-						auto bytes_to_copy = std::min(_chunk_length, remained);
+						auto bytes_to_copy = std::min(_chunk_length, remaining);
 
-						_response_body->Append(sub_data, bytes_to_copy);
+						{
+							std::shared_lock lock(_interceptor_list_mutex);
+							for (auto &interceptor : _interceptor_list)
+							{
+								_response_body_size += bytes_to_copy;
+								interceptor->OnData(std::make_shared<ov::Data>(sub_data, bytes_to_copy, true));
+							}
+						}
 
 						sub_data += bytes_to_copy;
-						remained -= bytes_to_copy;
+						remaining -= bytes_to_copy;
 						_chunk_length -= bytes_to_copy;
 						*processed_bytes += bytes_to_copy;
 
@@ -588,7 +690,7 @@ namespace http
 						if ((*sub_data) == '\r')
 						{
 							sub_data++;
-							remained--;
+							remaining--;
 							*processed_bytes += 1;
 							_chunk_parse_status = ChunkParseStatus::LineFeed;
 						}
@@ -603,7 +705,7 @@ namespace http
 						if ((*sub_data) == '\n')
 						{
 							sub_data++;
-							remained--;
+							remaining--;
 							*processed_bytes += 1;
 							_chunk_parse_status = ChunkParseStatus::Header;
 						}
@@ -618,7 +720,7 @@ namespace http
 						if ((*sub_data) == '\r')
 						{
 							sub_data++;
-							remained--;
+							remaining--;
 							*processed_bytes += 1;
 							_chunk_parse_status = ChunkParseStatus::LineFeedEnd;
 						}
@@ -633,7 +735,7 @@ namespace http
 						if ((*sub_data) == '\n')
 						{
 							sub_data++;
-							remained--;
+							remaining--;
 							*processed_bytes += 1;
 							_chunk_parse_status = ChunkParseStatus::Completed;
 						}
@@ -652,12 +754,12 @@ namespace http
 			return nullptr;
 		}
 
-		std::shared_ptr<const ov::Error> HttpClient::ProcessData(const std::shared_ptr<const ov::Data> &data)
+		std::shared_ptr<const ov::Error> HttpClientV2::ProcessData(const std::shared_ptr<const ov::Data> &data)
 		{
-			auto remained = data->GetLength();
-			auto sub_data = data;
+			auto remaining = data->GetLength();
+			auto sub_data  = data;
 
-			while (remained > 0)
+			while (remaining > 0)
 			{
 				switch (_parser.GetStatus())
 				{
@@ -676,12 +778,26 @@ namespace http
 						}
 						else
 						{
-							_response_body->Append(sub_data);
+							{
+								std::shared_lock lock(_interceptor_list_mutex);
+								for (auto &interceptor : _interceptor_list)
+								{
+									_response_body_size += sub_data->GetLength();
+
+									auto error = interceptor->OnData(sub_data);
+
+									if (error != nullptr)
+									{
+										return error;
+									}
+								}
+							}
+
 							processed_bytes = sub_data->GetLength();
 						}
 
-						OV_ASSERT2(remained >= processed_bytes);
-						remained -= processed_bytes;
+						OV_ASSERT2(remaining >= processed_bytes);
+						remaining -= processed_bytes;
 
 						break;
 					}
@@ -691,11 +807,18 @@ namespace http
 
 						switch (_parser.GetStatus())
 						{
-							case StatusCode::OK:
+							case StatusCode::OK: {
 								// Parsing just completed
 								// After parsing is completed, this code is executed only once
-								PostProcess();
+								auto error = HandleParseCompleted();
+
+								if (error != nullptr)
+								{
+									return error;
+								}
+
 								break;
+							}
 
 							case StatusCode::PartialContent:
 								// We need more data to parse response
@@ -709,7 +832,7 @@ namespace http
 						}
 
 						sub_data = data->Subdata(processed_length);
-						remained -= processed_length;
+						remaining -= processed_length;
 						break;
 					}
 
@@ -723,7 +846,7 @@ namespace http
 			return nullptr;
 		}
 
-		bool HttpClient::SendData(const std::shared_ptr<const ov::Data> &data)
+		bool HttpClientV2::SendData(const std::shared_ptr<const ov::Data> &data)
 		{
 			if (data == nullptr)
 			{
@@ -739,13 +862,25 @@ namespace http
 			return _socket->Send(data);
 		}
 
-		void HttpClient::PostProcess()
+		std::shared_ptr<const ov::Error> HttpClientV2::HandleParseCompleted()
 		{
-			logtd("Allocating %zu bytes for receiving response data", _parser.GetContentLength());
+			_response_body_size = 0;
 
-			_response_body = std::make_shared<ov::Data>(_parser.GetContentLength());
+			{
+				auto response_info = ResponseInfo::From(_parser);
+				std::shared_lock lock(_interceptor_list_mutex);
+				for (auto &interceptor : _interceptor_list)
+				{
+					auto error = interceptor->OnResponseInfo(response_info);
 
-			_is_chunked_transfer = (_parser.GetHeader("TRANSFER-ENCODING") == "chunked");
+					if (error != nullptr)
+					{
+						return error;
+					}
+				}
+			}
+
+			_is_chunked_transfer = (_parser.GetHeader("Transfer-Encoding") == "chunked");
 
 			if (_is_chunked_transfer)
 			{
@@ -753,14 +888,15 @@ namespace http
 				_chunk_header.SetCapacity(16);
 				_chunk_length = 0L;
 			}
+
+			return nullptr;
 		}
 
-		void HttpClient::CleanupVariables()
+		void HttpClientV2::CleanupVariables()
 		{
 			// Clean up variables
 			_url.Clear();
 			_parsed_url = nullptr;
-			_response_handler = nullptr;
 
 			OV_SAFE_RESET(
 				_tls_data, nullptr, {
@@ -771,27 +907,20 @@ namespace http
 			OV_SAFE_RESET(_socket, nullptr, _socket->Close(), _socket);
 		}
 
-		void HttpClient::HandleError(std::shared_ptr<const ov::Error> error)
+		void HttpClientV2::HandleError(std::shared_ptr<const ov::Error> error)
 		{
-			auto response_handler = _response_handler;
+			{
+				std::shared_lock lock(_interceptor_list_mutex);
+				for (auto &interceptor : _interceptor_list)
+				{
+					interceptor->OnError(error);
+				}
+			}
 
 			// An error occurred - reset all variables
 			CleanupVariables();
 
-			if (response_handler != nullptr)
-			{
-				auto http_error = std::dynamic_pointer_cast<const HttpError>(error);
-
-				if (http_error != nullptr)
-				{
-					// An error occurred in some modules related to HTTP
-					response_handler(http_error->GetStatusCode(), _response_body, error);
-				}
-				else
-				{
-					response_handler(StatusCode::Unknown, _response_body, error);
-				}
-			}
+			CallCloseFinish();
 		}
 	}  // namespace clnt
 }  // namespace http

@@ -3,7 +3,7 @@
 //  OvenMediaEngine
 //
 //  Created by Hyunjun Jang
-//  Copyright (c) 2021 AirenSoft. All rights reserved.
+//  Copyright (c) 2025 AirenSoft. All rights reserved.
 //
 //==============================================================================
 #pragma once
@@ -11,64 +11,89 @@
 #include <base/ovlibrary/ovlibrary.h>
 #include <base/ovsocket/ovsocket.h>
 
-#include <unordered_map>
-
 #include "../http_datastructure.h"
 #include "../http_error.h"
 #include "../protocol/http1/http_response_parser.h"
-#include "./http_client_data_structure.h"
+#include "./interceptors/http_client_interceptors.h"
 
 namespace http
 {
-
 	namespace clnt
 	{
-		class HttpClient : public ov::EnableSharedFromThis<HttpClient>,
-						   public ov::SocketAsyncInterface,
-						   public ov::TlsClientDataIoCallback
+		constexpr int TIMEOUT_INFINITE = 0;
+
+		class HttpClientV2 : public ov::EnableSharedFromThis<HttpClientV2>,
+							 public ov::SocketAsyncInterface,
+							 public ov::TlsClientDataIoCallback
 		{
+		protected:
+			struct PrivateToken
+			{
+			};
+
 		public:
 			// Use default TCP socket pool
-			HttpClient();
+			HttpClientV2(PrivateToken token);
 			// Use specified socket pool
-			HttpClient(const std::shared_ptr<ov::SocketPool> &socket_pool);
+			HttpClientV2(PrivateToken token, const std::shared_ptr<ov::SocketPool> &socket_pool);
 
-			~HttpClient() override;
+			static std::shared_ptr<HttpClientV2> Create()
+			{
+				return std::make_shared<HttpClientV2>(PrivateToken{});
+			}
+
+			static std::shared_ptr<HttpClientV2> Create(const std::shared_ptr<ov::SocketPool> &socket_pool)
+			{
+				return std::make_shared<HttpClientV2>(PrivateToken{}, socket_pool);
+			}
+
+			~HttpClientV2() override;
 
 			void SetBlockingMode(ov::BlockingMode mode);
 			ov::BlockingMode GetBlockingMode() const;
 
-			// timeout_msec == 0 means Infinite
+			// Use `TIMEOUT_INFINITE` to set infinite timeout if needed
 			void SetConnectionTimeout(int timeout_msec);
 			int GetConnectionTimeout() const;
 
-			// timeout_msec == 0 means Infinite
+			// Use `TIMEOUT_INFINITE` to set infinite timeout if needed
 			void SetRecvTimeout(int timeout_msec);
 			int GetRecvTimeout() const;
 
-			void SetTimeout(int timeout_msec);
+			void SetMethod(Method method);
+			Method GetMethod() const;
 
-			void SetMethod(http::Method method);
-			http::Method GetMethod() const;
+			void AddInterceptor(const std::shared_ptr<HttpClientInterceptor> &interceptor)
+			{
+				std::unique_lock lock(_interceptor_list_mutex);
+				_interceptor_list.push_back(interceptor);
+			}
 
-			// Request headers (Headers to sent to HTTP server)
+			// Request headers (Headers to be sent to the HTTP server)
 			void SetRequestHeader(const ov::String &key, const ov::String &value);
-			ov::String GetRequestHeader(const ov::String &key);
-			const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> &GetRequestHeaders() const;
-			std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> &GetRequestHeaders();
+			std::optional<ov::String> GetRequestHeader(const ov::String &key);
+			const HttpHeaderMap &GetRequestHeaders() const;
+			HttpHeaderMap &GetRequestHeaders();
 
-			// HttpClient can send a request body even when the method is GET, but the server may not actually accept it
+			// HttpClientV2 can send a request body even when the method is GET, but the server may not actually accept it
 			void SetRequestBody(const std::shared_ptr<const ov::Data> &body);
 			void SetRequestBody(const ov::String &body)
 			{
 				SetRequestBody(body.ToData(false));
 			}
 
-			void Request(const ov::String &url, ResponseHandler response_handler);
+			// If the request is made successfully in non-blocking mode, it returns a `CancelToken`,
+			// otherwise, it returns `nullptr` in blocking mode or when an error occurs during the request.
+			std::shared_ptr<CancelToken> Request(const ov::String &url);
+
+			auto &GetParser() const
+			{
+				return _parser;
+			}
 
 			// Response headers (Headers received from HTTP server)
-			ov::String GetResponseHeader(const ov::String &key);
-			const std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> &GetResponseHeaders() const;
+			std::optional<ov::String> GetResponseHeader(const ov::String &key) const;
+			const HttpHeaderMap &GetResponseHeaders() const;
 
 		protected:
 			enum class ChunkParseStatus
@@ -109,6 +134,10 @@ namespace http
 		protected:
 			std::shared_ptr<const ov::Error> PrepareForRequest(const ov::String &url, ov::SocketAddress *address);
 			std::shared_ptr<const ov::OpensslError> TryTlsConnect();
+
+			// Calls `OnClosed()` (if needed) and `OnRequestFinished()`
+			void CallCloseFinish();
+
 			void SendRequestIfNeeded();
 			// Use this API when blocking mode
 			void RecvResponse();
@@ -117,7 +146,7 @@ namespace http
 
 			bool SendData(const std::shared_ptr<const ov::Data> &data);
 
-			void PostProcess();
+			std::shared_ptr<const ov::Error> HandleParseCompleted();
 			void CleanupVariables();
 
 			void HandleError(std::shared_ptr<const ov::Error> error);
@@ -127,41 +156,46 @@ namespace http
 
 			ov::BlockingMode _blocking_mode = ov::BlockingMode::Blocking;
 			// Default: 10 seconds
-			int _connection_timeout_msec = 10 * 1000;
+			int _connection_timeout_msec	= 10 * 1000;
 			// Default: 60 seconds
-			int _recv_timeout_msec = 60 * 1000;
-			http::Method _method = http::Method::Get;
+			int _recv_timeout_msec			= 60 * 1000;
+			Method _method					= Method::Get;
+
+			std::shared_mutex _interceptor_list_mutex;
+			std::vector<std::shared_ptr<HttpClientInterceptor>> _interceptor_list;
+
+			bool _connected_callback_called = false;
+#ifdef DEBUG
+			bool _request_finished_callback_called = false;
+#endif	// DEBUG
 
 			// Related to chunked transfer
-			bool _is_chunked_transfer = false;
+			bool _is_chunked_transfer			 = false;
 			ChunkParseStatus _chunk_parse_status = ChunkParseStatus::None;
 			// Length of the chunk (include \r\n)
-			size_t _chunk_length = 0L;
+			size_t _chunk_length				 = 0L;
 			ov::String _chunk_header;
 
 			std::shared_ptr<ov::TlsClientData> _tls_data;
 
 			prot::h1::HttpResponseParser _parser;
 
-			std::mutex _request_mutex;
+			std::recursive_mutex _request_mutex;
 			std::atomic<bool> _requested = false;
 
 			ov::String _url;
 			std::shared_ptr<ov::Url> _parsed_url;
-			ResponseHandler _response_handler = nullptr;
 
 			std::shared_ptr<ov::Socket> _socket;
 
-			std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> _request_header;
+			HttpHeaderMap _request_header_map;
 			std::shared_ptr<ov::Data> _request_body;
 
-			// response header
+			// response headers
 			bool _is_header_found = false;
-			// A temporary string buffer to extract headers
-			ov::String _response_string;
-			std::unordered_map<ov::String, ov::String, ov::CaseInsensitiveHash, ov::CaseInsensitiveEqual> _response_header;
-
-			std::shared_ptr<ov::Data> _response_body;
+			HttpHeaderMap _response_header_map;
+			// Total received body size
+			size_t _response_body_size = 0;
 		};
 	}  // namespace clnt
 }  // namespace http
