@@ -175,6 +175,57 @@ namespace cmn
 		NB
 	};
 
+	inline const char* GetVideoPixelFormatIdString(VideoPixelFormatId format)
+	{
+		switch (format)
+		{
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, None);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUVJ444P);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUVJ422P);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUVJ420P);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUVA420P);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUV444P9);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUV444P16);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUV444P12);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUV444P10);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUV444P);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUV440P12);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUV440P10);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUV440P);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUV422P12);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUV422P10);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUV422P);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUV420P9);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUV420P12);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUV420P10);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, YUV420P);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, RGB24);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, P016);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, P010);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, NV21);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, NV20);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, NV16);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, NV12);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, GRAY8);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, GRAY10);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, GBRP16);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, GBRP12);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, GBRP10);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, GBRP);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, BGR24);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, BGR0);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, ARGB);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, RGBA);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, ABGR);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, BGRA);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, CUDA);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, XVBM_8);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, XVBM_10);
+			OV_CASE_RETURN_ENUM_STRING(VideoPixelFormatId, NB);
+		}
+		return "Unknown";
+	}
+
 	enum class KeyFrameIntervalType : uint8_t
 	{
 		FRAME = 0,
