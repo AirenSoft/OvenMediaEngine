@@ -118,5 +118,21 @@ namespace ov
 		static uint64_t GetProcessId();
 		static uint64_t GetThreadId();
 		static const char *GetThreadName();
+
+	public:
+		enum class CPUFeature
+		{
+			SSE,
+			SSE2,
+			SSE3,
+			AVX,
+			AVX2,
+			NEON,
+			NB
+		};
+		static bool IsSupportCPUFeature(CPUFeature feature);
+		static void CPUID1(int out[4]);
+		static void CPUIDEX(int out[4], int leaf, int subleaf);
+		static unsigned long long XGETBV(unsigned int i);
 	};
 }
