@@ -677,6 +677,76 @@ namespace ffmpeg
 			return true;
 		}
 
+		static cmn::VideoPixelFormatId GetHWFramesConstraintsValidSWFormat(std::shared_ptr<const MediaFrame> frame)
+		{
+			if (frame == nullptr || frame->GetPrivData() == nullptr)
+			{
+				return cmn::VideoPixelFormatId::None;
+			}
+
+			auto av_frame = static_cast<AVFrame*>(frame->GetPrivData());
+			return GetHWFramesConstraintsValidSWFormat(av_frame);
+		}
+
+		static cmn::VideoPixelFormatId GetHWFramesConstraintsValidHWFormat(std::shared_ptr<const MediaFrame> frame)
+		{
+			if (frame == nullptr || frame->GetPrivData() == nullptr)
+			{
+				return cmn::VideoPixelFormatId::None;
+			}
+
+			auto av_frame = static_cast<AVFrame*>(frame->GetPrivData());
+			return GetHWFramesConstraintsValidHWFormat(av_frame);
+		}
+
+		static cmn::VideoPixelFormatId GetHWFramesConstraintsValidSWFormat(AVFrame* frame)
+		{
+			if (frame == nullptr)
+			{
+				return cmn::VideoPixelFormatId::None;
+			}
+
+			if (frame->hw_frames_ctx == nullptr)
+			{
+				return cmn::VideoPixelFormatId::None;
+			}
+
+			auto constraints = ::av_hwdevice_get_hwframe_constraints(frame->hw_frames_ctx, nullptr);
+			if (constraints == nullptr)
+			{
+				return cmn::VideoPixelFormatId::None;
+			}
+
+			auto valid_sw_formats = *(constraints->valid_sw_formats);
+			::av_hwframe_constraints_free(&constraints);
+
+			return ToVideoPixelFormat(valid_sw_formats);
+		}
+
+		static cmn::VideoPixelFormatId GetHWFramesConstraintsValidHWFormat(AVFrame* frame)
+		{
+			if (frame == nullptr)
+			{
+				return cmn::VideoPixelFormatId::None;
+			}
+
+			if (frame->hw_frames_ctx == nullptr)
+			{
+				return cmn::VideoPixelFormatId::None;
+			}
+
+			auto constraints = ::av_hwdevice_get_hwframe_constraints(frame->hw_frames_ctx, nullptr);
+			if (constraints == nullptr)
+			{
+				return cmn::VideoPixelFormatId::None;
+			}
+
+			auto valid_hw_formats = *(constraints->valid_hw_formats);
+			::av_hwframe_constraints_free(&constraints);
+
+			return ToVideoPixelFormat(valid_hw_formats);
+		}
+
 		static bool SetHwDeviceCtxOfAVFilterContext(AVFilterContext* context, AVBufferRef* hw_device_ctx)
 		{
 			context->hw_device_ctx = ::av_buffer_ref(hw_device_ctx);
@@ -687,6 +757,7 @@ namespace ffmpeg
 
 			return true;
 		}
+		
 		static bool SetHWFramesCtxOfAVFilterLink(AVFilterLink* context, AVBufferRef* hw_device_ctx, int32_t width, int32_t height)
 		{
 			AVBufferRef* hw_frames_ref;
