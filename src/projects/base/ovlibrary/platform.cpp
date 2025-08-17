@@ -15,7 +15,11 @@
 
 #include <cstring>
 
-#if IS_64BITS
+#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
+#define HAVE_CPUID_H 1
+#endif
+
+#if IS_X86
 #	include <cpuid.h>
 #endif
 
@@ -59,7 +63,7 @@ namespace ov
 	// feature: sse, sse2, sse3, avx, avx2, neon
 	bool Platform::IsSupportCPUFeature(CPUFeature feature)
 	{
-#if IS_64BITS
+#if IS_X86
 		int r1[4] = {0};  // EAX, EBX, ECX, EDX for leaf 1
 		CPUID1(r1);
 		unsigned int ecx1 = (unsigned)r1[2];
@@ -152,7 +156,7 @@ namespace ov
 
 	void Platform::CPUIDEX(int out[4], int leaf, int subleaf)
 	{
-#if IS_64BITS		
+#if IS_X86		
 		unsigned int a, b, c, d;
 		__cpuid_count(leaf, subleaf, a, b, c, d);
 		out[0] = int(a);
@@ -163,7 +167,7 @@ namespace ov
 	}
 	void Platform::CPUID1(int out[4])
 	{
-#if IS_64BITS
+#if IS_X86
 		unsigned int a, b, c, d;
 		__cpuid(1, a, b, c, d);
 		out[0] = int(a);
@@ -174,7 +178,7 @@ namespace ov
 	}
 	unsigned long long Platform::XGETBV(unsigned int i)
 	{
-#if IS_64BITS
+#if IS_X86
 		unsigned int eax, edx;
 		__asm__ volatile(".byte 0x0f, 0x01, 0xd0" : "=a"(eax), "=d"(edx) : "c"(i));
 		return ((unsigned long long)(edx) << 32) | eax;
