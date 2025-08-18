@@ -1,0 +1,67 @@
+//=============================================================================
+//
+//  OvenMediaEngine
+//
+//  Created by Getroot
+//  Copyright (c) 2025 AirenSoft. All rights reserved.
+//
+//==============================================================================
+#pragma once
+
+#include "subtitle.h"
+
+namespace cfg
+{
+	namespace vhost
+	{
+		namespace app
+		{
+			namespace oprf
+			{
+				struct MediaOptions : public Item
+				{
+				protected:
+					Subtitle _subtitle; 
+
+				public:
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetSubtitle, _subtitle)
+
+				protected:
+					void MakeList() override
+					{
+						Register<Optional>("Subtitles", &_subtitle, nullptr,
+							[=]() -> std::shared_ptr<ConfigError> {
+								if (_subtitle.IsEnabled() && _subtitle.GetRenditions().empty())
+								{
+									return CreateConfigErrorPtr("Subtitle is enabled but no renditions are defined");
+								}
+								
+								// Check default label
+								auto default_label = _subtitle.GetDefaultLabel();
+								if (default_label.IsEmpty() == false)
+								{
+									bool found = false;
+									for (auto &rendition : _subtitle.GetRenditions())
+									{
+										if (rendition.GetLabel() == default_label)
+										{
+											rendition.SetDefault(true);
+											found = true;
+										}
+									}
+
+									if (found == false)
+									{
+										return CreateConfigErrorPtr("Default label '%s' not found in subtitle renditions", default_label.CStr());
+									}
+								}
+
+								return nullptr;
+							}
+						);
+					}
+				};
+			}  // namespace oprf
+		} // namespace app
+	} // namespace vhost
+}  // namespace cfg
