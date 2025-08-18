@@ -32,4 +32,6 @@ namespace ov
 	ov::String GetFileNameWithoutExt(const ov::String &path);
 
 	bool DeleteFile(const ov::String &path);
+
+	bool CopyFile(const ov::String &src_path, const ov::String &dest_path);
 }

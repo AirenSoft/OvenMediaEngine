@@ -209,4 +209,33 @@ namespace ov
 
 		return true;
 	}
+
+	bool CopyFile(const ov::String &src_path, const ov::String &dest_path)
+	{
+		auto src_file = fopen(src_path.CStr(), "rb");
+		if (!src_file)
+		{
+			return false;
+		}
+
+		auto dest_file = fopen(dest_path.CStr(), "wb");
+		if (!dest_file)
+		{
+			fclose(src_file);
+			return false;
+		}
+
+		char buffer[8192];
+		size_t bytes_read;
+
+		while ((bytes_read = fread(buffer, 1, sizeof(buffer), src_file)) > 0)
+		{
+			fwrite(buffer, 1, bytes_read, dest_file);
+		}
+
+		fclose(src_file);
+		fclose(dest_file);
+
+		return true;
+	}
 }

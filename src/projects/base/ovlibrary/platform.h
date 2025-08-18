@@ -20,7 +20,7 @@
 #define IS_IOS                                  0
 #define IS_ARM                                  0
 #define IS_64BITS                               0
-
+#define IS_X86                                  0
 // Reference
 //   http://nadeausoftware.com/articles/2012/01/c_c_tip_how_use_compiler_predefined_macros_detect_operating_system
 //   https://stackoverflow.com/questions/142508/how-do-i-check-os-with-a-preprocessor-directive
@@ -109,6 +109,11 @@
 #   define IS_64BITS                            1
 #endif
 
+#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
+#	undef IS_X86
+#	define IS_X86                               1
+#endif
+
 namespace ov
 {
 	class Platform
@@ -118,5 +123,21 @@ namespace ov
 		static uint64_t GetProcessId();
 		static uint64_t GetThreadId();
 		static const char *GetThreadName();
+
+	public:
+		enum class CPUFeature
+		{
+			SSE,
+			SSE2,
+			SSE3,
+			AVX,
+			AVX2,
+			NEON,
+			NB
+		};
+		static bool IsSupportCPUFeature(CPUFeature feature);
+		static void CPUID1(int out[4]);
+		static void CPUIDEX(int out[4], int leaf, int subleaf);
+		static unsigned long long XGETBV(unsigned int i);
 	};
 }
