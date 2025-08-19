@@ -29,6 +29,19 @@ namespace ffmpeg
 			WriterStateClosed = 4
 		};
 
+		static const char* WriterStateToString(WriterState state)
+		{
+			switch (state)
+			{
+				case WriterStateNone: return "None";
+				case WriterStateConnecting: return "Connecting";
+				case WriterStateConnected: return "Connected";
+				case WriterStateError: return "Error";
+				case WriterStateClosed: return "Closed";
+				default: return "Unknown";
+			}
+		}
+		
 	public:
 		static std::shared_ptr<Writer> Create();
 
@@ -65,7 +78,7 @@ namespace ffmpeg
 		std::pair<std::shared_ptr<AVStream>, std::shared_ptr<MediaTrack>> GetTrack(int32_t track_id) const;
 		bool ToAVPacket(AVPacket &av_packet, const std::shared_ptr<AVStream> av_stream, const std::shared_ptr<MediaPacket> &media_packet, const std::shared_ptr<MediaTrack> &media_track, int64_t start_time);
 
-		WriterState _state;
+		std::atomic<WriterState> _state;
 
 		ov::String _url;
 		ov::String _format;

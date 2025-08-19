@@ -312,6 +312,11 @@ namespace pub
 
 	void FileSession::SendOutgoingData(const std::any &packet)
 	{
+		if (GetState() != SessionState::Started)
+		{
+			return;
+		}
+
 		std::shared_ptr<MediaPacket> session_packet;
 
 		try
