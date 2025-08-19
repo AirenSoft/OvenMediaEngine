@@ -1086,7 +1086,7 @@ namespace pvd
 					result = ReceiveUserControlMessage(message);
 					break;
 				case RtmpMessageTypeID::WindowAcknowledgementSize:
-					ReceiveWindowAcknowledgementSize(message);
+					result = ReceiveWindowAcknowledgementSize(message);
 					break;
 				default:
 					logtw("Unknown Type - Type(%d)", message->header->completed.type_id);
@@ -1104,6 +1104,12 @@ namespace pvd
 
 	bool RtmpStream::ReceiveSetChunkSize(const std::shared_ptr<const RtmpMessage> &message)
 	{
+		if (message->payload->GetLength() < 4)
+		{
+			logte("Invalid message size (data length must be at least 4 bytes, but %zu)", message->payload->GetLength());
+			return false;
+		}
+
 		auto chunk_size = RtmpMuxUtil::ReadInt32(message->payload->GetData());
 
 		logti("[%s/%s] ChunkSize is changed to %u (stream id: %u)", _vhost_app_name.CStr(), _stream_name.CStr(), chunk_size, message->header->completed.stream_id);
@@ -1176,21 +1182,38 @@ namespace pvd
 		return true;
 	}
 
-	void RtmpStream::ReceiveWindowAcknowledgementSize(const std::shared_ptr<const RtmpMessage> &message)
+	bool RtmpStream::ReceiveWindowAcknowledgementSize(const std::shared_ptr<const RtmpMessage> &message)
 	{
+		if (message->payload->GetLength() < 4)
+		{
+			logte("Invalid message size (data length must be at least 4 bytes, but %zu)", message->payload->GetLength());
+			return false;
+		}
+
 		auto acknowledgement_size = RtmpMuxUtil::ReadInt32(message->payload->GetData());
 
 		if (acknowledgement_size != 0)
 		{
 			_acknowledgement_size = acknowledgement_size / 2;
 		}
+
+		return true;
 	}
 
 	bool RtmpStream::ReceiveAmfCommandMessage(const std::shared_ptr<const RtmpMessage> &message)
 	{
 		OV_ASSERT2(message->header != nullptr);
 		OV_ASSERT2(message->payload != nullptr);
-		OV_ASSERT2(message->payload->GetLength() == message->header->message_length);
+
+		if (message->payload->GetLength() != message->header->message_length)
+		{
+			OV_ASSERT2(message->payload->GetLength() == message->header->message_length);
+
+			logte("Invalid AMF0CommandMessage size (data length must be equal to message length, but %zu != %u)",
+				  message->payload->GetLength(),
+				  message->header->message_length);
+			return false;
+		}
 
 		ov::ByteStream byte_stream(message->payload);
 		AmfDocument document;
@@ -1264,7 +1287,15 @@ namespace pvd
 
 	void RtmpStream::ReceiveAmfDataMessage(const std::shared_ptr<const RtmpMessage> &message)
 	{
-		OV_ASSERT2(message->payload->GetLength() == message->header->message_length);
+		if (message->payload->GetLength() != message->header->message_length)
+		{
+			OV_ASSERT2(message->payload->GetLength() == message->header->message_length);
+
+			logte("Invalid AMF0DataMessage size (data length must be equal to message length, but %zu != %u)",
+				  message->payload->GetLength(),
+				  message->header->message_length);
+			return;
+		}
 
 		ov::ByteStream byte_stream(message->payload);
 		AmfDocument document;
