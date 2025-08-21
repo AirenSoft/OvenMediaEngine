@@ -62,6 +62,11 @@ bool AACAdts::Parse(const uint8_t *data, size_t data_length, AACAdts &adts)
 
 	if (adts._protection_absent == false)
 	{
+		if (parser.BytesRemained() < 2)
+		{
+			return false;
+		}
+
 		adts._crc = parser.ReadBits<uint16_t>(16);
 	}
 
