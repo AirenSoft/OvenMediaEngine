@@ -35,6 +35,7 @@ OvenSpace is a sub-second latency streaming demo service using [OvenMediaEngine]
   * In-band FEC (Forward Error Correction)
     * <i>Opus</i>
 * Legacy HLS (HLS version 3)
+  * Dump for VoD
   * MPEG-2 TS Container
   * Audio/Video Muxed
   * DVR
