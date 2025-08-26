@@ -1835,6 +1835,28 @@ void TranscoderStream::OnEncodedPacket(MediaTrackId encoder_id, std::shared_ptr<
 	}
 }
 
+std::vector<std::shared_ptr<MediaTrack>> TranscoderStream::GetOutputTracksByEncoderId(MediaTrackId encoder_id)
+{
+	std::vector<std::shared_ptr<MediaTrack>> output_tracks;
+
+	auto it = _link_encoder_to_outputs.find(encoder_id);
+	if (it == _link_encoder_to_outputs.end())
+	{
+		return output_tracks;
+	}
+
+	for (auto &[output_stream, output_track_id] : it->second)
+	{
+		auto output_track = output_stream->GetTrack(output_track_id);
+		if (output_track != nullptr)
+		{
+			output_tracks.push_back(output_track);
+		}
+	}
+
+	return output_tracks;
+}
+
 void TranscoderStream::UpdateMsidOfOutputStreams(uint32_t msid)
 {
 	// Update info::Stream().msid of all output streams

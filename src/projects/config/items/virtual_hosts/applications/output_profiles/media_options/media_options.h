@@ -9,6 +9,7 @@
 #pragma once
 
 #include "subtitle.h"
+#include "./overlays/overlays.h"
 
 namespace cfg
 {
@@ -22,9 +23,11 @@ namespace cfg
 				{
 				protected:
 					Subtitle _subtitle; 
+					Overlays _overlays;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetSubtitle, _subtitle)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetOverlays, _overlays);
 
 				protected:
 					void MakeList() override
@@ -59,6 +62,8 @@ namespace cfg
 								return nullptr;
 							}
 						);
+						Register<Optional>({"Overlays", "overlays"}, &_overlays);
+
 					}
 				};
 			}  // namespace oprf

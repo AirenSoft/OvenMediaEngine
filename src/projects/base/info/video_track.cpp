@@ -276,3 +276,30 @@ int32_t VideoTrack::GetLookaheadByConfig() const
 {
 	return _lookahead_conf;
 }
+
+void VideoTrack::SetOverlays(const std::vector<std::shared_ptr<info::Overlay>> &overlays)
+{
+	std::unique_lock<std::shared_mutex> lock(_overlay_mutex);
+
+	if (overlays.empty())
+	{
+		_overlays.clear();
+		_overlay_signature = 0;
+		return;
+	}
+
+	_overlays.assign(overlays.begin(), overlays.end());
+	_overlay_signature = info::Overlay::GetSignature(overlays);
+}
+
+std::vector<std::shared_ptr<info::Overlay>> VideoTrack::GetOverlays() const
+{
+	std::shared_lock<std::shared_mutex> lock(_overlay_mutex);
+	return _overlays;
+}
+
+size_t VideoTrack::GetOverlaySignature() const
+{
+	std::shared_lock<std::shared_mutex> lock(_overlay_mutex);
+	return _overlay_signature;
+}

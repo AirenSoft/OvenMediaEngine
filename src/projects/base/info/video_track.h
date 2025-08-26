@@ -10,7 +10,7 @@
 
 #include <modules/bitstream/h264/h264_parser.h>
 #include <modules/bitstream/nalu/nal_unit_fragment_header.h>
-
+#include "base/info/overlay.h"
 #include "base/common_types.h"
 
 class VideoTrack
@@ -159,4 +159,15 @@ protected:
 	// @encoder
 	// Lookahead (set by user)
 	int32_t _lookahead_conf = -1;
+
+public:
+	// Overlay (set by user)
+	void SetOverlays(const std::vector<std::shared_ptr<info::Overlay>> &overlays);
+	std::vector<std::shared_ptr<info::Overlay>> GetOverlays() const;
+	size_t GetOverlaySignature() const;
+ 
+protected:
+	std::vector<std::shared_ptr<info::Overlay>> _overlays;
+	size_t _overlay_signature;
+	mutable std::shared_mutex _overlay_mutex;
 };
