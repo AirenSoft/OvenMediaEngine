@@ -103,11 +103,12 @@ endif
 # Enable NVidia Accelerator
 ifeq ($(and \
   $(filter 0,$(call chk_lib_exist,libcuda.so)), \
-  $(filter 0,$(call chk_lib_exist,libnvidia-ml.so)) \
+  $(filter 0,$(call chk_lib_exist,libnvidia-ml.so)), \
+  $(filter 0,$(call chk_exe_exist,nvcc)) \
 ), 0)
 HWACCELS_NVIDIA_ENABLED := true
-LOCAL_LDFLAGS += -L/usr/local/cuda/lib64 -L/usr/local/cuda/lib64/stubs -lcuda -lnvidia-ml
 PROJECT_CXXFLAGS += -I/usr/local/cuda/include -DHWACCELS_NVIDIA_ENABLED
+LOCAL_LDFLAGS += -L/usr/local/cuda/lib64 -L/usr/local/cuda/lib64/stubs -lcuda -lnvidia-ml
 endif
 
 # Enable Netint Accelerator
