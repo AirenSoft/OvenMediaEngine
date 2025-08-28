@@ -50,7 +50,7 @@ namespace cfg
 						Register<Optional>({"HWAccels", "hwaccels"}, &_hwaccels);
 						Register<Optional>("OutputProfile", &_output_profiles);
 						Register<Optional>({"Decodes", "decodes"}, &_decodes);
-						Register<Optional>({"MediaOptions", "media_options"}, &_media_options);
+						Register<Optional>("MediaOptions", &_media_options);
 					}
 				};
 			}  // namespace oprf
