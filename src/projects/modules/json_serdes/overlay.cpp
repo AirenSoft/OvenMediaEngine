@@ -79,7 +79,8 @@ namespace serdes
 	{
 		// {
 		//     "outputStreamName": "stream",
-		//     "variantName": "video_1080",
+		//     "variantNames": "video_1080",
+		//     // "variantNames": "video_1080,video_720",
 		//     "overlays": [
 		//         {
 		//             "url": "http://ovenmediaengine.com/overlay/image001.png",
@@ -104,9 +105,9 @@ namespace serdes
 			overlay_info->SetOutputStreamName(json_body["outputStreamName"].asString().c_str());
 		}
 
-		if (json_body.isMember("variantName") && json_body["variantName"].isString())
+		if (json_body.isMember("variantNames") && json_body["variantNames"].isString())
 		{
-			overlay_info->SetVariantName(json_body["variantName"].asString().c_str());
+			overlay_info->SetVariantNames(json_body["variantNames"].asString().c_str());
 		}
 
 		if (json_body.isMember("overlays") && json_body["overlays"].isArray())
@@ -135,7 +136,7 @@ namespace serdes
 
 		Json::Value json_overlay_info(Json::objectValue);
 		json_overlay_info["outputStreamName"] = overlay_info->GetOutputStreamName().CStr();
-		json_overlay_info["variantName"] = overlay_info->GetVariantName().CStr();
+		json_overlay_info["variantNames"] = overlay_info->GetVariantNames().CStr();
 
 		Json::Value json_overlays(Json::arrayValue);
 		for (const auto &overlay : overlay_info->GetOverlays())

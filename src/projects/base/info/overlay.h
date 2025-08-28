@@ -81,9 +81,9 @@ namespace info
 		OverlayInfo()			= default;
 		~OverlayInfo() override = default;
 
-		OverlayInfo(ov::String output_stream_name, ov::String variant_name,
+		OverlayInfo(ov::String output_stream_name, ov::String variant_names,
 					const std::vector<std::shared_ptr<info::Overlay>> &overlays)
-			: _output_stream_name(output_stream_name), _variant_name(variant_name), _overlays(overlays)
+			: _output_stream_name(output_stream_name), _variant_names(variant_names), _overlays(overlays)
 		{
 		}
 
@@ -93,16 +93,20 @@ namespace info
 			_output_stream_name = output_stream_name;
 		}
 
-		OV_DEFINE_CONST_GETTER(GetVariantName, _variant_name)
-		void SetVariantName(ov::String variant_name)
+		OV_DEFINE_CONST_GETTER(GetVariantNames, _variant_names)
+		void SetVariantNames(ov::String variant_names)
 		{
-			_variant_name = variant_name;
+			_variant_names = variant_names;
 		}
 
 		OV_DEFINE_CONST_GETTER(GetOverlays, _overlays)
 		void SetOverlays(const std::vector<std::shared_ptr<info::Overlay>> &overlays)
 		{
 			_overlays = overlays;
+		}
+		void ClearOverlays()
+		{
+			_overlays.clear();
 		}
 
 		ov::String GetInfoString() const
@@ -112,13 +116,13 @@ namespace info
 			{
 				overlays_info += overlay->GetInfoString() + "; ";
 			}
-			return ov::String::FormatString("OverlayInfo(outputStreamName=%s, variantName=%s, overlays=[%s])",
-											_output_stream_name.CStr(), _variant_name.CStr(), overlays_info.CStr());
+			return ov::String::FormatString("OverlayInfo(outputStreamName=%s, variantNames=%s, overlays=[%s])",
+											_output_stream_name.CStr(), _variant_names.CStr(), overlays_info.CStr());
 		}
 
 	private:
 		ov::String _output_stream_name;
-		ov::String _variant_name;
+		ov::String _variant_names;
 		std::vector<std::shared_ptr<info::Overlay>> _overlays;
 	};
 
