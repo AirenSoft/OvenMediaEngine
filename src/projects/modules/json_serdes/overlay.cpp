@@ -79,8 +79,7 @@ namespace serdes
 	{
 		// {
 		//     "outputStreamName": "stream",
-		//     "variantNames": "video_1080",
-		//     // "variantNames": "video_1080,video_720",
+		//     "variantNames": "video_1080", or "variantNames": ["video_1080","video_720"],
 		//     "overlays": [
 		//         {
 		//             "url": "http://ovenmediaengine.com/overlay/image001.png",
@@ -109,6 +108,19 @@ namespace serdes
 		{
 			overlay_info->SetVariantNames(json_body["variantNames"].asString().c_str());
 		}
+		else if(json_body.isMember("overlays") && json_body["variantNames"].isArray())
+		{
+			std::vector<ov::String> variant_name_array;
+			for(const auto &variant_name : json_body["variantNames"])
+			{
+				if(variant_name.isString() && variant_name.asString().empty() == false)
+				{
+					variant_name_array.push_back(variant_name.asString().c_str());
+				}
+			}
+			
+			overlay_info->SetVariantNames(ov::String::Join(variant_name_array, ",").CStr());
+		}
 
 		if (json_body.isMember("overlays") && json_body["overlays"].isArray())
 		{
@@ -136,7 +148,14 @@ namespace serdes
 
 		Json::Value json_overlay_info(Json::objectValue);
 		json_overlay_info["outputStreamName"] = overlay_info->GetOutputStreamName().CStr();
-		json_overlay_info["variantNames"] = overlay_info->GetVariantNames().CStr();
+
+		auto variant_name_array = overlay_info->GetVariantNames().Split(",");
+		Json::Value json_variant_name_array(Json::arrayValue);
+		for (const auto &variant_name : variant_name_array)
+		{
+			json_variant_name_array.append(variant_name.CStr());
+		}
+		json_overlay_info["variantNames"] = json_variant_name_array;
 
 		Json::Value json_overlays(Json::arrayValue);
 		for (const auto &overlay : overlay_info->GetOverlays())
