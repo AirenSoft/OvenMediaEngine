@@ -108,7 +108,7 @@ namespace serdes
 		{
 			overlay_info->SetVariantNames(json_body["variantNames"].asString().c_str());
 		}
-		else if(json_body.isMember("overlays") && json_body["variantNames"].isArray())
+		else if(json_body.isMember("variantNames") && json_body["variantNames"].isArray())
 		{
 			std::vector<ov::String> variant_name_array;
 			for(const auto &variant_name : json_body["variantNames"])
