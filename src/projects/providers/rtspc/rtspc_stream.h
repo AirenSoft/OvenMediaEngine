@@ -146,6 +146,7 @@ namespace pvd
 		ov::String _rtsp_session_id;
 		uint32_t _rtsp_session_timeout_sec = 0;
 		std::shared_ptr<ov::Data> _h264_extradata_nalu = nullptr;
+		std::shared_ptr<ov::Data> _h265_extradata_nalu = nullptr;
 		// ssrc, rtp channel id (rtcp channel id = rtp_channel_id + 1)
 		std::map<uint32_t, uint8_t> _ssrc_channel_id_map;
 

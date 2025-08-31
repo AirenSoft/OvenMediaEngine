@@ -403,6 +403,7 @@ namespace pvd
 				switch (first_payload->GetCodec())
 				{
 					case PayloadAttr::SupportCodec::H264:
+					case PayloadAttr::SupportCodec::H265:
 					case PayloadAttr::SupportCodec::VP8:
 					case PayloadAttr::SupportCodec::MPEG4_GENERIC:
 					case PayloadAttr::SupportCodec::OPUS:
@@ -538,17 +539,16 @@ namespace pvd
 					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::H264;
 					break;
 
-#if 0
 				case PayloadAttr::SupportCodec::H265:
 					track->SetMediaType(cmn::MediaType::Video);
 					track->SetCodecId(cmn::MediaCodecId::H265);
 					track->SetOriginBitstream(cmn::BitstreamFormat::H265_RTP_RFC_7798);
 					// Get Extradata from the first payload(out of band)
-					// _h264_extradata_nalu = first_payload->GetH264ExtraDataAsAnnexB(); 
+					_h265_extradata_nalu = first_payload->GetH265ExtraDataAsAnnexB();
 					depacketizer_type = RtpDepacketizingManager::SupportedDepacketizerType::H265;
 					break;
-#endif
-				case PayloadAttr::SupportCodec::VP8:
+
+					case PayloadAttr::SupportCodec::VP8:
 					track->SetMediaType(cmn::MediaType::Video);
 					track->SetCodecId(cmn::MediaCodecId::Vp8);
 					track->SetOriginBitstream(cmn::BitstreamFormat::VP8_RTP_RFC_7741);
@@ -1111,6 +1111,20 @@ namespace pvd
 															  adjusted_timestamp,
 															  adjusted_timestamp,
 															  cmn::BitstreamFormat::H264_ANNEXB,
+															  cmn::PacketType::NALU);
+			SendFrame(media_packet);
+			_sent_sequence_header = true;
+		}
+		// Send VPS/SPS/PPS if stream is H265
+		else if (_sent_sequence_header == false && track->GetCodecId() == cmn::MediaCodecId::H265 && _h265_extradata_nalu != nullptr)
+		{
+			auto media_packet = std::make_shared<MediaPacket>(GetMsid(),
+															  track->GetMediaType(),
+															  track->GetId(),
+															  _h265_extradata_nalu,
+															  adjusted_timestamp,
+															  adjusted_timestamp,
+															  cmn::BitstreamFormat::H265_ANNEXB,
 															  cmn::PacketType::NALU);
 			SendFrame(media_packet);
 			_sent_sequence_header = true;
