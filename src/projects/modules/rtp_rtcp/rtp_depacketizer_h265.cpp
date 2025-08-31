@@ -60,6 +60,7 @@ std::shared_ptr<ov::Data> RtpDepacketizerH265::ParseAndAssembleFrame(std::vector
 			result = ParseFUsAndConvertAnnexB(payload);
 			if (result == nullptr)
 			{
+				loge("RtpDepacketizerH265", "Failed to parse FU");
 				return nullptr;
 			}
 
@@ -71,6 +72,7 @@ std::shared_ptr<ov::Data> RtpDepacketizerH265::ParseAndAssembleFrame(std::vector
 			result = ParseAPsAndConvertAnnexB(payload);
 			if (result == nullptr)
 			{
+				loge("RtpDepacketizerH265", "Failed to parse AP");
 				return nullptr;
 			}
 
@@ -87,6 +89,7 @@ std::shared_ptr<ov::Data> RtpDepacketizerH265::ParseAndAssembleFrame(std::vector
 			result = ConvertSingleNaluToAnnexB(payload);
 			if (result == nullptr)
 			{
+				loge("RtpDepacketizerH265", "Failed to convert single NALU");
 				return nullptr;
 			}
 
@@ -125,7 +128,8 @@ std::shared_ptr<ov::Data> RtpDepacketizerH265::ParseFUsAndConvertAnnexB(const st
 	auto bitstream = std::make_shared<ov::Data>(payload->GetLength() + 16);
 	uint8_t start_prefix[ANNEXB_START_PREFIX_LENGTH] = {0, 0, 0, 1};
 
-	if (payload->GetLength() < PAYLOAD_HEADER_SIZE + FU_HEADER_SIZE + LENGTH_FIELD_SIZE)
+	// Check Payload header length and FU header length
+	if (payload->GetLength() < PAYLOAD_HEADER_SIZE + FU_HEADER_SIZE)
 	{
 		// Invalid Data
 		return nullptr;
@@ -149,24 +153,30 @@ std::shared_ptr<ov::Data> RtpDepacketizerH265::ParseFUsAndConvertAnnexB(const st
 	uint8_t fu_type = FUH_TYPE(fu_hdr);
 	offset += FU_HEADER_SIZE;
 
+	// S, E fields cannot both be 1.
 	if (fu_s == 1 && fu_e == 1)
 	{
 		// Invalid Data
 		return nullptr;
 	}
 
+	// If the S field is 1, the FU header must include the DONL(Conditional) field.
+	if (fu_s == 1 && payload->GetLength() < PAYLOAD_HEADER_SIZE + FU_HEADER_SIZE + DONL_FIELD_SIZE)
+	{
+		// Invalid Data
+		return nullptr;
+	}
+
+	// If the S field is 1, the NAL header must be attached.
 	if (fu_s == 1)
 	{
 		// logw("RtpDepacketizerH265", "start=%d, end=%d, type=%d->%d, layer=%d, temporal_id=%d", fu_s, fu_e, nuh_type, fu_type, nuh_layer_id, nuh_temporal_id);
-
 		bitstream->Append(start_prefix, ANNEXB_START_PREFIX_LENGTH);
 
 		// Set NAL Header
 		uint8_t nal_header[2];
 		ByteWriter<uint16_t>::WriteBigEndian((uint8_t *)&nal_header[0], NUH_HEADER(fu_type, nuh_layer_id, nuh_temporal_id));
 		bitstream->Append(nal_header, PAYLOAD_HEADER_SIZE);
-
-		// It is determined that there is no Decoding Parameter Set in the Fragemted Unit.
 	}
 
 	// Set FU Payload
