@@ -469,6 +469,8 @@ bool HlsStream::CheckIfAllPlaylistReady()
 
 	alert->SendStreamMessage(mon::alrt::Message::Code::EGRESS_HLS_READY, stream_metrics);
 
+	DumpMasterPlaylistOfAllItems();
+
 	return true;
 }
 
@@ -502,11 +504,6 @@ void HlsStream::OnSegmentCreated(const ov::String &packager_id, const std::share
 	playlist->OnSegmentCreated(segment);
 
 	logtd("Playlist : %s", playlist->ToString(false).CStr());
-
-	if (segment->GetNumber() == 0)
-	{
-		DumpMasterPlaylistOfAllItems();
-	}
 
 	DumpSegmentOfAllItems(packager_id, segment->GetNumber());
 }
@@ -911,7 +908,7 @@ void HlsStream::InitializeAllDumps()
 		auto match_result = dump.GetTargetStreamNameRegex().Matches(GetName().CStr());
 		if (match_result.IsMatched())
 		{
-			auto output_path = std::make_shared<ov::String>(dump.GetOutputPath());
+			auto output_path = dump.GetOutputPath();
 			dump.ConfigureOutputPath(output_path, GetApplication()->GetVHostAppName().GetVHostName(), GetApplication()->GetVHostAppName().GetAppName(), GetName());
 
 			auto dump_item = std::make_shared<mdl::Dump>();

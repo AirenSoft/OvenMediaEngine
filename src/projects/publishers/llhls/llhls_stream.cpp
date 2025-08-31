@@ -210,7 +210,7 @@ bool LLHlsStream::Start()
 		auto match_result = dump.GetTargetStreamNameRegex().Matches(GetName().CStr());
 		if (match_result.IsMatched())
 		{
-			auto output_path = std::make_shared<ov::String>(dump.GetOutputPath());
+			auto output_path = dump.GetOutputPath();
 			dump.ConfigureOutputPath(output_path, GetApplication()->GetVHostAppName().GetVHostName(), GetApplication()->GetVHostAppName().GetAppName(), GetName());
 
 			auto dump_item = std::make_shared<mdl::Dump>();

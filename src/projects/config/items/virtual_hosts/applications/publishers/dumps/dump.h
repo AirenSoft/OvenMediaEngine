@@ -45,17 +45,17 @@ namespace cfg
 						return _target_stream_name_regex;
 					}
 
-					void ConfigureOutputPath(std::shared_ptr<ov::String> output_path, ov::String v_host_name, ov::String app_name, ov::String stream_name) const
+					void ConfigureOutputPath(ov::String& output_path, ov::String v_host_name, ov::String app_name, ov::String stream_name)
 					{
-						if (output_path == nullptr)
+						if (output_path.IsEmpty())
 						{
 							return;
 						}
 						
 						// ${VHostName}, ${AppName}, ${StreamName}
-						*output_path = output_path->Replace("${VHostName}", v_host_name.CStr());
-						*output_path = output_path->Replace("${AppName}", app_name.CStr());
-						*output_path = output_path->Replace("${StreamName}", stream_name.CStr());
+						output_path = output_path.Replace("${VHostName}", v_host_name.CStr());
+						output_path = output_path.Replace("${AppName}", app_name.CStr());
+						output_path = output_path.Replace("${StreamName}", stream_name.CStr());
 
 						// ${YYYY}, ${MM}, ${DD}, ${hh}, ${mm}, ${ss}, ${ISO8601}, ${z}
 						auto now = std::chrono::system_clock::now();
@@ -68,20 +68,20 @@ namespace cfg
 						// Replace ${ISO8601} to ISO8601 format
 						memset(tmbuf, 0, sizeof(tmbuf));
 						::strftime(tmbuf, sizeof(tmbuf), "%Y-%m-%dT%H:%M:%S%z", &tm);
-						*output_path = output_path->Replace("${ISO8601}", tmbuf);
+						output_path = output_path.Replace("${ISO8601}", tmbuf);
 
 						// Replace ${YYYY}, ${MM}, ${DD}, ${hh}, ${mm}, ${ss}
-						*output_path = output_path->Replace("${YYYY}", ov::Converter::ToString(tm.tm_year + 1900).CStr());
-						*output_path = output_path->Replace("${MM}", ov::String::FormatString("%02d", tm.tm_mon + 1).CStr());
-						*output_path = output_path->Replace("${DD}", ov::String::FormatString("%02d", tm.tm_mday).CStr());
-						*output_path = output_path->Replace("${hh}", ov::String::FormatString("%02d", tm.tm_hour).CStr());
-						*output_path = output_path->Replace("${mm}", ov::String::FormatString("%02d", tm.tm_min).CStr());
-						*output_path = output_path->Replace("${ss}", ov::String::FormatString("%02d", tm.tm_sec).CStr());
+						output_path = output_path.Replace("${YYYY}", ov::Converter::ToString(tm.tm_year + 1900).CStr());
+						output_path = output_path.Replace("${MM}", ov::String::FormatString("%02d", tm.tm_mon + 1).CStr());
+						output_path = output_path.Replace("${DD}", ov::String::FormatString("%02d", tm.tm_mday).CStr());
+						output_path = output_path.Replace("${hh}", ov::String::FormatString("%02d", tm.tm_hour).CStr());
+						output_path = output_path.Replace("${mm}", ov::String::FormatString("%02d", tm.tm_min).CStr());
+						output_path = output_path.Replace("${ss}", ov::String::FormatString("%02d", tm.tm_sec).CStr());
 
 						// +hhmm or -hhmm
 						memset(tmbuf, 0, sizeof(tmbuf));
 						strftime(tmbuf, sizeof(tmbuf), "%z", &tm);
-						*output_path = output_path->Replace("${z}", tmbuf);
+						output_path = output_path.Replace("${z}", tmbuf);
 					}
 
 				protected:
