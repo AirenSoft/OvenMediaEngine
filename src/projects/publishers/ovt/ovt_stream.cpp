@@ -45,7 +45,6 @@ bool OvtStream::Start()
 		if (result == CommonErrorCode::ERROR)
 		{
 			logtw("Failed to register stream to origin map store : %s/%s", GetApplicationName(), GetName().CStr());
-			return false;
 		}
 	}
 

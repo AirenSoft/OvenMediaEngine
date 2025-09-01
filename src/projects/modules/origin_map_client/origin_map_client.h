@@ -40,6 +40,13 @@ private:
 	bool NofifyStreamsAlive();
 	bool RetryRegister();
 
+	std::tuple<int, ov::String> CommandToRedis(const char *format, ...);
+
+	bool AddOriginMap(const ov::String &app_stream_name, const ov::String &origin_host);
+	bool AddOriginMapCandidate(const ov::String &app_stream_name, const ov::String &origin_host);
+	bool DeleteOriginMap(const ov::String &app_stream_name);
+	bool DeleteOriginMapCandidate(const ov::String &app_stream_name);
+
 	ov::String _redis_ip;
 	uint16_t _redis_port;
 	ov::String _redis_password;
@@ -48,7 +55,7 @@ private:
 
 	std::map<ov::String, ov::String> _origin_map;
 	std::map<ov::String, ov::String> _origin_map_candidates;
-	std::mutex _origin_map_mutex;
+	std::recursive_mutex _origin_map_mutex;
 
 	redisContext *_redis_context = nullptr;
 	std::mutex _redis_context_mutex;
