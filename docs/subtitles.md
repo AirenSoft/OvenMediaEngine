@@ -2,6 +2,10 @@
 
 From OvenMediaEngine 0.19.1 and later, you can insert subtitles into live streams in real time using the API.&#x20;
 
+<figure><img src=".gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
+
+<figure><img src=".gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
+
 {% hint style="info" %}
 Currently, only the LL-HLS publisher is supported. HLS and WebRTC will be supported in future releases.
 {% endhint %}
@@ -55,7 +59,7 @@ Once subtitle tracks are enabled, you can insert subtitles in real time using th
 ### Playlist Subtitle Disable per Playlist
 
 When subtitles are enabled, all playlists include them by default.\
-To disable subtitles for a specific playlist, set `<``Playlist><Options><EnableSubtitles>` to false (default : true).
+To disable subtitles for a specific playlist, set `<Playlist><Options><EnableSubtitles>` to false (default : true).
 
 ```xml
 <Playlist>
