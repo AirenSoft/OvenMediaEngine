@@ -16,6 +16,7 @@
 #include "monitoring/monitoring.h"
 
 #include "modules/containers/bmff/fmp4_packager/fmp4_packager.h"
+#include "modules/containers/webvtt/webvtt_packager.h"
 #include "llhls_master_playlist.h"
 #include "llhls_chunklist.h"
 
@@ -69,13 +70,11 @@ public:
 	
 	const ov::String &GetStreamKey() const;
 
-	uint64_t GetMaxChunkDurationMS() const;
-
 	std::tuple<RequestResult, std::shared_ptr<const ov::Data>> GetMasterPlaylist(const ov::String &file_name, const ov::String &chunk_query_string, bool gzip, bool legacy, bool rewind, bool include_path=true);
 	std::tuple<RequestResult, std::shared_ptr<const ov::Data>> GetChunklist(const ov::String &chunk_query_string, const int32_t &track_id, int64_t msn, int64_t psn, bool skip, bool gzip, bool legacy, bool rewind) const;
 	std::tuple<RequestResult, std::shared_ptr<ov::Data>> GetInitializationSegment(const int32_t &track_id) const;
 	std::tuple<RequestResult, std::shared_ptr<ov::Data>> GetSegment(const int32_t &track_id, const int64_t &segment_number) const;
-	std::tuple<RequestResult, std::shared_ptr<ov::Data>> GetChunk(const int32_t &track_id, const int64_t &segment_number, const int64_t &chunk_number) const;
+	std::tuple<RequestResult, std::shared_ptr<ov::Data>> GetPartial(const int32_t &track_id, const int64_t &segment_number, const int64_t &chunk_number) const;
 
 	//////////////////////////
 	// For Dump API
@@ -100,7 +99,7 @@ private:
 
 	bool GetDrmInfo(const ov::String &file_path, bmff::CencProperty &cenc_property);
 
-	bool IsSupportedCodec(cmn::MediaCodecId codec_id) const; 
+	bool IsSupportedMediaCodec(cmn::MediaCodecId codec_id) const; 
 
 	void NotifyPlaylistUpdated(const int32_t &track_id, const int64_t &msn, const int64_t &part);
 
@@ -116,7 +115,7 @@ private:
 	// Get fMP4 packager with the track id
 	std::shared_ptr<bmff::FMP4Packager> GetPackager(const int32_t &track_id) const;
 	// Get storage with the track id
-	std::shared_ptr<bmff::FMP4Storage> GetStorage(const int32_t &track_id) const;
+	std::shared_ptr<base::modules::SegmentStorage> GetStorage(const int32_t &track_id) const;
 	// Get Playlist with the track id
 	std::shared_ptr<LLHlsChunklist> GetChunklistWriter(const int32_t &track_id) const;
 
@@ -147,10 +146,7 @@ private:
 
 	double ComputeOptimalPartDuration(const std::shared_ptr<const MediaTrack> &track) const;
 
-	//////////////////////////
 	// Events
-	//////////////////////////
-
 	// <result, error message>
 	std::tuple<bool, ov::String> ConcludeLive();
 	bool IsConcluded() const;
@@ -162,7 +158,7 @@ private:
 	bmff::FMP4Storage::Config _storage_config;
 
 	// Track ID : Storage
-	std::map<int32_t, std::shared_ptr<bmff::FMP4Storage>> _storage_map;
+	std::map<int32_t, std::shared_ptr<base::modules::SegmentStorage>> _storage_map;
 	mutable std::shared_mutex _storage_map_lock;
 	std::map<int32_t, std::shared_ptr<bmff::FMP4Packager>> _packager_map;
 	mutable std::shared_mutex _packager_map_lock;
@@ -211,4 +207,16 @@ private:
 	// Append #EXT-X-ENDLIST all chunklists, and no more update segment and chunklist
 	bool _concluded = false;
 	mutable std::shared_mutex _concluded_lock;
+
+	// Subtitles, vtt
+	bool IsVttEnabled() const;
+	bool AddVttPackager(const std::shared_ptr<const MediaTrack> &track);
+	std::shared_ptr<webvtt::Packager> GetVttPackager(const int32_t &track_id) const;
+	std::map<int32_t, std::shared_ptr<webvtt::Packager>> GetVttPackagers() const;
+
+	bool _vtt_enabled = false;
+	int32_t _vtt_reference_track_id = -1; // track id of the reference track for VTT
+
+	std::map<int32_t, std::shared_ptr<webvtt::Packager>> _vtt_packagers;
+	mutable std::shared_mutex _vtt_packagers_lock;
 };

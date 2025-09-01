@@ -110,7 +110,7 @@ namespace pvd
 		return _last_media_timestamp_ms + _elapsed_from_last_media_timestamp.Elapsed();
 	}
 
-	bool Stream::SendDataFrame(int64_t timestamp_in_ms, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent, const MediaPacketFlag packet_flag)
+	bool Stream::SendDataFrame(int64_t timestamp_in_ms, int64_t duration, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent, const MediaPacketFlag packet_flag)
 	{
 		if (frame == nullptr)
 		{
@@ -167,8 +167,56 @@ namespace pvd
 															packet_type);
 		event_message->SetFlag(packet_flag);
 		event_message->SetHighPriority(urgent);
+		event_message->SetDuration(duration);
 
 		return SendFrame(event_message);
+	}
+
+	bool Stream::SendDataFrame(int64_t timestamp, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent, const MediaPacketFlag packet_flag)
+	{
+		return SendDataFrame(timestamp, -1, format, packet_type, frame, urgent, packet_flag);
+	}
+
+	bool Stream::SendSubtitleFrame(const ov::String &label, int64_t timestamp_in_ms, int64_t duration_ms, const cmn::BitstreamFormat &format, const std::shared_ptr<ov::Data> &frame, bool urgent)
+	{
+		if (frame == nullptr)
+		{
+			return false;
+		}
+
+		auto subtitle_track = GetTrack(label);
+		if (subtitle_track == nullptr)
+		{
+			logte("Subtitle track is not found. %s/%s(%u)", GetApplicationName(), GetName().CStr(), GetId());
+			return false;
+		}
+
+		if (timestamp_in_ms == -1)
+		{
+			timestamp_in_ms = GetCurrentTimestampMs();
+			if (timestamp_in_ms == -1)
+			{
+				logte("Could not send subtitle frame. %s/%s(%u) - Media is not started yet", GetApplicationName(), GetName().CStr(), GetId());
+				return false;
+			}
+		}
+
+		auto timestamp_in_tb = static_cast<int64_t>(timestamp_in_ms * subtitle_track->GetTimeBase().GetTimescale() / 1000.0);
+		auto duration_in_tb = static_cast<int64_t>(duration_ms * subtitle_track->GetTimeBase().GetTimescale() / 1000.0);
+
+		auto subtitle_message = std::make_shared<MediaPacket>(GetMsid(),
+															cmn::MediaType::Subtitle,
+															subtitle_track->GetId(),
+															frame, 
+															timestamp_in_tb,
+															timestamp_in_tb,
+															duration_in_tb,
+															MediaPacketFlag::Key,
+															cmn::BitstreamFormat::WebVTT,
+															cmn::PacketType::RAW);
+		subtitle_message->SetHighPriority(urgent);
+		
+		return SendFrame(subtitle_message);
 	}
 
 	bool Stream::SendEvent(const std::shared_ptr<MediaEvent> &event)

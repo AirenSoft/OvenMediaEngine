@@ -642,7 +642,8 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 			break;
 			
 			// If there is a data type track in the input stream, it must be created equally in all output streams.
-			case cmn::MediaType::Data: {
+			case cmn::MediaType::Data: 
+			case cmn::MediaType::Subtitle:{
 					auto output_track = CreateOutputTrackDataType(input_track);
 					if (output_track == nullptr)
 					{

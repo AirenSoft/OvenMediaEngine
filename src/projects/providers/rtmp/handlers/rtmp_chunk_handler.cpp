@@ -8,8 +8,8 @@
 //==============================================================================
 #include "./rtmp_chunk_handler.h"
 
-#include <modules/data_format/id3v2/frames/id3v2_frames.h>
-#include <modules/data_format/id3v2/id3v2.h>
+#include <base/modules/data_format/id3v2/frames/id3v2_frames.h>
+#include <base/modules/data_format/id3v2/id3v2.h>
 #include <modules/rtmp_v2/rtmp.h>
 #include <orchestrator/orchestrator.h>
 
@@ -98,6 +98,7 @@ namespace pvd::rtmp
 			OV_CASE_RETURN(cmn::MediaCodecId::Jpeg, false);
 			OV_CASE_RETURN(cmn::MediaCodecId::Png, false);
 			OV_CASE_RETURN(cmn::MediaCodecId::Webp, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::WebVTT, false);
 		}
 		return false;
 	}

@@ -14,7 +14,7 @@
 #include <modules/containers/mpegts/mpegts_packager.h>
 #include <monitoring/monitoring.h>
 
-#include <modules/data_format/cue_event/cue_event.h>
+#include <base/modules/data_format/cue_event/cue_event.h>
 
 #include "hls_master_playlist.h"
 #include "hls_media_playlist.h"

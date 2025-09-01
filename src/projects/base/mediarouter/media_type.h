@@ -58,7 +58,8 @@ namespace cmn
 		CUE,
 		AMF,	// AMF0
 		SEI,	// H.264/H.265 SEI
-		SCTE35	// SCTE35
+		SCTE35,	// SCTE35
+		WebVTT	// WebVTT (Web Video Text Tracks)
 	};
 
 	enum class PacketType : int8_t
@@ -105,7 +106,8 @@ namespace cmn
 		Opus,
 		Jpeg,
 		Png,
-		Webp
+		Webp,
+		WebVTT
 	};
 
 	// DeviceId is used to identify a hwardware accelerator device.
@@ -252,6 +254,7 @@ namespace cmn
 			OV_CASE_RETURN(cmn::MediaCodecId::Jpeg, false);
 			OV_CASE_RETURN(cmn::MediaCodecId::Png, false);
 			OV_CASE_RETURN(cmn::MediaCodecId::Webp, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::WebVTT, false);
 		}
 
 		return false;
@@ -277,6 +280,7 @@ namespace cmn
 			OV_CASE_RETURN(cmn::MediaCodecId::Jpeg, true);
 			OV_CASE_RETURN(cmn::MediaCodecId::Png, true);
 			OV_CASE_RETURN(cmn::MediaCodecId::Webp, true);
+			OV_CASE_RETURN(cmn::MediaCodecId::WebVTT, false);
 		}
 
 		return false;
@@ -302,6 +306,7 @@ namespace cmn
 			OV_CASE_RETURN(cmn::MediaCodecId::Jpeg, false);
 			OV_CASE_RETURN(cmn::MediaCodecId::Png, false);
 			OV_CASE_RETURN(cmn::MediaCodecId::Webp, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::WebVTT, false);
 		}
 
 		return false;
@@ -373,6 +378,7 @@ namespace cmn
 			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, AMF);
 			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, SEI);
 			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, SCTE35);
+			OV_CASE_RETURN_ENUM_STRING(BitstreamFormat, WebVTT);
 		}
 
 		return "Unknown";
@@ -486,6 +492,8 @@ namespace cmn
 			OV_CASE_RETURN(MediaCodecId::Aac, "AAC");
 			OV_CASE_RETURN(MediaCodecId::Mp3, "MP3");
 			OV_CASE_RETURN(MediaCodecId::Opus, "OPUS");
+			// Subtitle codecs
+			OV_CASE_RETURN(MediaCodecId::WebVTT, "WebVTT");
 		}
 
 		return "Unknown";

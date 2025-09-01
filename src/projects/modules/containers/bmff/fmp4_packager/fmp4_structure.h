@@ -9,14 +9,15 @@
 #pragma once
 
 #include <base/ovlibrary/ovlibrary.h>
-#include <modules/marker/marker_box.h>
+#include <base/modules/container/segment_storage.h>
+#include <base/modules/marker/marker_box.h>
 
 namespace bmff
 {
-	class FMP4Chunk
+	class FMP4Partial : public base::modules::PartialSegment
 	{
 	public:
-		FMP4Chunk(const std::shared_ptr<ov::Data> &data, uint64_t number, int64_t start_timestamp, double duration_ms, bool independent)
+		FMP4Partial(const std::shared_ptr<ov::Data> &data, int64_t number, int64_t start_timestamp, double duration_ms, bool independent)
 		{
 			_data = data;
 			_number = number;
@@ -25,33 +26,33 @@ namespace bmff
 			_independent = independent;
 		}
 
-		int64_t GetNumber() const
+		int64_t GetNumber() const override
 		{
 			return _number;
 		}
 
-		int64_t GetStartTimestamp() const
+		int64_t GetStartTimestamp() const override
 		{
 			return _start_timestamp;
 		}
 
-		double GetDuration() const
+		double GetDurationMs() const override
 		{
 			return _duration_ms;
 		}
 
 		// Get Size
-		uint64_t GetSize() const
+		uint64_t GetDataLength() const override
 		{
-			return _data->GetLength();
+			return _data == nullptr ? 0 : _data->GetLength();
 		}
 
-		bool IsIndependent() const
+		bool IsIndependent() const override
 		{
 			return _independent;
 		}
 
-		const std::shared_ptr<ov::Data> &GetData() const
+		const std::shared_ptr<ov::Data> GetData() const override
 		{
 			return _data;
 		}
@@ -64,7 +65,7 @@ namespace bmff
 		std::shared_ptr<ov::Data> _data;
 	};
 
-	class FMP4Segment
+	class FMP4Segment : public base::modules::Segment
 	{
 	public:
 		FMP4Segment(uint64_t number, uint64_t target_duration)
@@ -94,94 +95,88 @@ namespace bmff
 			return _is_completed;
 		}
 
-		bool AppendChunkData(const std::shared_ptr<ov::Data> &chunk_data, int64_t start_timestamp, double duration_ms, bool independent)
+		bool AppendPartialData(const std::shared_ptr<ov::Data> &partial_data, int64_t start_timestamp, double duration_ms, bool independent)
 		{
 			if (_is_completed)
 			{
 				return false;
 			}
 
-			std::unique_lock<std::shared_mutex> lock(_chunks_lock);
+			std::unique_lock<std::shared_mutex> lock(_partials_lock);
 
-			auto chunk_number = _chunks.size();
-			if (chunk_number == 0)
+			auto partial_count = _partials.size();
+			if (partial_count == 0)
 			{
 				_start_timestamp = start_timestamp;
 			}
 
-			_chunks.emplace_back(std::make_shared<FMP4Chunk>(chunk_data, chunk_number, start_timestamp, duration_ms, independent));
-			_last_chunk_number = chunk_number;
+			_partials.emplace_back(std::make_shared<FMP4Partial>(partial_data, partial_count, start_timestamp, duration_ms, independent));
+			_last_partial_number = partial_count;
 
 			lock.unlock();
 			
 			// Append data
 			_duration_ms += duration_ms;
-			_data->Append(chunk_data);
+			_data->Append(partial_data);
 
 			return true;
 		}
 
 		// Get Data
-		std::shared_ptr<ov::Data> GetData() const
+		const std::shared_ptr<ov::Data> GetData() const override
 		{
 			return _data;
 		}
 
-		size_t GetDataLength() const
+		size_t GetDataLength() const override
 		{
 			return _data == nullptr ? 0 : _data->GetLength();
 		}
 
 		// Get Number
-		int64_t GetNumber() const
+		int64_t GetNumber() const override
 		{
 			return _number;
 		}
 
 		// Get Start Timestamp
-		uint64_t GetStartTimestamp() const
+		int64_t GetStartTimestamp() const override
 		{
 			return _start_timestamp;
 		}
 
 		// Get Duration
-		double GetDurationMs() const
+		double GetDurationMs() const override
 		{
 			return _duration_ms;
 		}
 
-		// Get Chunk Count
-		uint64_t GetChunkCount() const
+		// Get partial segment Count
+		uint64_t GetPartialCount() const
 		{
-			std::shared_lock<std::shared_mutex> lock(_chunks_lock);
-			return _chunks.size();
+			std::shared_lock<std::shared_mutex> lock(_partials_lock);
+			return _partials.size();
 		}
 
-		size_t GetSize() const
+		int64_t GetLastPartialNumber() const
 		{
-			return _data->GetLength();
+			return _last_partial_number;
 		}
 
-		// Get Last Chunk Number
-		int64_t GetLastChunkNumber() const
+		// Get Partial Segment At
+		std::shared_ptr<FMP4Partial> GetPartialSegment(uint64_t index) const
 		{
-			return _last_chunk_number;
-		}
+			std::shared_lock<std::shared_mutex> lock(_partials_lock);
 
-		// Get Chunk At
-		std::shared_ptr<FMP4Chunk> GetChunk(uint64_t index) const
-		{
-			std::shared_lock<std::shared_mutex> lock(_chunks_lock);
-
-			if (index >= _chunks.size())
+			if (index >= _partials.size())
 			{
 				return nullptr;
 			}
 
-			return _chunks[index];
+			return _partials[index];
 		}
 
-		bool HasMarker() const
+		bool HasMarker() const override
 		{
 			return _markers.empty() == false;
 		}
@@ -196,7 +191,7 @@ namespace bmff
 			_markers.insert(_markers.end(), markers.begin(), markers.end());
 		}
 
-		const std::vector<std::shared_ptr<Marker>> &GetMarkers() const
+		const std::vector<std::shared_ptr<Marker>> &GetMarkers() const override
 		{
 			return _markers;
 		}
@@ -209,10 +204,10 @@ namespace bmff
 		int64_t _start_timestamp = 0;
 		double _duration_ms = 0;
 
-		std::deque<std::shared_ptr<FMP4Chunk>> _chunks;
-		mutable std::shared_mutex _chunks_lock;
+		std::deque<std::shared_ptr<FMP4Partial>> _partials;
+		mutable std::shared_mutex _partials_lock;
 
-		int64_t _last_chunk_number = -1;
+		int64_t _last_partial_number = -1;
 
 		// Segment Data
 		std::shared_ptr<ov::Data> _data;

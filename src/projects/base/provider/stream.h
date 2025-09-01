@@ -68,6 +68,10 @@ namespace pvd
 		// Given that the data track’s timebase is 1/1000, timestamps are treated in milliseconds
 		bool SendDataFrame(int64_t timestamp_in_ms, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent, const MediaPacketFlag packet_flag = MediaPacketFlag::NoFlag);
 
+		bool SendDataFrame(int64_t timestamp, int64_t duration, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent, const MediaPacketFlag packet_flag);
+
+		bool SendSubtitleFrame(const ov::String &label, int64_t timestamp_in_ms, int64_t duration_ms, const cmn::BitstreamFormat &format, const std::shared_ptr<ov::Data> &frame, bool urgent);
+
 		// Provider can override this function to handle the event if needed.
 		virtual bool SendEvent(const std::shared_ptr<MediaEvent> &event);
 

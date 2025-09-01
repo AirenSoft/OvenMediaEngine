@@ -350,7 +350,7 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 {
 	// Split to filename.ext
 	auto name_ext_items = file_name.Split(".");
-	if (name_ext_items.size() < 2 || (name_ext_items[1] != "m4s" && name_ext_items[1] != "m3u8"))
+	if (name_ext_items.size() < 2 || (name_ext_items[1] != "m4s" && name_ext_items[1] != "m3u8" && name_ext_items[1] != "vtt"))
 	{
 		logtw("Invalid file name requested: %s", file_name.CStr());
 		return false;
@@ -387,7 +387,7 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 		track_id = ov::Converter::ToInt32(name_items[1].CStr());
 		stream_key = name_items[3];
 	}
-	else if (name_items[0] == "seg" && name_ext_items[1] == "m4s")
+	else if (name_items[0] == "seg" && (name_ext_items[1] == "m4s" || name_ext_items[1] == "vtt"))
 	{
 		// seg_<track id>_<segment number>_<media type>_<stream key>_llhls
 		if (name_items.size() < 6)
@@ -401,7 +401,7 @@ bool LLHlsSession::ParseFileName(const ov::String &file_name, RequestType &type,
 		segment_number = ov::Converter::ToInt64(name_items[2].CStr());
 		stream_key = name_items[4];
 	}
-	else if (name_items[0] == "part" && name_ext_items[1] == "m4s")
+	else if (name_items[0] == "part" && (name_ext_items[1] == "m4s" || name_ext_items[1] == "vtt"))
 	{
 		// part_<track id>_<segment number>_<partial number>_<media type>_<stream key>_llhls
 		if (name_items.size() < 7)
@@ -685,9 +685,17 @@ void LLHlsSession::ResponseSegment(const std::shared_ptr<http::svr::HttpExchange
 		{
 			response->SetHeader("Content-Type", "video/mp4");
 		}
-		else
+		else if (GetStream()->GetTrack(track_id)->GetMediaType() == cmn::MediaType::Audio)
 		{
 			response->SetHeader("Content-Type", "audio/mp4");
+		}
+		else if (GetStream()->GetTrack(track_id)->GetMediaType() == cmn::MediaType::Subtitle)
+		{
+			response->SetHeader("Content-Type", "text/vtt");
+		}
+		else
+		{
+			response->SetHeader("Content-Type", "application/octet-stream");
 		}
 
 		if (_segment_max_age >= 0)
@@ -726,7 +734,7 @@ void LLHlsSession::ResponsePartialSegment(const std::shared_ptr<http::svr::HttpE
 	auto response = exchange->GetResponse();
 
 	// Get the partial segment
-	auto [result, partial_segment] = llhls_stream->GetChunk(track_id, segment_number, partial_number);
+	auto [result, partial_segment] = llhls_stream->GetPartial(track_id, segment_number, partial_number);
 	if (result == LLHlsStream::RequestResult::Success)
 	{
 		// Send the partial segment
@@ -736,9 +744,17 @@ void LLHlsSession::ResponsePartialSegment(const std::shared_ptr<http::svr::HttpE
 		{
 			response->SetHeader("Content-Type", "video/mp4");
 		}
-		else
+		else if (GetStream()->GetTrack(track_id)->GetMediaType() == cmn::MediaType::Audio)
 		{
 			response->SetHeader("Content-Type", "audio/mp4");
+		}
+		else if (GetStream()->GetTrack(track_id)->GetMediaType() == cmn::MediaType::Subtitle)
+		{
+			response->SetHeader("Content-Type", "text/vtt");
+		}
+		else
+		{
+			response->SetHeader("Content-Type", "application/octet-stream");
 		}
 
 		if (_partial_segment_max_age >= 0)

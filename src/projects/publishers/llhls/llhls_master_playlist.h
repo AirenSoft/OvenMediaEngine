@@ -16,20 +16,6 @@
 class LLHlsMasterPlaylist
 {
 public:
-	void SetDefaultOptions(bool legacy, bool rewind);
-
-	void SetChunkPath(const ov::String &chunk_path);
-	void SetCencProperty(const bmff::CencProperty &cenc_property);
-
-	bool AddMediaCandidateGroup(const std::shared_ptr<const MediaTrackGroup> &track_group, std::function<ov::String(const std::shared_ptr<const MediaTrack> &track)> chunk_uri_generator);
-	bool AddStreamInfo(const ov::String &video_group_id, int video_index_hint, const ov::String &audio_group_id);
-
-	void UpdateCacheForDefaultPlaylist();
-
-	ov::String ToString(const ov::String &chunk_query_string, bool legacy, bool rewind, bool include_path=true) const;
-	std::shared_ptr<const ov::Data> ToGzipData(const ov::String &chunk_query_string, bool legacy, bool rewind) const;
-
-private:
 	struct MediaInfo
 	{
 		ov::String GetTypeStr() const
@@ -40,6 +26,8 @@ private:
 					return "VIDEO";
 				case cmn::MediaType::Audio:
 					return "AUDIO";
+				case cmn::MediaType::Subtitle:
+					return "SUBTITLES";
 				default:
 					return "UNKNOWN";
 			}
@@ -52,14 +40,29 @@ private:
 		ov::String _characteristics; // Optional
 		bool _auto_select = true; // Optional
 		bool _default = false; // Optional
+		bool _forced = false; // Optional
 		ov::String _instream_id; // Required for closed captions
 		ov::String _assoc_language; // Optional
 		ov::String _uri; // Optional 
-
-		// Track
-		std::shared_ptr<const MediaTrack> _track; // Required
+		std::shared_ptr<const MediaTrack> _track; // optional, used for audio/video track
 	};
 
+
+	void SetDefaultOptions(bool legacy, bool rewind);
+
+	void SetChunkPath(const ov::String &chunk_path);
+	void SetCencProperty(const bmff::CencProperty &cenc_property);
+
+	bool AddMediaCandidateGroup(const std::shared_ptr<const MediaTrackGroup> &track_group, std::function<ov::String(const std::shared_ptr<const MediaTrack> &track)> chunk_uri_generator);
+	bool AddMediaCandidate(const LLHlsMasterPlaylist::MediaInfo &media_info);
+	bool AddStreamInfo(const ov::String &video_group_id, int video_index_hint, const ov::String &audio_group_id, const ov::String &subtitle_group_id);
+
+	void UpdateCacheForDefaultPlaylist();
+
+	ov::String ToString(const ov::String &chunk_query_string, bool legacy, bool rewind, bool include_path=true) const;
+	std::shared_ptr<const ov::Data> ToGzipData(const ov::String &chunk_query_string, bool legacy, bool rewind) const;
+
+private:
 	struct MediaGroup
 	{
 		ov::String _group_id;
@@ -83,7 +86,7 @@ private:
 		uint32_t _program_id = 1;
 		ov::String _video_group_id; // optional
 		ov::String _audio_group_id; // optional
-		ov::String _subtitle_group_id; // optional, not supported yet in OME
+		ov::String _subtitle_group_id; // optional
 		ov::String _closed_captions_group_id; // optional, not supported yet in OME
 		
 		uint32_t _bandwidth = 0;

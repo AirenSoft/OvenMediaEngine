@@ -402,12 +402,16 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 	}
 
 	playlist.AppendFormat("#EXT-X-MEDIA-SEQUENCE:%u\n", vod == false ? first_segment->GetSequence() : 0);
-	playlist.AppendFormat("#EXT-X-MAP:URI=\"%s", _map_uri.CStr());
-	if (query_string.IsEmpty() == false)
+
+	if (_map_uri.IsEmpty() == false)
 	{
-		playlist.AppendFormat("?%s", query_string.CStr());
+		playlist.AppendFormat("#EXT-X-MAP:URI=\"%s", _map_uri.CStr());
+		if (query_string.IsEmpty() == false)
+		{
+			playlist.AppendFormat("?%s", query_string.CStr());
+		}
+		playlist.AppendFormat("\"\n");
 	}
-	playlist.AppendFormat("\"\n");
 
 	// CENC
 	if (_cenc_property.scheme != bmff::CencProtectScheme::None)
@@ -481,7 +485,7 @@ ov::String LLHlsChunklist::MakeChunklist(const ov::String &query_string, bool sk
 						playlist.AppendFormat("?%s", query_string.CStr());
 					}
 					playlist.AppendFormat("\"");
-					if (_track->GetMediaType() == cmn::MediaType::Audio || (_track->GetMediaType() == cmn::MediaType::Video && partial_segment->IsIndependent() == true))
+					if (partial_segment->IsIndependent() == true)
 					{
 						playlist.AppendFormat(",INDEPENDENT=YES");
 					}

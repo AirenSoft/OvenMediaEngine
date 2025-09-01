@@ -296,6 +296,16 @@ namespace ov
 		/// @return 읽은 데이터를 64bit로 반환
 		OV_DECLARE_READ_FUNCTION(uint64_t, ReadNE64, NetworkToHost64);
 
+
+		/// 현재 offset 위치의 데이터를 읽음
+		///
+		/// @return 읽은 데이터를 Data 인스턴스로 반환
+		std::shared_ptr<Data> ReadData(size_t length);
+		/// 현재 offset 위치의 스트링을 읽음
+		///
+		/// @return 읽은 스트링을 반환
+		ov::String ReadString(size_t length);
+
 		/// 데이터를 현재 위치(offset)에 bytes만큼 기록함. 기록 후 현재 위치가 변경됨.
 		///
 		/// @param buffer 기록할 데이터

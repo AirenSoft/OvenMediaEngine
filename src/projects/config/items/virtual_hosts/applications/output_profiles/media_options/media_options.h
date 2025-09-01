@@ -46,6 +46,11 @@ namespace cfg
 										if (rendition.GetLabel() == default_label)
 										{
 											rendition.SetDefault(true);
+											if (rendition.IsAutoSelect() == false)
+											{
+												logw("Config", "Default subtitle rendition '%s' must have AutoSelect enabled. Enabling it automatically.", default_label.CStr());
+												rendition.SetAutoSelect(true);
+											}
 											found = true;
 										}
 									}

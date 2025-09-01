@@ -26,6 +26,8 @@
 
 #define MAX_FRAG_COUNT 20
 
+constexpr const char *kSubtitleTrackVariantName = "subtitle";
+
 enum class CommonErrorCode : int16_t
 {
 	DISABLED = 0,

@@ -9,7 +9,9 @@
 #pragma once
 
 #include "fmp4_structure.h"
-#include <modules/marker/marker_box.h>
+#include <base/common_types.h>
+#include <base/modules/container/segment_storage.h>
+#include <base/modules/marker/marker_box.h>
 
 namespace bmff
 {
@@ -22,7 +24,7 @@ namespace bmff
 		virtual void OnMediaSegmentDeleted(const int32_t &track_id, const uint32_t &segment_number) = 0;
 	};
 
-	class FMP4Storage
+	class FMP4Storage : public base::modules::SegmentStorage
 	{
 	public:
 		struct Config
@@ -37,27 +39,28 @@ namespace bmff
 
 		FMP4Storage(const std::shared_ptr<FMp4StorageObserver> &observer, const std::shared_ptr<const MediaTrack> &track, const Config &config, const ov::String &stream_tag);
 
-		~FMP4Storage();
+		virtual ~FMP4Storage();
 
-		std::shared_ptr<ov::Data> GetInitializationSection() const;
-		std::shared_ptr<FMP4Segment> GetMediaSegment(uint32_t segment_number) const;
-		std::shared_ptr<FMP4Segment> GetLastSegment() const;
-		std::shared_ptr<FMP4Chunk> GetMediaChunk(uint32_t segment_number, uint32_t chunk_number) const;
-
-		uint64_t GetSegmentCount() const;
-
-		std::tuple<int64_t, int64_t> GetLastChunkNumber() const;
-		int64_t GetLastSegmentNumber() const;
-
+		std::shared_ptr<ov::Data> GetInitializationSection() const override;
+		std::shared_ptr<base::modules::Segment> GetSegment(uint32_t segment_number) const override;
+		std::shared_ptr<base::modules::Segment> GetLastSegment() const override;
+		std::shared_ptr<base::modules::PartialSegment> GetPartialSegment(uint32_t segment_number, uint32_t partial_number) const override;
+		uint64_t GetSegmentCount() const override;
+		int64_t GetLastSegmentNumber() const override;
+		std::tuple<int64_t, int64_t> GetLastPartialSegmentNumber() const;
+		
 		bool StoreInitializationSection(const std::shared_ptr<ov::Data> &section);
 		bool AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent, bool last_chunk, const std::vector<std::shared_ptr<Marker>> &markers = {});
 
-		uint64_t GetMaxChunkDurationMs() const;
-		uint64_t GetMinChunkDurationMs() const;
+		uint64_t GetMaxPartialDurationMs() const override;
+		uint64_t GetMinPartialDurationMs() const override;
 
 		double GetTargetSegmentDuration() const;
 
 	private:
+		std::shared_ptr<FMP4Segment> GetSegmentInternal(int64_t segment_number) const;
+		std::shared_ptr<FMP4Segment> GetLastSegmentInternal() const;
+		
 
 		// For DVR
 		class DvrInfo

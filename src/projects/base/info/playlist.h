@@ -170,6 +170,16 @@ namespace info
 			return _hls_chunklist_path_depth;
 		}
 
+		void EnableSubtitles(bool enabled)
+		{
+			_enable_subtitles = enabled;
+		}
+
+		bool IsSubtitlesEnabled() const
+		{
+			return _enable_subtitles;
+		}
+
 		// Append Rendition
 		void AddRendition(const std::shared_ptr<Rendition> &rendition)
 		{
@@ -276,6 +286,7 @@ namespace info
 		bool _webrtc_auto_abr = false;
 		int _hls_chunklist_path_depth = -1;
 		bool _enable_ts_packaging = false;
+		bool _enable_subtitles = true;
 
 		std::vector<std::shared_ptr<Rendition>> _renditions;
 	};

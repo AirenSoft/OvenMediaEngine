@@ -73,6 +73,7 @@ namespace info
 		bool RemoveTrack(uint32_t id);
 		
 		const std::shared_ptr<MediaTrack> GetTrack(int32_t id) const;
+		const std::shared_ptr<MediaTrack> GetTrack(const ov::String &public_label) const;
 		const std::map<int32_t, std::shared_ptr<MediaTrack>> &GetTracks() const;
 
 		const std::shared_ptr<MediaTrackGroup> GetMediaTrackGroup(const ov::String &group_name) const;
@@ -161,6 +162,9 @@ namespace info
 
 		// Group Name (variant name) : MediaTrackGroup
 		std::map<ov::String, std::shared_ptr<MediaTrackGroup>> _track_group_map; // Track group
+
+		// Subtitle label : track id
+		std::map<ov::String, int32_t> _public_label_map; // Subtitle label map
 
 		// File name : Playlist
 		std::map<ov::String, std::shared_ptr<const Playlist>> _playlists;

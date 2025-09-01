@@ -79,6 +79,7 @@ namespace ffmpeg
 			OV_CASE_RETURN(cmn::MediaCodecId::Jpeg, AV_CODEC_ID_MJPEG);
 			OV_CASE_RETURN(cmn::MediaCodecId::Png, AV_CODEC_ID_PNG);
 			OV_CASE_RETURN(cmn::MediaCodecId::Webp, AV_CODEC_ID_WEBP);
+			OV_CASE_RETURN(cmn::MediaCodecId::WebVTT, AV_CODEC_ID_NONE);
 		}
 
 		return AV_CODEC_ID_NONE;

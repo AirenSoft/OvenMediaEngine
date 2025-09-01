@@ -13,10 +13,10 @@
 #include <modules/bitstream/nalu/nal_stream_converter.h>
 #include <modules/bitstream/aac/aac_converter.h>
 
-#include <modules/data_format/id3v2/id3v2.h>
-#include <modules/data_format/id3v2/frames/id3v2_text_frame.h>
+#include <base/modules/data_format/id3v2/id3v2.h>
+#include <base/modules/data_format/id3v2/frames/id3v2_text_frame.h>
 
-#include <modules/data_format/cue_event/cue_event.h>
+#include <base/modules/data_format/cue_event/cue_event.h>
 
 namespace bmff
 {
@@ -172,7 +172,7 @@ namespace bmff
 
 		std::shared_ptr<Samples> samples = _sample_buffer.GetSamples();
 
-		auto last_segment = _storage->GetLastSegment();
+		auto last_segment = std::static_pointer_cast<FMP4Segment>(_storage->GetLastSegment());
 		double total_sample_duration = samples != nullptr ? samples->GetTotalDuration() : 0;
 		double total_sample_duration_ms = (static_cast<double>(total_sample_duration) / GetMediaTrack()->GetTimeBase().GetTimescale()) * 1000.0;
 		// Calculate duration as milliseconds
@@ -433,13 +433,13 @@ namespace bmff
 		_segmentation_info.last_sample_timestamp_ms = static_cast<double>(next_frame->GetDts()) / GetMediaTrack()->GetTimeBase().GetTimescale() * 1000.0;
 		_segmentation_info.last_sample_duration_ms = static_cast<double>(next_frame->GetDuration()) / GetMediaTrack()->GetTimeBase().GetTimescale() * 1000.0;
 
-		last_segment = _storage->GetLastSegment();
+		last_segment = std::static_pointer_cast<FMP4Segment>(_storage->GetLastSegment());
 
 		if (last_segment != nullptr)
 		{
 			_segmentation_info.is_last_segment_completed = last_segment->IsCompleted();
 			_segmentation_info.last_segment_number = last_segment->GetNumber();
-			_segmentation_info.last_partial_segment_number = last_segment->GetLastChunkNumber();
+			_segmentation_info.last_partial_segment_number = last_segment->GetLastPartialNumber();
 			_segmentation_info.last_segement_duration_ms = total_sample_duration_ms;
 			if (last_segment->IsCompleted() == false)
 			{

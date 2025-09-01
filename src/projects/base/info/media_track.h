@@ -67,6 +67,15 @@ public:
 	void SetLanguage(const ov::String &language);
 	ov::String GetLanguage() const;
 
+	void SetAutoSelect(bool auto_select);
+	bool IsAutoSelect() const;
+
+	void SetDefault(bool def);
+	bool IsDefault() const;
+
+	void SetForced(bool forced);
+	bool IsForced() const;
+
 	// Characteristics (e.g. "main", "sign", "visually-impaired")
 	void SetCharacteristics(const ov::String &characteristics);
 	ov::String GetCharacteristics() const;
@@ -161,6 +170,11 @@ protected:
 	ov::String _public_name;
 	ov::String _language;
 	ov::String _characteristics;
+
+	// For subtitle 
+	bool _auto_select = false;
+	bool _default = false;
+	bool _forced = false;
 
 	// Bitstream format 
 	cmn::BitstreamFormat _origin_bitstream_format = cmn::BitstreamFormat::Unknown;

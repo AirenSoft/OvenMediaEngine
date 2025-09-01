@@ -59,6 +59,10 @@ bool MediaTrack::Update(const MediaTrack &media_track)
 	_language = media_track._language;
 	_characteristics = media_track._characteristics;
 
+	_auto_select = media_track._auto_select;
+	_default = media_track._default;
+	_forced = media_track._forced;
+
 	// Video
 	_framerate = media_track._framerate;
 	_framerate_conf = media_track._framerate_conf;
@@ -157,6 +161,35 @@ void MediaTrack::SetCharacteristics(const ov::String &characteristics)
 ov::String MediaTrack::GetCharacteristics() const
 {
 	return _characteristics;
+}
+
+void MediaTrack::SetAutoSelect(bool auto_select)
+{
+	_auto_select = auto_select;
+}
+bool MediaTrack::IsAutoSelect() const
+{
+	return _auto_select;
+}
+
+void MediaTrack::SetDefault(bool def)
+{
+	_default = def;
+}
+
+bool MediaTrack::IsDefault() const
+{
+	return _default;
+}
+
+void MediaTrack::SetForced(bool forced)
+{
+	_forced = forced;
+}
+
+bool MediaTrack::IsForced() const
+{
+	return _forced;
 }
 
 void MediaTrack::SetMediaType(MediaType type)
@@ -376,6 +409,17 @@ ov::String MediaTrack::GetInfoString()
 				GetCodecId(), cmn::GetCodecIdString(GetCodecId()), IsBypass()?"Passthrough":cmn::GetCodecModuleIdString(GetCodecModuleId()),
 				GetBitstreamFormatString(GetOriginBitstream()));
 			break;
+		case MediaType::Subtitle:
+			out_str.AppendFormat(
+				"Subtitle Track #%d: "
+				"Public Name(%s) "
+				"Variant Name(%s) "
+				"Codec(%d,%s,%s) "
+				"BSF(%s) ",
+				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
+				GetCodecId(), cmn::GetCodecIdString(GetCodecId()), IsBypass()?"Passthrough":cmn::GetCodecModuleIdString(GetCodecModuleId()),
+				GetBitstreamFormatString(GetOriginBitstream()));
+			break;
 
 		default:
 			break;
@@ -394,7 +438,8 @@ bool MediaTrack::IsValid()
 	}
 
 	// data type is always valid
-	if(GetMediaType() == MediaType::Data)
+	if(GetMediaType() == MediaType::Data || 
+		GetMediaType() == MediaType::Subtitle)
 	{
 		_is_valid = true;
 		return true;

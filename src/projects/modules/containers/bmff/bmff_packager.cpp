@@ -9,8 +9,8 @@
 
 #include "bmff_packager.h"
 #include "bmff_private.h"
-#include <modules/data_format/id3v2/id3v2.h>
-#include <modules/data_format/id3v2/frames/id3v2_frames.h>
+#include <base/modules/data_format/id3v2/id3v2.h>
+#include <base/modules/data_format/id3v2/frames/id3v2_frames.h>
 namespace bmff
 {
 	Packager::Packager(const std::shared_ptr<const MediaTrack> &media_track, const std::shared_ptr<const MediaTrack> &data_track, const CencProperty &cenc_property)

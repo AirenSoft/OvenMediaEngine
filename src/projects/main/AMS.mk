@@ -34,6 +34,7 @@ LOCAL_STATIC_LIBRARIES := \
 	cue_event \
 	amf_event \
 	scte35_event \
+	webvtt_format \
 	segment_writer \
 	web_console \
 	mediarouter \

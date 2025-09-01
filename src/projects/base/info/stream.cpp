@@ -22,7 +22,6 @@ namespace info
 	{
 		_app_info = std::make_shared<info::Application>(app_info);
 
-		// ID RANDOM 생성
 		SetId(ov::Random::GenerateUInt32() - 1);
 
 		_created_time = std::chrono::system_clock::now();
@@ -233,8 +232,20 @@ namespace info
 
 	uint32_t Stream::IssueUniqueTrackId()
 	{
-		static std::atomic<uint32_t> last_issued_track_id(1);
-		return last_issued_track_id++;
+		static std::atomic<uint32_t> last_issued_track_id(0);
+		last_issued_track_id += 1;
+
+		// Verify
+		while (GetTrack(last_issued_track_id.load()) != nullptr)
+		{
+			last_issued_track_id++;
+			if (last_issued_track_id == std::numeric_limits<uint32_t>::max())
+			{
+				last_issued_track_id = 1; // Reset to 1
+			}
+		}
+
+		return last_issued_track_id.load();
 	}
 
 	bool Stream::AddTrack(const std::shared_ptr<MediaTrack> &track)
@@ -268,6 +279,25 @@ namespace info
 		{
 			auto group = group_it->second;
 			group->AddTrack(track);
+		}
+
+		// public label to track id map
+		auto label = track->GetPublicName();
+		if (label.IsEmpty() == false)
+		{
+			auto label_it = _public_label_map.find(label);
+			if (label_it == _public_label_map.end())
+			{
+				_public_label_map.emplace(label, track->GetId());
+			}
+			else
+			{
+				logw("DEBUG", "Public label '%s' already exists for track ID %d", label.CStr(), track->GetId());
+			}
+		}
+		else
+		{
+			logw("DEBUG", "Track with empty label added. Track ID: %d", track->GetId());
 		}
 
 		return true;
@@ -339,6 +369,18 @@ namespace info
 		}
 
 		return item->second;
+	}
+
+	const std::shared_ptr<MediaTrack> Stream::GetTrack(const ov::String &public_label) const
+	{
+		auto label_it = _public_label_map.find(public_label);
+		if (label_it == _public_label_map.end())
+		{
+			return nullptr;
+		}
+
+		auto track_id = label_it->second;
+		return GetTrack(track_id);
 	}
 
 	const std::shared_ptr<MediaTrackGroup> Stream::GetMediaTrackGroup(const ov::String &group_name) const

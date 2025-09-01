@@ -140,7 +140,8 @@ namespace pub
 			{
 				stream->SendAudioFrame(stream_data->_media_packet);
 			}
-			else if (media_packet->GetMediaType() == cmn::MediaType::Data)
+			else if (media_packet->GetMediaType() == cmn::MediaType::Data || 
+						media_packet->GetMediaType() == cmn::MediaType::Subtitle)
 			{
 				if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::OVEN_EVENT)
 				{

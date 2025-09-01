@@ -10,11 +10,12 @@
 
 #include <base/provider/application.h>
 #include <modules/bitstream/h264/h264_sei.h>
-#include <modules/data_format/amf_event/amf_event.h>
-#include <modules/data_format/cue_event/cue_event.h>
-#include <modules/data_format/id3v2/frames/id3v2_frames.h>
-#include <modules/data_format/id3v2/id3v2.h>
-#include <modules/data_format/scte35_event/scte35_event.h>
+#include <base/modules/data_format/amf_event/amf_event.h>
+#include <base/modules/data_format/cue_event/cue_event.h>
+#include <base/modules/data_format/id3v2/frames/id3v2_frames.h>
+#include <base/modules/data_format/id3v2/id3v2.h>
+#include <base/modules/data_format/scte35_event/scte35_event.h>
+#include <base/modules/data_format/webvtt/webvtt_frame.h>
 
 #include "../../../../../api_private.h"
 
@@ -31,6 +32,8 @@ namespace api
 			RegisterPost(R"((sendEvents))", &StreamActionsController::OnPostSendEvents);
 
 			RegisterPost(R"((concludeHlsLive))", &StreamActionsController::OnPostConcludeHlsLive);
+
+			RegisterPost(R"((sendSubtitles))", &StreamActionsController::OnPostSendSubtitles);
 		}
 
 		// POST /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>:hlsDumps
@@ -440,6 +443,135 @@ namespace api
 				throw http::HttpError(http::StatusCode::InternalServerError,
 									  "Internal Server Error - Could not inject ConcludeLive event: [%s/%s/%s]",
 									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
+			}
+
+			return {http::StatusCode::OK};
+		}
+
+		ApiResponse StreamActionsController::OnPostSendSubtitles(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
+										   const std::shared_ptr<mon::HostMetrics> &vhost,
+										   const std::shared_ptr<mon::ApplicationMetrics> &app,
+										   const std::shared_ptr<mon::StreamMetrics> &stream,
+										   const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams)
+		{
+			/*
+			POST v1/vhosts/{vhost}/apps/{app}/streams/{stream}:SendSubtitles
+			{
+				"format": "webvtt",
+				"data": [
+					{
+						"label": "Korean", // Required
+						"subtitles": [
+							{ 
+								"startOffset": 0, // Optional, current + offset
+								"durationMs": 4000, // Optional, default: 1000
+								"settings": "line:90% align:center size:100% position:0%", // Optional
+								"text": "안녕하세요, OvenMediaEngine!" // Required
+							},
+							{ "text": "이것은 자막 테스트입니다." }
+						]
+					},
+					{
+						"label": "English",
+						"subtitles": [
+							{ "text": "Hello, OvenMediaEngine!" },
+							{ "startOffset": 1000, "text": "This is a subtitle test." }
+						]
+					}
+				]
+			}
+			*/
+
+			if (request_body.isMember("format") == false || request_body["format"].isString() == false ||
+				request_body.isMember("data") == false || request_body["data"].isArray() == false || request_body["data"].size() == 0)
+			{
+				throw http::HttpError(http::StatusCode::BadRequest, "format(string) and data(array) are required");
+			}
+			ov::String format = request_body["format"].asString().c_str();
+			if (format.UpperCaseString() != "WEBVTT")
+			{
+				throw http::HttpError(http::StatusCode::BadRequest, "format is not supported: [%s]", format.CStr());
+			}
+			auto source_stream = GetSourceStream(stream);
+			if (source_stream == nullptr)
+			{
+				throw http::HttpError(http::StatusCode::NotFound,
+									  "Could not find stream: [%s/%s/%s]",
+									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
+			}
+
+			int64_t current_timestamp_ms = source_stream->GetCurrentTimestampMs();
+			if (current_timestamp_ms < 0)
+			{
+				throw http::HttpError(http::StatusCode::InternalServerError,
+									  "Could not get current timestamp: [%s/%s/%s]",
+									  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
+			}
+			
+			for (const auto &data : request_body["data"])
+			{
+				if (data.isMember("label") == false || data["label"].isString() == false ||
+					data.isMember("subtitles") == false || data["subtitles"].isArray() == false || data["subtitles"].size() == 0)
+				{
+					throw http::HttpError(http::StatusCode::BadRequest, "label(string) and subtitles(array) are required");
+				}
+				
+				ov::String label = data["label"].asString().c_str();
+
+				int64_t start_timestamp_ms = current_timestamp_ms;
+				for (const auto &subtitle : data["subtitles"])
+				{
+					if (subtitle.isMember("text") == false || subtitle["text"].isString() == false)
+					{
+						throw http::HttpError(http::StatusCode::BadRequest, "text(string) is required in subtitles");
+					}
+
+					ov::String text = subtitle["text"].asString().c_str();
+
+					// start_offset
+					int64_t start_offset = 0; // default 0
+					if (subtitle.isMember("startOffset") == true && subtitle["startOffset"].isInt64() == true)
+					{
+						start_offset = subtitle["startOffset"].asInt64();
+					}
+
+					// start_timestamp
+					start_timestamp_ms += start_offset;
+
+					uint32_t duration_ms = 1000; // default 1 second
+					// duration (optional)
+					if (subtitle.isMember("durationMs") == true && subtitle["durationMs"].isUInt() == true)
+					{
+						duration_ms = subtitle["durationMs"].asUInt();
+					}
+
+					// settings (optional)
+					ov::String settings;
+					if (subtitle.isMember("settings") == true && subtitle["settings"].isString() == true)
+					{
+						settings = subtitle["settings"].asString().c_str();
+					}
+
+					// end_timestamp
+					int64_t end_timestamp_ms = start_timestamp_ms + duration_ms;
+					
+					auto webvtt_frame = WebVTTFrame::Create(label, start_timestamp_ms, end_timestamp_ms, settings, text);
+					if (webvtt_frame == nullptr)
+					{
+						throw http::HttpError(http::StatusCode::InternalServerError,
+											  "Could not create WebVTT frame: [%s/%s/%s]",
+											  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
+					}
+
+					if (source_stream->SendSubtitleFrame(label, start_timestamp_ms, duration_ms, cmn::BitstreamFormat::WebVTT,  webvtt_frame->Serialize(), true) == false)
+					{
+						throw http::HttpError(http::StatusCode::InternalServerError,
+											  "Could not send WebVTT frame: [%s/%s/%s]",
+											  vhost->GetName().CStr(), app->GetVHostAppName().GetAppName().CStr(), stream->GetName().CStr());
+					}
+
+					start_timestamp_ms = end_timestamp_ms; // next subtitle will start after the end of the previous one
+				}
 			}
 
 			return {http::StatusCode::OK};

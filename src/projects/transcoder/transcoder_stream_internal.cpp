@@ -426,12 +426,15 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrackDataType(
 		return nullptr;
 	}
 
-	output_track->SetMediaType(cmn::MediaType::Data);
+	output_track->SetMediaType(input_track->GetMediaType());
 	output_track->SetId(NewTrackId());
-	output_track->SetVariantName("");
+	output_track->SetVariantName(input_track->GetVariantName());
 	output_track->SetPublicName(input_track->GetPublicName());
 	output_track->SetLanguage(input_track->GetLanguage());
 	output_track->SetCharacteristics(input_track->GetCharacteristics());
+	output_track->SetDefault(input_track->IsDefault());
+	output_track->SetAutoSelect(input_track->IsAutoSelect());
+	output_track->SetForced(input_track->IsForced());
 	output_track->SetBypass(true);
 	output_track->SetCodecId(input_track->GetCodecId());
 	output_track->SetCodecModules("");

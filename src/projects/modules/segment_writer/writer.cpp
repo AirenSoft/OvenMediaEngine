@@ -154,6 +154,7 @@ static AVCodecID AvCodecIdFromMediaCodecId(cmn::MediaCodecId codec_id)
 		WRITER_CASE(cmn::MediaCodecId::Jpeg, AV_CODEC_ID_JPEG2000)
 		WRITER_CASE(cmn::MediaCodecId::Png, AV_CODEC_ID_PNG)
 		WRITER_CASE(cmn::MediaCodecId::Webp, AV_CODEC_ID_WEBP)
+		WRITER_CASE(cmn::MediaCodecId::WebVTT, AV_CODEC_ID_NONE)
 	}
 
 	return AV_CODEC_ID_NONE;
@@ -881,6 +882,8 @@ bool Writer::WritePacket(const std::shared_ptr<const MediaPacket> &packet)
 		case cmn::BitstreamFormat::SEI:
 			[[fallthrough]];
 		case cmn::BitstreamFormat::SCTE35:
+			[[fallthrough]];
+		case cmn::BitstreamFormat::WebVTT:	
 			break;
 	}
 

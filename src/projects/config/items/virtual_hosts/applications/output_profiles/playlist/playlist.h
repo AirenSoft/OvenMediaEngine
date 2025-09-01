@@ -46,6 +46,7 @@ namespace cfg
 						playlist->SetHlsChunklistPathDepth(_options.GetHlsChunklistPathDepth());
 						playlist->SetWebRtcAutoAbr(_options.IsWebRtcAutoAbr());
 						playlist->EnableTsPackaging(_options.IsTsPackagingEnabled());
+						playlist->EnableSubtitles(_options.IsSubtitlesEnabled());
 
 						for (auto &rendition : _renditions)
 						{

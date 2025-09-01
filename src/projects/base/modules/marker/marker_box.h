@@ -11,8 +11,8 @@
 #include "base/common_types.h"
 #include "base/info/dump.h"
 
-#include <modules/data_format/cue_event/cue_event.h>
-#include <modules/data_format/scte35_event/scte35_event.h>
+#include <base/modules/data_format/cue_event/cue_event.h>
+#include <base/modules/data_format/scte35_event/scte35_event.h>
 
 
 class Marker

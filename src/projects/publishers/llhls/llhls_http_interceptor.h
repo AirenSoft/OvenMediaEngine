@@ -54,7 +54,7 @@ protected:
 			}
 
 			// *_llhls.m4s is for LL-HLS
-			else if (file.HasSuffix("_llhls.m4s"))
+			else if (file.HasSuffix("_llhls.m4s") || file.HasSuffix("_llhls.vtt"))
 			{
 				return true;
 			}

@@ -11,7 +11,7 @@
 
 #include <base/ovlibrary/ovlibrary.h>
 #include <modules/bitstream/h264/h264_sei.h>
-#include <modules/data_format/amf_event/amf_textdata_event.h>
+#include <base/modules/data_format/amf_event/amf_textdata_event.h>
 #include <orchestrator/orchestrator.h>
 
 #include "mediarouter_private.h"

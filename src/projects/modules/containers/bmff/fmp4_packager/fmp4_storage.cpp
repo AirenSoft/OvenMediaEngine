@@ -10,7 +10,7 @@
 #include <base/info/media_track.h>
 #include <base/ovlibrary/files.h>
 
-#include <modules/data_format/cue_event/cue_event.h>
+#include <base/modules/data_format/cue_event/cue_event.h>
 
 #include "fmp4_storage.h"
 #include "fmp4_private.h"
@@ -55,7 +55,12 @@ namespace bmff
 		return _initialization_section;
 	}
 
-	std::shared_ptr<FMP4Segment> FMP4Storage::GetMediaSegment(uint32_t segment_number) const
+	std::shared_ptr<base::modules::Segment> FMP4Storage::GetSegment(uint32_t segment_number) const
+	{
+		return GetSegmentInternal(static_cast<int64_t>(segment_number));
+	}
+
+	std::shared_ptr<FMP4Segment> FMP4Storage::GetSegmentInternal(int64_t segment_number) const
 	{
 		std::shared_lock<std::shared_mutex> lock(_segments_lock);
 		
@@ -80,7 +85,12 @@ namespace bmff
 		return nullptr;
 	}
 
-	std::shared_ptr<FMP4Segment> FMP4Storage::GetLastSegment() const
+	std::shared_ptr<base::modules::Segment> FMP4Storage::GetLastSegment() const
+	{
+		return GetLastSegmentInternal();	
+	}
+
+	std::shared_ptr<FMP4Segment> FMP4Storage::GetLastSegmentInternal() const
 	{
 		std::shared_lock<std::shared_mutex> lock(_segments_lock);
 		if (_segments.empty())
@@ -92,35 +102,35 @@ namespace bmff
 		return _segments.rbegin()->second;
 	}
 
-	std::shared_ptr<FMP4Chunk> FMP4Storage::GetMediaChunk(uint32_t segment_number, uint32_t chunk_number) const
+	std::shared_ptr<base::modules::PartialSegment> FMP4Storage::GetPartialSegment(uint32_t segment_number, uint32_t partial_number) const
 	{
 		// Get Media Segement
-		auto segment = GetMediaSegment(segment_number);
+		auto segment = GetSegmentInternal(segment_number);
 		if (segment == nullptr)
 		{
 			return nullptr;
 		}
 
 		// last chunk number + 1 of completed segment is the first chunk of the next segment
-		if (segment->IsCompleted() && segment->GetLastChunkNumber() + 1 == chunk_number)
+		if (segment->IsCompleted() && segment->GetLastPartialNumber() + 1 == partial_number)
 		{
-			segment = GetMediaSegment(segment_number + 1);
+			segment = GetSegmentInternal(segment_number + 1);
 			if (segment == nullptr)
 			{
 				return nullptr;
 			}
 
-			chunk_number = 0;
+			partial_number = 0;
 		}
 
 		// Get Media Chunk
-		auto chunk = segment->GetChunk(chunk_number);
-		if (chunk == nullptr)
+		auto partial = segment->GetPartialSegment(partial_number);
+		if (partial == nullptr)
 		{
 			return nullptr;
 		}
 
-		return chunk;
+		return partial;
 	}
 
 	uint64_t FMP4Storage::GetSegmentCount() const
@@ -129,15 +139,15 @@ namespace bmff
 		return _segments.size();
 	}
 
-	std::tuple<int64_t, int64_t> FMP4Storage::GetLastChunkNumber() const
+	std::tuple<int64_t, int64_t> FMP4Storage::GetLastPartialSegmentNumber() const
 	{
-		auto last_segment = GetLastSegment();
+		auto last_segment = GetLastSegmentInternal();
 		if (last_segment == nullptr)
 		{
 			return { -1, -1 };
 		}
 
-		return { last_segment->GetNumber(), last_segment->GetLastChunkNumber() };
+		return { last_segment->GetNumber(), last_segment->GetLastPartialNumber() };
 	}
 
 	int64_t FMP4Storage::GetLastSegmentNumber() const
@@ -151,12 +161,12 @@ namespace bmff
 		return last_segment->GetNumber();
 	}
 
-	uint64_t FMP4Storage::GetMaxChunkDurationMs() const
+	uint64_t FMP4Storage::GetMaxPartialDurationMs() const
 	{
 		return _max_chunk_duration_ms;
 	}
 
-	uint64_t FMP4Storage::GetMinChunkDurationMs() const
+	uint64_t FMP4Storage::GetMinPartialDurationMs() const
 	{
 		return _min_chunk_duration_ms;
 	}
@@ -321,13 +331,13 @@ namespace bmff
 
 	bool FMP4Storage::AppendMediaChunk(const std::shared_ptr<ov::Data> &chunk, int64_t start_timestamp, double duration_ms, bool independent, bool last_chunk, const std::vector<std::shared_ptr<Marker>> &markers)
 	{
-		auto segment = GetLastSegment();
+		auto segment = GetLastSegmentInternal();
 		if (segment == nullptr || segment->IsCompleted() == true)
 		{
 			segment = CreateNextSegment();
 		}
 
-		if (segment->AppendChunkData(chunk, start_timestamp, duration_ms, independent) == false)
+		if (segment->AppendPartialData(chunk, start_timestamp, duration_ms, independent) == false)
 		{
 			return false;
 		}
@@ -349,7 +359,7 @@ namespace bmff
 			segment->SetCompleted();
 			CreateNextSegment();
 
-			logtd("Segment[%u] is created : track(%u), duration(%u) chunks(%u)", segment->GetNumber(), _track->GetId(),segment->GetDurationMs(), segment->GetChunkCount());
+			logtd("Segment[%u] is created : track(%u), duration(%u) chunks(%u)", segment->GetNumber(), _track->GetId(),segment->GetDurationMs(), segment->GetPartialCount());
 			
 			_total_expected_duration_ms += _config.segment_duration_ms;
 			_total_segment_duration_ms += segment->GetDurationMs();
@@ -441,7 +451,7 @@ namespace bmff
 		if (_observer != nullptr)
 		{
 			bool last_chunk = segment->IsCompleted() == true;
-			_observer->OnMediaChunkUpdated(_track->GetId(), segment->GetNumber(), segment->GetLastChunkNumber(), last_chunk);
+			_observer->OnMediaChunkUpdated(_track->GetId(), segment->GetNumber(), segment->GetLastPartialNumber(), last_chunk);
 		}
 
 		return true;

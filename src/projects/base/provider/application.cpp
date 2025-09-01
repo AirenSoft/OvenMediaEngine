@@ -140,6 +140,36 @@ namespace pvd
 			stream->AddTrack(data_track);
 		}
 
+		// Add subtitle track
+		auto subtitle_config = GetConfig().GetOutputProfiles().GetMediaOptions().GetSubtitle();
+		if (subtitle_config.IsEnabled())
+		{
+			for (const auto &rendition : subtitle_config.GetRenditions())
+			{
+				if (stream->GetTrack(rendition.GetLabel()) != nullptr)
+				{
+					logtw("Subtitle track with label '%s' already exists in stream '%s'. Skipping addition.", rendition.GetLabel().CStr(), stream->GetName().CStr());
+					continue;
+				}
+
+				auto subtitle_track = std::make_shared<MediaTrack>();
+				// Issue unique track id
+				subtitle_track->SetId(stream->IssueUniqueTrackId());
+				subtitle_track->SetVariantName(kSubtitleTrackVariantName);
+				subtitle_track->SetPublicName(rendition.GetLabel());
+				subtitle_track->SetMediaType(cmn::MediaType::Subtitle);
+				subtitle_track->SetCodecId(cmn::MediaCodecId::WebVTT);
+				subtitle_track->SetOriginBitstream(cmn::BitstreamFormat::WebVTT);
+				subtitle_track->SetTimeBase(1, 1000);
+				subtitle_track->SetLanguage(rendition.GetLanguage());
+				subtitle_track->SetAutoSelect(rendition.IsAutoSelect());
+				subtitle_track->SetDefault(rendition.IsDefault());
+				subtitle_track->SetForced(rendition.IsForced());
+
+				stream->AddTrack(subtitle_track);
+			}
+		}
+
 		// This is not an official feature
 		// OutputProfile(without encoding) is not applied to a specific provider.
 		// To reduce transcoding cost when using Persistent Stream

@@ -21,7 +21,7 @@ namespace cfg
 				protected:
 					ov::String _label;
 					ov::String _language;
-					bool _auto_select = true;
+					bool _auto_select = false;
 					bool _default = false;
 					bool _forced = false;
 
@@ -35,6 +35,11 @@ namespace cfg
 					void SetDefault(bool is_default)
 					{
 						_default = is_default;
+					}
+
+					void SetAutoSelect(bool auto_select)
+					{
+						_auto_select = auto_select;
 					}
 
 				protected:

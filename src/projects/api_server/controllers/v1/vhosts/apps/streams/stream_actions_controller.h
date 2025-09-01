@@ -60,6 +60,13 @@ namespace api
 											  const std::shared_ptr<mon::StreamMetrics> &stream,
 											  const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
 
+			// POST /v1/vhosts/<vhost_name>/apps/<app_name>/streams/<stream_name>:sendEvent
+			ApiResponse OnPostSendSubtitles(const std::shared_ptr<http::svr::HttpExchange> &client, const Json::Value &request_body,
+										   const std::shared_ptr<mon::HostMetrics> &vhost,
+										   const std::shared_ptr<mon::ApplicationMetrics> &app,
+										   const std::shared_ptr<mon::StreamMetrics> &stream,
+										   const std::vector<std::shared_ptr<mon::StreamMetrics>> &output_streams);
+
 		private:
 			// TODO(Getroot): Move to mon::StreamMetrics
 			std::shared_ptr<pvd::Stream> GetSourceStream(const std::shared_ptr<mon::StreamMetrics> &stream);
