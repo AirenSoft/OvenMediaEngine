@@ -208,6 +208,14 @@ $(strip \
 )
 endef
 
+# Check if executable exists
+# $(call chk_exe_exist)
+define chk_exe_exist
+$(strip \
+	$(shell command -v $(1) >/dev/null 2>&1; echo $$?) \
+)
+endef
+
 # Check if the library is referenced in the shared object
 # $(call chk_so_references,<SEARCH_PATHS>,<SO_FILENAME>,<LIBRARY_NAME>)
 define chk_so_references

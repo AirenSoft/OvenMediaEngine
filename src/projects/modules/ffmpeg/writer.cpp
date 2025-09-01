@@ -28,12 +28,12 @@ namespace ffmpeg
 
 	void Writer::SetState(WriterState state)
 	{
-		_state = state;
+		_state.store(state);
 	}
 
 	Writer::WriterState Writer::GetState()
 	{
-		return _state;
+		return _state.load();
 	}
 
 	int Writer::InterruptCallback(void *opaque)
@@ -237,6 +237,13 @@ namespace ffmpeg
 
 	bool Writer::SendPacket(const std::shared_ptr<MediaPacket> &packet, uint64_t *sent_bytes)
 	{
+		// Writer is not connected, but it's not an error. Waiting for initialization.
+		if(GetState() != WriterStateConnected)
+		{
+			logtw("Writer is not initialized. state:%s", WriterStateToString(GetState()));
+			return true;
+		}
+
 		if (!packet)
 		{
 			logte("Packet is null");

@@ -21,7 +21,7 @@ public:
 	bool SetConfigParams(Mode mode, uint32_t size_length, uint32_t index_length, uint32_t index_delta_length, const std::shared_ptr<ov::Data> &config);
 
 private:
-	std::shared_ptr<ov::Data> Convert(const std::shared_ptr<ov::Data> &payload, bool include_adts_header);
+	std::shared_ptr<ov::Data> Convert(const std::shared_ptr<const ov::Data> &payload, bool include_adts_header);
 
 	// Default setting
 	Mode		_mode = Mode::AAC_hbr;

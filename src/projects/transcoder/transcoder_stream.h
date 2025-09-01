@@ -24,12 +24,14 @@
 #include "transcoder_filter.h"
 #include "transcoder_stream_internal.h"
 #include "transcoder_events.h"
+#include "transcoder_overlays.h"
 
 class TranscodeApplication;
 
 class TranscoderStream : public ov::EnableSharedFromThis<TranscoderStream>,
 						 public TranscoderStreamInternal,
-						 public TranscoderEvents
+						 public TranscoderEvents,
+						 public TranscoderOverlays
 {
 public:
 	class CompositeContext
@@ -271,6 +273,8 @@ private:
 	// Step 3: Encode (Encode the filtered frame to packets)
 	TranscodeResult EncodeFrame(std::shared_ptr<const MediaFrame> frame);
 	void OnEncodedPacket(MediaTrackId encoder_id, std::shared_ptr<MediaPacket> encoded_packet);
+
+	std::vector<std::shared_ptr<MediaTrack>> GetOutputTracksByEncoderId(MediaTrackId encoder_id);
 
 	// Send encoded packet to mediarouter via transcoder application
 	void SendFrame(std::shared_ptr<info::Stream> &stream, std::shared_ptr<MediaPacket> packet);

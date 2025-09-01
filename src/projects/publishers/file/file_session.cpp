@@ -45,6 +45,8 @@ namespace pub
 
 	bool FileSession::Start()
 	{
+		_is_splitting.store(false);
+
 		if (StartRecord() == false)
 		{
 			logte("Failed to start recording. id(%d)", GetId());
@@ -236,7 +238,11 @@ namespace pub
 		{
 			writer->Stop();
 
-			SetState(SessionState::Stopping);
+			// If current state is in the middle of a split recording, do not change the session state.
+			if(_is_splitting.load() == false)
+			{
+				SetState(SessionState::Stopping);
+			}
 
 			auto record = GetRecord();
 			if (record)
@@ -312,6 +318,11 @@ namespace pub
 
 	void FileSession::SendOutgoingData(const std::any &packet)
 	{
+		if (GetState() != SessionState::Started)
+		{
+			return;
+		}
+
 		std::shared_ptr<MediaPacket> session_packet;
 
 		try
@@ -354,7 +365,7 @@ namespace pub
 			}
 		}
 
-		bool need_file_split = false;
+		_is_splitting.store(false);
 
 		// When setting interval parameter, perform segmentation recording.
 		if (((uint64_t)record->GetInterval() > 0) && (record->GetRecordTime() > (uint64_t)record->GetInterval()) &&
@@ -362,7 +373,7 @@ namespace pub
 			((session_packet->GetMediaType() == cmn::MediaType::Audio) ||
 			(session_packet->GetMediaType() == cmn::MediaType::Video && session_packet->GetFlag() == MediaPacketFlag::Key)) )
 		{
-			need_file_split = true;
+			_is_splitting.store(true);
 		}
 		// When setting schedule parameter, perform segmentation recording.
 		else if (record->GetSchedule().IsEmpty() != true)
@@ -376,7 +387,7 @@ namespace pub
 			}
 			else if (record->GetNextScheduleTime() <= std::chrono::system_clock::now())
 			{
-				need_file_split = true;
+				_is_splitting.store(true);
 
 				if (record->UpdateNextScheduleTime() == false)
 				{
@@ -385,7 +396,7 @@ namespace pub
 			}
 		}
 
-		if (need_file_split)
+		if (_is_splitting.load())
 		{
 			Split();
 		}

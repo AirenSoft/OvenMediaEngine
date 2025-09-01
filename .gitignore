@@ -30,14 +30,14 @@ src/projects/main/git_info.h
 *.includes
 .qtc_clangd
 
+# For intermediates files
 *.o
+*.a
 *.d
 *.pc
 *.texi
 *.dump
+
+# For third-party libraries
 misc/oven_rtc_tester/OvenRtcTester
-misc/app-ffmpeg4*
 misc/FFmpeg*
-misc/openh264*
-misc/opt/20*
-misc/opt/22*

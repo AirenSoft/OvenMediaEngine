@@ -1,6 +1,7 @@
 #include "rtp_depacketizer_mpeg4_generic_audio.h"
 
 #include <base/ovlibrary/bit_reader.h>
+#include <modules/bitstream/aac/aac_adts.h>
 
 #define OV_LOG_TAG "RtpDepacketizerMpeg4GenericAudio"
 
@@ -32,11 +33,36 @@ std::shared_ptr<ov::Data> RtpDepacketizerMpeg4GenericAudio::ParseAndAssembleFram
 		}
 
 		auto bitstream = std::make_shared<ov::Data>(reserve_size);
-		bool first = true;
-		uint16_t raw_aac_data_length = 0;
+		bool need_to_prepend_adts_header = true;
 		for (const auto &payload : payload_list)
 		{
-			if (first == true)
+			auto raw_data = Convert(payload, false);
+			if (raw_data == nullptr)
+			{
+				return nullptr;
+			}
+
+			// Some RTSP servers send AAC packets with ADTS header,
+			// so check if an ADTS header is already present before adding an ADTS header. (#1897)
+			if (need_to_prepend_adts_header && (raw_data->GetLength() >= 2))
+			{
+				auto raw_data_ptr = raw_data->GetDataAs<uint8_t>();
+				
+				// Fast check for ADTS header
+				if ((raw_data_ptr[0] == 0xFF) && ((raw_data_ptr[1] & 0xF6) == 0xF0))
+				{
+					// Precise check for ADTS header
+					AACAdts adts;
+
+					if (AACAdts::Parse(raw_data_ptr, raw_data->GetLength(), adts))
+					{
+						// If the ADTS header is already present, do not prepend it again.
+						need_to_prepend_adts_header = false;
+					}
+				}
+			}
+
+			if (need_to_prepend_adts_header)
 			{
 				if (payload->GetLength() < 4)
 				{
@@ -51,7 +77,7 @@ std::shared_ptr<ov::Data> RtpDepacketizerMpeg4GenericAudio::ParseAndAssembleFram
 
 				// (RFC) AU-size is associated with an AU fragment, the AU size indicates
 				// the size of the entire AU and not the size of the fragment.
-				raw_aac_data_length = parser.ReadBits<uint16_t>(_size_length);
+				uint16_t raw_aac_data_length = parser.ReadBits<uint16_t>(_size_length);
 
 				//Get the AACSecificConfig value from extradata;
 				uint8_t aac_profile = static_cast<uint8_t>(_aac_config.GetAacProfile());
@@ -60,13 +86,7 @@ std::shared_ptr<ov::Data> RtpDepacketizerMpeg4GenericAudio::ParseAndAssembleFram
 
 				bitstream->Append(AacConverter::MakeAdtsHeader(aac_profile, aac_sample_rate, aac_channels, raw_aac_data_length));
 
-				first = false;
-			}
-
-			auto raw_data = Convert(payload, false);
-			if (raw_data == nullptr)
-			{
-				return nullptr;
+				need_to_prepend_adts_header = false;
 			}
 
 			bitstream->Append(raw_data);
@@ -94,11 +114,11 @@ bool RtpDepacketizerMpeg4GenericAudio::SetConfigParams(RtpDepacketizerMpeg4Gener
 	return _aac_config.Parse(config);
 }
 
-std::shared_ptr<ov::Data> RtpDepacketizerMpeg4GenericAudio::Convert(const std::shared_ptr<ov::Data> &payload, bool include_adts_header)
+std::shared_ptr<ov::Data> RtpDepacketizerMpeg4GenericAudio::Convert(const std::shared_ptr<const ov::Data> &payload, bool include_adts_header)
 {
 	auto aac_data = std::make_shared<ov::Data>(payload->GetLength() * 2);
-	auto payload_ptr = payload->GetDataAs<uint8_t>();
-	size_t payload_len = payload->GetLength();
+	auto const payload_ptr = payload->GetDataAs<uint8_t>();
+	const size_t payload_len = payload->GetLength();
 
 	/*
 	  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- .. -+-+-+-+-+-+-+-+-+-+
@@ -156,14 +176,39 @@ std::shared_ptr<ov::Data> RtpDepacketizerMpeg4GenericAudio::Convert(const std::s
 		// Extract raw aac data and convert to ADTS
 		if (include_adts_header == true)
 		{
-			auto adts_data = AacConverter::ConvertRawToAdts(data_section_ptr + data_section_offset, au_size, _aac_config);
-			if (adts_data == nullptr)
+			// Some RTSP servers send AAC packets with ADTS header,
+			// so check if an ADTS header is already present before adding an ADTS header. (#1897)
+			auto au_data		 = data_section_ptr + data_section_offset;
+			bool has_adts_header = false;
+
+			if (au_size >= 2)
 			{
-				logte("Could not extract raw aac data in mpeg4-generic audio");
-				return nullptr;
+				// Fast check for ADTS header
+				if ((au_data[0] == 0xFF) && ((au_data[1] & 0xF6) == 0xF0))
+				{
+					// Precise check for ADTS header
+					AACAdts adts;
+
+					has_adts_header = AACAdts::Parse(au_data, au_size, adts);
+				}
 			}
 
-			aac_data->Append(adts_data);
+			if (has_adts_header == false)
+			{
+				auto adts_data = AacConverter::ConvertRawToAdts(data_section_ptr + data_section_offset, au_size, _aac_config);
+
+				if (adts_data == nullptr)
+				{
+					logte("Could not extract raw aac data in mpeg4-generic audio");
+					return nullptr;
+				}
+
+				aac_data->Append(adts_data);
+			}
+			else
+			{
+				aac_data->Append(au_data, au_size);
+			}
 		}
 		else
 		{

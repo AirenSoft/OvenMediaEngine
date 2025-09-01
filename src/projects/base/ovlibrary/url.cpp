@@ -18,7 +18,7 @@ namespace ov
 		// <scheme>://[id:password@]
 		R"((?<scheme>.*):\/\/((?<id>.+):(?<password>.+)@)?)"
 		// <host>
-		R"((?<host>(\[[0-9A-Fa-f:.]+\]|[^:\/?#]*)))"
+		R"((?<host>(\[[0-9A-Za-z:.]+\]|[^:\/?#]*)))"
 		// [:<port>]
 		R"((:(?<port>[0-9]+))?)"
 		// [/<path/to/resource>]
