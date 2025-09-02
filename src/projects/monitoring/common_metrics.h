@@ -35,9 +35,12 @@ namespace mon
 		virtual std::chrono::system_clock::time_point GetLastSentTime() const;
 		virtual uint64_t GetBytesOut(PublisherType type) const;
 		virtual uint64_t GetConnections(PublisherType type) const;
+		uint32_t GetModuleUsageCount(cmn::MediaCodecModuleId module_id) const;
 		
 		virtual void IncreaseBytesIn(uint64_t value);
 		virtual void IncreaseBytesOut(PublisherType type, uint64_t value);
+		void IncreaseModuleUsageCount(cmn::MediaCodecModuleId module_id);
+		void DecreaseModuleUsageCount(cmn::MediaCodecModuleId module_id);
 		virtual void OnSessionConnected(PublisherType type);
 		virtual void OnSessionDisconnected(PublisherType type);
 		virtual void OnSessionsDisconnected(PublisherType type, uint64_t number_of_sessions);
@@ -92,5 +95,6 @@ namespace mon
 		};
 
 		PublisherMetrics _publisher_metrics[static_cast<int8_t>(PublisherType::NumberOfPublishers)];
+		std::atomic<int32_t> _module_usage_count[ov::ToUnderlyingType(cmn::MediaCodecModuleId::NB)] = {};
 	};
 }  // namespace mon

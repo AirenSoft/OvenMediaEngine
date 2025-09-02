@@ -168,6 +168,15 @@ namespace mon
 		return _publisher_metrics[static_cast<int8_t>(type)]._connections;
 	}
 
+	uint32_t CommonMetrics::GetModuleUsageCount(cmn::MediaCodecModuleId module_id) const
+	{
+		auto count = _module_usage_count[ov::ToUnderlyingType(module_id)].load();
+
+		// In theory, due to a race condition, there may be temporary occurrences of negative value,
+		// so this is adjusted accordingly.
+		return std::max(count, 0);
+	}
+
 	void CommonMetrics::IncreaseBytesIn(uint64_t value)
 	{
 		_total_bytes_in += value;
@@ -192,6 +201,16 @@ namespace mon
 		_last_sent_time = std::chrono::system_clock::now();
 
 		UpdateDate();
+	}
+
+	void CommonMetrics::IncreaseModuleUsageCount(cmn::MediaCodecModuleId module_id)
+	{
+		_module_usage_count[ov::ToUnderlyingType(module_id)]++;
+	}
+
+	void CommonMetrics::DecreaseModuleUsageCount(cmn::MediaCodecModuleId module_id)
+	{
+		_module_usage_count[ov::ToUnderlyingType(module_id)]--;
 	}
 
 	void CommonMetrics::OnSessionConnected(PublisherType type)
