@@ -185,17 +185,6 @@ namespace ocst
 		return std::nullopt;
 	}
 
-	std::optional<std::reference_wrapper<const http::CorsManager>> Orchestrator::GetCorsManager(const ov::String &vhost_name)
-	{
-		auto vhost = GetVirtualHost(vhost_name);
-		if (vhost != nullptr)
-		{
-			return std::ref<const http::CorsManager>(vhost->GetDefaultCorsManager());
-		}
-
-		return std::nullopt;
-	}
-
 	ocst::Result Orchestrator::CreateApplication(const info::Host &host_info, const cfg::vhost::app::Application &app_config, bool is_dynamic)
 	{
 		auto vhost_name = host_info.GetName();

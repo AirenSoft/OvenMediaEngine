@@ -49,17 +49,6 @@ namespace ocst
 				logti("OriginMapStore::OriginHostName is not specified. This OriginMapStore can work only as a edge.");
 			}
 		}
-
-		// CORS
-		bool is_cors_parsed;
-		auto cross_domains = _host_info.GetCrossDomains(&is_cors_parsed);
-
-		if (is_cors_parsed)
-		{
-			// VHOST has no VHostAppName so we use InvalidVHostAppName
-			// Each vhost has its own cors manager so there is no problem to use InvalidVHostAppName
-			_default_cors_manager.SetCrossDomains(info::VHostAppName::InvalidVHostAppName(), cross_domains);
-		}
 	}
 
 	ov::String VirtualHost::GetName() const
@@ -207,11 +196,6 @@ namespace ocst
 		}
 
 		return false;
-	}
-
-	http::CorsManager& VirtualHost::GetDefaultCorsManager()
-	{
-		return _default_cors_manager;
 	}
 
 	bool VirtualHost::ValidateDomain(const ov::String &domain) const

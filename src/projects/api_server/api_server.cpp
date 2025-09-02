@@ -167,7 +167,7 @@ namespace api
 			_cors_manager.SetupHttpCorsHeader(
 				info::VHostAppName::InvalidVHostAppName(),
 				request, response,
-				{http::Method::Options, http::Method::Get, http::Method::Post, http::Method::Put, http::Method::Patch, http::Method::Delete});
+				{http::Method::Options, http::Method::Head, http::Method::Get, http::Method::Post, http::Method::Put, http::Method::Patch, http::Method::Delete});
 
 			return http::svr::NextHandler::Call;
 		});

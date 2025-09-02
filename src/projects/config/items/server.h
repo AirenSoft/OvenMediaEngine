@@ -17,6 +17,7 @@
 #include "managers/managers.h"
 #include "modules/modules.h"
 #include "virtual_hosts/virtual_hosts.h"
+#include "default/default.h"
 
 namespace cfg
 {
@@ -54,6 +55,8 @@ namespace cfg
 
 		vhost::VirtualHosts _virtual_hosts;
 
+		dft::Defaults _defaults;
+
 	public:
 		CFG_DECLARE_CONST_REF_GETTER_OF(GetVersion, _version)
 
@@ -76,6 +79,8 @@ namespace cfg
 		CFG_DECLARE_CONST_REF_GETTER_OF(GetAlert, _alert)
 
 		CFG_DECLARE_CONST_REF_GETTER_OF(GetAnalytics, _analytics)
+
+		CFG_DECLARE_CONST_REF_GETTER_OF(GetDefaults, _defaults)
 
 		CFG_DECLARE_CONST_REF_GETTER_OF(GetVirtualHostList, _virtual_hosts.GetVirtualHostList())
 
@@ -149,6 +154,7 @@ namespace cfg
 			Register<Optional>("Alert", &_alert);
 			Register<Optional>("Analytics", &_analytics);
 
+			Register<Optional>("Defaults", &_defaults);
 			Register<Optional>("VirtualHosts", &_virtual_hosts);
 		}
 	};

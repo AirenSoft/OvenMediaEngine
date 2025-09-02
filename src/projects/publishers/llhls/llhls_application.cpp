@@ -29,14 +29,6 @@ LLHlsApplication::LLHlsApplication(const std::shared_ptr<pub::Publisher> &publis
 	{
 		_cors_manager.SetCrossDomains(application_info.GetVHostAppName(), cross_domains);
 	}
-	else
-	{
-		const auto &default_cross_domains = application_info.GetHostInfo().GetCrossDomains(&is_parsed);
-		if (is_parsed)
-		{
-			_cors_manager.SetCrossDomains(application_info.GetVHostAppName(), default_cross_domains);
-		}
-	}
 
 	_origin_mode = llhls_config.IsOriginMode();
 }

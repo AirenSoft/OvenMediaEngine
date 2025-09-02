@@ -117,6 +117,13 @@
 		</Publishers>
 	</Bind>
 
+	<!-- Default Settings for all Virtual Hosts -->
+	<Defaults>
+		<CrossDomains>
+			<Url>*</Url>
+		</CrossDomains>
+	</Defaults>
+
 	<VirtualHosts>
 		<!--
 			You can include multiple XML files by doing the following:

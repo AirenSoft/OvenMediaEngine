@@ -76,7 +76,11 @@ namespace cfg
 				Register<Optional>("Origins", &_origins);
 				Register<Optional>("OriginMapStore", &_origin_map_store);
 
-				Register<Optional>("CrossDomains", &_cross_domains);
+				// Deprecated: Use CrossDomains in Server instead.
+				Register<Optional>("CrossDomains", &_cross_domains, nullptr, [=]() -> std::shared_ptr<ConfigError> {
+					logw("Config", "CrossDomains in VirtualHost is deprecated. Use default CrossDomains in Server instead.");
+					return nullptr;
+				});
 
 				Register<Optional>("Applications", &_applications);
 			}

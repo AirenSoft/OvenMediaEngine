@@ -12,6 +12,7 @@
 
 #include "http_server.h"
 #include "https_server.h"
+#include "config/items/common/cross_domains.h"
 
 namespace http
 {
@@ -24,6 +25,9 @@ namespace http
 
 		public:
 			std::shared_ptr<HttpServer> CreateHttpServer(const char *server_name, const char *server_short_name, const ov::SocketAddress &address, int worker_count = HTTP_SERVER_USE_DEFAULT_COUNT);
+
+			void SetDefaultCrosssDomains(const cfg::cmn::CrossDomains &cross_domain_cfg);
+			const http::CorsManager &GetDefaultCorsManager() const;
 
 			bool AppendCertificate(const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate);
 			bool RemoveCertificate(const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate);
@@ -65,6 +69,8 @@ namespace http
 		protected:
 			std::mutex _http_servers_mutex;
 			std::map<ov::SocketAddress, std::shared_ptr<HttpServer>> _http_servers;
+
+			http::CorsManager _default_cors_manager;
 		};
 	}  // namespace svr
 }  // namespace http

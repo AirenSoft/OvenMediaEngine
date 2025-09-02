@@ -88,6 +88,13 @@
 	</P2P>
 	-->
 
+	<!-- Default Settings for all Virtual Hosts -->
+	<Defaults>
+		<CrossDomains>
+			<Url>*</Url>
+		</CrossDomains>
+	</Defaults>
+
 	<VirtualHosts>
 		<!-- You can use wildcard like this to include multiple XMLs -->
 		<VirtualHost include="VHost*.xml" />

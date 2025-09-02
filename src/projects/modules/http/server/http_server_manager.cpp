@@ -77,6 +77,16 @@ namespace http
 			}
 		}
 
+		void HttpServerManager::SetDefaultCrosssDomains(const cfg::cmn::CrossDomains &cross_domain_cfg)
+		{
+			_default_cors_manager.SetDefaultCrossDomains(cross_domain_cfg);
+		}
+
+		const http::CorsManager &HttpServerManager::GetDefaultCorsManager() const
+		{
+			return _default_cors_manager;
+		}
+
 		bool HttpServerManager::AppendCertificate(const ov::SocketAddress &address, const std::shared_ptr<const info::Certificate> &certificate)
 		{
 			auto https_server = GetHttpsServer(address);

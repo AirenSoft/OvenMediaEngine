@@ -300,17 +300,7 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 			return http::svr::NextHandler::DoNotCall;
 		}
 
-		if (_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response, {http::Method::Options, http::Method::Post, http::Method::Patch, http::Method::Delete}) == false)
-		{
-			// CORS from default cors manager from virtual host
-			auto vhost_name = ocst::Orchestrator::GetInstance()->GetVhostNameFromDomain(request_url->Host());
-			auto cors_manager_ref_opt = ocst::Orchestrator::GetInstance()->GetCorsManager(vhost_name);
-			if (cors_manager_ref_opt.has_value())
-			{
-				const auto &cors_manager = cors_manager_ref_opt.value().get();
-				cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
-			}
-		}
+		_cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response, {http::Method::Options, http::Method::Post, http::Method::Patch, http::Method::Delete});
 
 		response->SetStatusCode(http::StatusCode::OK);
 		response->SetHeader("Access-Control-Allow-Private-Network", "true");

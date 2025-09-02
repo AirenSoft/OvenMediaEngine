@@ -99,6 +99,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	// Set Default CORS for HTTP Server
+	http::svr::HttpServerManager::GetInstance()->SetDefaultCrosssDomains(server_config->GetDefaults().GetCrossDomains());
+
 	// Precompile SDP patterns for better performance.
 	if (SDPRegexPattern::GetInstance()->Compile() == false)
 	{

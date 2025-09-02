@@ -205,6 +205,13 @@
 	</Alert>
 	-->
 
+	<!-- Default Settings for all Virtual Hosts -->
+	<Defaults>
+		<CrossDomains>
+			<Url>*</Url>
+		</CrossDomains>
+	</Defaults>
+
 	<VirtualHosts>
 		<!-- You can use wildcard like this to include multiple XMLs -->
 		<VirtualHost include="VHost*.xml" />
@@ -300,11 +307,6 @@
 				<OriginHostName>ome-dev.airensoft.com</OriginHostName>
 			</OriginMapStore>
 			-->
-
-			<!-- Default CORS Settings -->
-			<CrossDomains>
-				<Url>*</Url>
-			</CrossDomains>
 
 			<!-- Settings for applications -->
 			<Applications>
@@ -484,7 +486,6 @@
 					</OutputProfiles>
 					<Providers>
 						<OVT />
-						<WebRTC />
 						<RTMP />
 						<SRT />
 						<MPEGTS>

@@ -242,16 +242,6 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		{
 			application->GetCorsManager().SetupHttpCorsHeader(vhost_app_name, request, response, {http::Method::Options, http::Method::Get, http::Method::Head});
 		}
-		else
-		{
-			// CORS from default cors manager
-			auto cors_manager_ref_opt = ocst::Orchestrator::GetInstance()->GetCorsManager(vhost_name);
-			if (cors_manager_ref_opt.has_value())
-			{
-				const auto &cors_manager = cors_manager_ref_opt.value().get();
-				cors_manager.SetupHttpCorsHeader(vhost_app_name, request, response);
-			}
-		}
 
 		response->SetStatusCode(http::StatusCode::OK);
 		response->SetHeader("Access-Control-Allow-Private-Network", "true");
@@ -367,6 +357,16 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			return http::svr::NextHandler::DoNotCall;
 		}
 
+		auto application = std::static_pointer_cast<LLHlsApplication>(GetApplicationByName(vhost_app_name));
+		if (application == nullptr)
+		{
+			logte("Cannot find application (%s)", vhost_app_name.CStr());
+			response->SetStatusCode(http::StatusCode::NotFound);
+			return http::svr::NextHandler::DoNotCall;
+		}
+		// Cors Setting
+		application->GetCorsManager().SetupHttpCorsHeader(vhost_app_name, request, response, {http::Method::Options, http::Method::Get, http::Method::Head});
+		
 		auto stream = std::static_pointer_cast<LLHlsStream>(GetStream(vhost_app_name, stream_name));
 		if (stream == nullptr)
 		{
@@ -391,13 +391,6 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			return http::svr::NextHandler::DoNotCall;
 		}
 
-		auto application = std::static_pointer_cast<LLHlsApplication>(stream->GetApplication());
-		if (application == nullptr)
-		{
-			logte("Cannot find application (%s)", vhost_app_name.CStr());
-			response->SetStatusCode(http::StatusCode::NotFound);
-			return http::svr::NextHandler::DoNotCall;
-		}
 		auto origin_mode = application->IsOriginMode();
 
 		std::shared_ptr<LLHlsSession> session = nullptr;
@@ -497,8 +490,6 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 		connection->AddUserData(stream->GetStreamId(), session);
 		session->UpdateLastRequest(connection->GetId());
 
-		// Cors Setting
-		application->GetCorsManager().SetupHttpCorsHeader(vhost_app_name, request, response, {http::Method::Options, http::Method::Get, http::Method::Head});
 		stream->SendMessage(session, std::make_any<std::shared_ptr<http::svr::HttpExchange>>(exchange));
 
 		return http::svr::NextHandler::DoNotCallAndDoNotResponse;

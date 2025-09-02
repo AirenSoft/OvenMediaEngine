@@ -30,11 +30,14 @@ namespace http
 		//
 		// NOTE - SetCrossDomains() isn't thread-safe.
 		void SetCrossDomains(const info::VHostAppName &vhost_app_name, const cfg::cmn::CrossDomains &cross_domain_cfg);
-
+		void SetDefaultCrossDomains(const cfg::cmn::CrossDomains &cross_domain_cfg);
 		bool SetupRtmpCorsXml(const std::shared_ptr<http::svr::HttpResponse> &response) const;
 
 		bool SetupHttpCorsHeader(
 			const info::VHostAppName &vhost_app_name,
+			const std::shared_ptr<const http::svr::HttpRequest> &request, const std::shared_ptr<http::svr::HttpResponse> &response,
+			const std::vector<http::Method> &allowed_methods = {http::Method::Get}) const;
+		bool SetupDefaultHttpCorsHeader(
 			const std::shared_ptr<const http::svr::HttpRequest> &request, const std::shared_ptr<http::svr::HttpResponse> &response,
 			const std::vector<http::Method> &allowed_methods = {http::Method::Get}) const;
 

@@ -49,6 +49,7 @@ namespace http
 			bool AddHeader(const ov::String &key, const ov::String &value);
 			// Overwrites the existing value to <value>
 			bool SetHeader(const ov::String &key, const ov::String &value);
+			bool UnsetHeader(const ov::String &key);
 			const std::vector<ov::String> &GetHeader(const ov::String &key) const;
 			bool RemoveHeader(const ov::String &key);
 

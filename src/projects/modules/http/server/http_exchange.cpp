@@ -10,6 +10,7 @@
 
 #include "./http_server_private.h"
 #include "http_connection.h"
+#include "http_server_manager.h"
 
 namespace http
 {
@@ -265,6 +266,11 @@ namespace http
 			{
 				response->SetIfNoneMatch(if_none_match);
 			}
+
+			// Setup Default Cors Header, application specific CORS header can be overridden
+			http::svr::HttpServerManager::GetInstance()->GetDefaultCorsManager().SetupDefaultHttpCorsHeader(request, response, {http::Method::Options, http::Method::Head, http::Method::Get, http::Method::Post, http::Method::Put, http::Method::Patch, http::Method::Delete});
+
+			response->SetHeader("Vary", "Origin");
 
 			return _interceptor->OnRequestCompleted(GetSharedPtr());
 		}

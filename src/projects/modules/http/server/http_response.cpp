@@ -138,6 +138,25 @@ namespace http
 			return true;
 		}
 
+		bool HttpResponse::UnsetHeader(const ov::String &key)
+		{
+			if (IsHeaderSent())
+			{
+				logtw("Cannot unset header: Header is sent: %s", _client_socket->ToString().CStr());
+				return false;
+			}
+
+			auto response_iterator = _response_header.find(key);
+			if (response_iterator == _response_header.end())
+			{
+				return false;
+			}
+
+			_response_header.erase(response_iterator);
+
+			return true;
+		}
+
 		const std::vector<ov::String> &HttpResponse::GetHeader(const ov::String &key) const
 		{
 			auto item = _response_header.find(key);

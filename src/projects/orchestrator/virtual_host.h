@@ -42,8 +42,6 @@ namespace ocst
 
 		std::vector<std::shared_ptr<Application>> GetApplicationList() const;
 
-		http::CorsManager& GetDefaultCorsManager();
-
 		// Match the domain name
 		bool ValidateDomain(const ov::String &domain) const;
 
@@ -91,9 +89,6 @@ namespace ocst
 		bool _is_origin_map_store_enabled = false;
 		ov::String _origin_base_url;
 		std::shared_ptr<OriginMapClient> _origin_map_client = nullptr;
-
-		// Default CORS manager
-		http::CorsManager _default_cors_manager;
 
 		// Template of dynamic application configuration
 		cfg::vhost::app::Application _app_cfg_template;
