@@ -56,10 +56,10 @@ namespace cmn
 		ID3v2,
 		OVEN_EVENT,	 // OvenMediaEngine defined event
 		CUE,
-		AMF,	// AMF0
-		SEI,	// H.264/H.265 SEI
-		SCTE35,	// SCTE35
-		WebVTT	// WebVTT (Web Video Text Tracks)
+		AMF,	 // AMF0
+		SEI,	 // H.264/H.265 SEI
+		SCTE35,	 // SCTE35
+		WebVTT	 // WebVTT (Web Video Text Tracks)
 	};
 
 	enum class PacketType : int8_t
@@ -130,6 +130,28 @@ namespace cmn
 		NB
 	};
 
+	constexpr const char *GetMediaCodecModuleIdString(MediaCodecModuleId module_id)
+	{
+		switch (module_id)
+		{
+			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, None);
+			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, DEFAULT);
+			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, OPENH264);
+			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, BEAMR);
+			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, X264);
+			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, NVENC);
+			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, QSV);
+			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, XMA);
+			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, NILOGAN);
+			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, LIBVPX);
+			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, FDKAAC);
+			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, LIBOPUS);
+			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, NB);
+		}
+
+		return "Unknown";
+	}
+
 	enum class VideoPixelFormatId : int32_t
 	{
 		None = 0,
@@ -177,7 +199,7 @@ namespace cmn
 		NB
 	};
 
-	inline const char* GetVideoPixelFormatIdString(VideoPixelFormatId format)
+	constexpr const char *GetVideoPixelFormatIdString(VideoPixelFormatId format)
 	{
 		switch (format)
 		{
@@ -234,7 +256,7 @@ namespace cmn
 		TIME
 	};
 
-	static bool IsVideoCodec(cmn::MediaCodecId codec_id)
+	constexpr static bool IsVideoCodec(cmn::MediaCodecId codec_id)
 	{
 		switch (codec_id)
 		{
@@ -260,7 +282,7 @@ namespace cmn
 		return false;
 	}
 
-	static bool IsImageCodec(cmn::MediaCodecId codec_id)
+	constexpr static bool IsImageCodec(cmn::MediaCodecId codec_id)
 	{
 		switch (codec_id)
 		{
@@ -286,7 +308,7 @@ namespace cmn
 		return false;
 	}
 
-	static bool IsAudioCodec(cmn::MediaCodecId codec_id)
+	constexpr static bool IsAudioCodec(cmn::MediaCodecId codec_id)
 	{
 		switch (codec_id)
 		{
@@ -456,7 +478,7 @@ namespace cmn
 		return "none";
 	}
 
-	static bool IsSupportHWAccels(cmn::MediaCodecModuleId id)
+	constexpr static bool IsSupportHWAccels(cmn::MediaCodecModuleId id)
 	{
 		switch (id)
 		{
