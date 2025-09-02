@@ -19,6 +19,11 @@
 #include "hls_master_playlist.h"
 #include "hls_media_playlist.h"
 
+#include <modules/dump/dump.h>
+#include <memory>
+#include <map>
+#include <shared_mutex>
+
 // max initial media packet buffer size, for OOM protection
 #define MAX_INITIAL_MEDIA_PACKET_BUFFER_SIZE 10000
 
@@ -94,6 +99,19 @@ private:
 	std::tuple<bool, ov::String> ConcludeLive();
 	bool IsConcluded() const;
 
+	//////////////////////////
+	// Dumps
+	//////////////////////////
+
+	void InitializeAllDumps();
+	void DumpMasterPlaylistOfAllItems();
+	bool DumpMasterPlaylist(const std::shared_ptr<mdl::Dump>& item);
+	void DumpSegmentOfAllItems(const ov::String &packager_id, const uint32_t &segment_number);
+	bool DumpSegment(const std::shared_ptr<mdl::Dump>& dump, const ov::String& packager_id, const uint32_t& segment_number);
+	bool DumpData(const std::shared_ptr<mdl::Dump>& dump, const ov::String& file_name, const std::shared_ptr<const ov::Data>& data, bool append = false);
+	void StopDumps();
+	void StopDump(const std::shared_ptr<mdl::Dump>& dumper);
+
 	uint32_t _worker_count = 0;
 
 	cfg::vhost::app::pub::HlsPublisher _ts_config;
@@ -122,6 +140,9 @@ private:
 	bool _concluded = false;
 	mutable std::shared_mutex _concluded_lock;
 
+	// Dumps map
+	std::map<ov::String, std::shared_ptr<mdl::Dump>> _dumps;
+	std::shared_mutex _dumps_lock;
 
 	bool _ready_to_play = false; // true if the stream is ready to play, all playlists are ready and have enough segments
 };
