@@ -315,6 +315,12 @@ namespace mon
 				return false;
 			}
 
+			// Update module usage count for the tracks in the stream if the stream is an output stream
+			for (const auto &[id, track] : stream.GetTracks())
+			{
+				output_stream_metric->IncreaseModuleUsageCount(track);
+			}
+
 			_alert->SendStreamMessage(alrt::Message::Code::EGRESS_STREAM_PREPARED, output_stream_metric);
 		}
 
@@ -355,6 +361,12 @@ namespace mon
 				if (output_stream_metric == nullptr)
 				{
 					return false;
+				}
+
+				// Update module usage count for the tracks in the stream if the stream is an output stream
+				for (const auto &[id, track] : stream.GetTracks())
+				{
+					output_stream_metric->DecreaseModuleUsageCount(track);
 				}
 
 				_alert->SendStreamMessage(alrt::Message::Code::EGRESS_STREAM_DELETED, output_stream_metric);

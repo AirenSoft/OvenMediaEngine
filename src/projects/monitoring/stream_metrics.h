@@ -50,6 +50,13 @@ namespace mon
 		// Overriding from CommonMetrics 
 		void IncreaseBytesIn(uint64_t value) override;
 		void IncreaseBytesOut(PublisherType type, uint64_t value) override;
+		// Since `Increase...()` is called in `Monitoring::OnStreamPrepared()`
+		// and `Decrease...()` is called in `Monitoring::OnStreamDeleted()`,
+		// and it is not guaranteed that these two are always called in pairs.
+		// Therefore, we manage whether it has been increased by
+		// receiving `media_track` and storing it in `_module_usage_count_map_mutex`.
+		void IncreaseModuleUsageCount(const std::shared_ptr<const MediaTrack> &media_track);
+		void DecreaseModuleUsageCount(const std::shared_ptr<const MediaTrack> &media_track);
 		void OnSessionConnected(PublisherType type) override;
 		void OnSessionDisconnected(PublisherType type) override;
 		void OnSessionsDisconnected(PublisherType type, uint64_t number_of_sessions) override;
@@ -62,5 +69,8 @@ namespace mon
 		std::vector<std::shared_ptr<StreamMetrics>> _output_stream_metrics;
 
 		std::shared_ptr<ApplicationMetrics>	_app_metrics;
+
+		std::mutex _module_usage_count_map_mutex;
+		std::unordered_map<MediaTrackId, std::shared_ptr<const MediaTrack>> _module_usage_count_map;
 	};
 }

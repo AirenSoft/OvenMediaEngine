@@ -4,6 +4,7 @@
 
 #include "stream_metrics.h"
 #include "application_metrics.h"
+#include "host_metrics.h"
 #include "monitoring_private.h"
 
 namespace mon
@@ -93,6 +94,72 @@ namespace mon
 				origin_stream_metric->IncreaseBytesOut(type, value);
 			}
 		}
+	}
+
+	void StreamMetrics::IncreaseModuleUsageCount(const std::shared_ptr<const MediaTrack> &media_track)
+	{
+		// Holds the `shared_ptr` to prevent it from being released while in use
+		auto app_metrics  = _app_metrics;
+		auto host_metrics = (app_metrics != nullptr) ? app_metrics->GetHostMetrics() : nullptr;
+
+		if ((media_track == nullptr) || (app_metrics == nullptr) || (host_metrics == nullptr))
+		{
+			OV_ASSERT2(false);
+			return;
+		}
+
+		std::lock_guard lock(_module_usage_count_map_mutex);
+
+		auto it = _module_usage_count_map.find(media_track->GetId());
+
+		if (it != _module_usage_count_map.end())
+		{
+			// It SHOULD NOT be called twice for one track
+			OV_ASSERT2(false);
+			return;
+		}
+
+		_module_usage_count_map[media_track->GetId()] = media_track;
+
+		auto module_id = media_track->GetCodecModuleId();
+
+		CommonMetrics::IncreaseModuleUsageCount(module_id);
+
+		app_metrics->IncreaseModuleUsageCount(module_id);
+		host_metrics->IncreaseModuleUsageCount(module_id);
+	}
+
+	void StreamMetrics::DecreaseModuleUsageCount(const std::shared_ptr<const MediaTrack> &media_track)
+	{
+		// Holds the `shared_ptr` to prevent it from being released while in use
+		auto app_metrics  = _app_metrics;
+		auto host_metrics = (app_metrics != nullptr) ? app_metrics->GetHostMetrics() : nullptr;
+
+		if ((media_track == nullptr) || (app_metrics == nullptr) || (host_metrics == nullptr))
+		{
+			OV_ASSERT2(false);
+			return;
+		}
+
+		std::lock_guard lock(_module_usage_count_map_mutex);
+
+		auto it = _module_usage_count_map.find(media_track->GetId());
+
+		if (it == _module_usage_count_map.end())
+		{
+			// `Monitoring::OnStreamDeleted()` is called before `Monitoring::OnStreamPrepared()` is called, so it is not registered in the map.
+			// This scenario can occur in normal situations.
+			return;
+		}
+
+		_module_usage_count_map.erase(it);
+
+		auto module_id = media_track->GetCodecModuleId();
+
+		CommonMetrics::DecreaseModuleUsageCount(module_id);
+
+		app_metrics->DecreaseModuleUsageCount(module_id);
+		host_metrics->DecreaseModuleUsageCount(module_id);
 	}
 
 	void StreamMetrics::OnSessionConnected(PublisherType type)
