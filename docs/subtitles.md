@@ -50,6 +50,8 @@ To enable subtitles, add a `subtitles` section under  `<Application><OutputProfi
 * **AutoSelect**: if `true`, the player may select this track automatically based on the user’s language.
 * **Forced**: if `true`, the track is always shown even if subtitles are disabled (behavior depends on the player).
 
+## Insert Subtitle Cues
+
 Once subtitle tracks are enabled, you can insert subtitles in real time using the OvenMediaEngine subtitle API. See the API documentation for details.
 
 {% content-ref url="rest-api/v1/virtualhost/application/stream/send-event-1.md" %}
