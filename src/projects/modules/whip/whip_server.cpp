@@ -361,7 +361,7 @@ std::shared_ptr<WhipInterceptor> WhipServer::CreateInterceptor()
 
 		if (answer._status_code == http::StatusCode::Created)
 		{
-			auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(answer._vhost_name, answer._app_name);
+			auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationName(answer._vhost_name, answer._app_name);
 			if (vhost_app_name.IsValid() == false)
 			{
 				logte("Could not resolve application name from domain: %s", answer._vhost_name.CStr());
