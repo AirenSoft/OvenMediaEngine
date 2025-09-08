@@ -50,7 +50,7 @@ namespace pvd
 	{
 		if(_signalling_socket_pool == nullptr)
 		{
-			_signalling_socket_pool = ov::SocketPool::Create("RtspcProvider", ov::SocketType::Tcp);
+			_signalling_socket_pool = ov::SocketPool::Create("RtspcProvider", ov::SocketType::Tcp, false);
 			_signalling_socket_pool->Initialize(_worker_count);
 		}
 

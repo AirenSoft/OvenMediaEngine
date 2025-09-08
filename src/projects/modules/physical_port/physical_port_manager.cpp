@@ -22,6 +22,7 @@ std::shared_ptr<PhysicalPort> PhysicalPortManager::CreatePort(const char *name,
 															  ov::SocketType type,
 															  const ov::SocketAddress &address,
 															  int worker_count,
+															  bool thread_per_socket,
 															  int send_buffer_size,
 															  int recv_buffer_size,
 															  const PhysicalPort::OnSocketCreated on_socket_created)
@@ -41,7 +42,7 @@ std::shared_ptr<PhysicalPort> PhysicalPortManager::CreatePort(const char *name,
 	{
 		port = std::make_shared<PhysicalPort>(PhysicalPort::PrivateToken{nullptr});
 
-		if (port->Create(name, type, address, worker_count, send_buffer_size, recv_buffer_size, on_socket_created))
+		if (port->Create(name, type, address, worker_count, thread_per_socket, send_buffer_size, recv_buffer_size, on_socket_created))
 		{
 			_port_list[key] = port;
 		}
@@ -59,7 +60,7 @@ std::shared_ptr<PhysicalPort> PhysicalPortManager::CreatePort(const char *name,
 	{
 		port->IncreaseRefCount();
 
-		if (port->GetWorkerCount() != worker_count)
+		if (thread_per_socket == false && port->GetWorkerCount() != worker_count)
 		{
 			logtw("The number of workers in the existing socket pool differs from the number of workers passed by the argument: socket pool: %d, argument: %d",
 				  port->GetWorkerCount(), worker_count);

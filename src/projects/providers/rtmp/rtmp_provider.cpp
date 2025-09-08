@@ -92,6 +92,7 @@ namespace pvd
 		bool is_configured;
 		auto worker_count = rtmp_config.GetWorkerCount(&is_configured);
 		worker_count = is_configured ? worker_count : PHYSICAL_PORT_USE_DEFAULT_COUNT;
+		auto thread_per_socket = rtmp_config.IsThreadPerSocket();
 
 		std::vector<ov::SocketAddress> rtmp_address_list;
 
@@ -119,7 +120,7 @@ namespace pvd
 
 		for (const auto &rtmp_address : rtmp_address_list)
 		{
-			auto physical_port = port_manager->CreatePort("RTMP", ov::SocketType::Tcp, rtmp_address, worker_count);
+			auto physical_port = port_manager->CreatePort("RTMP", ov::SocketType::Tcp, rtmp_address, worker_count, thread_per_socket);
 
 			if (physical_port == nullptr)
 			{

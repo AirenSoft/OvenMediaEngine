@@ -77,7 +77,7 @@ namespace ov
 
 		_stop_epoll_thread = true;
 
-		if (_epoll_thread.joinable())
+		if (_epoll_thread.joinable() && _epoll_thread.get_id() != std::this_thread::get_id())
 		{
 			_epoll_thread.join();
 		}
@@ -883,6 +883,7 @@ namespace ov
 		{
 			std::lock_guard lock_guard(_socket_map_mutex);
 			_socket_map.erase(socket->GetNativeHandle());
+			DecreaseSocketCount();
 		}
 
 		return (error == nullptr);

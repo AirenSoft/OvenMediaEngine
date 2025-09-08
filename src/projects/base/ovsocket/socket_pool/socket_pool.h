@@ -21,12 +21,12 @@ namespace ov
 
 	public:
 		// SocketPool can only be created using SocketPool::Create()
-		SocketPool(PrivateToken token, const char *name, SocketType type);
+		SocketPool(PrivateToken token, const char *name, SocketType type, bool thread_per_socket);
 		~SocketPool() override;
 
-		static std::shared_ptr<SocketPool> Create(const char *name, SocketType type)
+		static std::shared_ptr<SocketPool> Create(const char *name, SocketType type, bool thread_per_socket)
 		{
-			return std::make_shared<SocketPool>(PrivateToken{nullptr}, name, type);
+			return std::make_shared<SocketPool>(PrivateToken{nullptr}, name, type, thread_per_socket);
 		}
 
 		static std::shared_ptr<SocketPool> GetTcpPool()
@@ -40,7 +40,7 @@ namespace ov
 
 				if (pool == nullptr)
 				{
-					pool = Create("DefTcp", SocketType::Tcp);
+					pool = Create("DefTcp", SocketType::Tcp, false);
 
 					if (pool != nullptr)
 					{
@@ -63,7 +63,7 @@ namespace ov
 
 				if (pool == nullptr)
 				{
-					pool = Create("DefUdp", SocketType::Udp);
+					pool = Create("DefUdp", SocketType::Udp, false);
 
 					if (pool != nullptr)
 					{
@@ -94,7 +94,6 @@ namespace ov
 		std::shared_ptr<Tsocket> AllocSocket(const SocketFamily family, Targuments... args)
 		{
 			std::shared_ptr<SocketPoolWorker> worker = GetIdleWorker();
-
 			if (worker != nullptr)
 			{
 				auto socket = worker->AllocSocket<Tsocket>(family, args...);
@@ -111,6 +110,23 @@ namespace ov
 			return nullptr;
 		}
 
+		bool ReleaseSocketPoolWorker(const std::shared_ptr<SocketPoolWorker> &worker)
+		{
+			std::lock_guard lock_guard(_worker_list_mutex);
+
+			auto iterator = std::find(_worker_list.begin(), _worker_list.end(), worker);
+			if (iterator != _worker_list.end())
+			{
+				auto worker = *iterator;
+				worker->Uninitialize();
+
+				_worker_list.erase(iterator);
+				return true;
+			}
+
+			return false;
+		}
+
 		bool ReleaseSocket(const std::shared_ptr<Socket> &socket)
 		{
 			return socket->GetSocketPoolWorker()->ReleaseSocket(socket);
@@ -120,11 +136,28 @@ namespace ov
 
 		String ToString() const;
 
+		bool IsThreadPerSocket() const
+		{
+			return _thread_per_socket;
+		}
+
 	protected:
 		// This method will increase the number of sockets for that worker by 1
 		std::shared_ptr<SocketPoolWorker> GetIdleWorker()
 		{
 			std::lock_guard lock_guard(_worker_list_mutex);
+
+			if (_thread_per_socket)
+			{
+				auto instance = CreateWorker();
+				if (instance != nullptr)
+				{
+					instance->IncreaseSocketCount();
+					_worker_list.push_back(instance);
+				}
+
+				return instance;
+			}
 
 			if (_worker_list.size() == 0)
 			{
@@ -140,15 +173,33 @@ namespace ov
 			return worker;
 		}
 
+		std::shared_ptr<SocketPoolWorker> CreateWorker()
+		{
+			auto pool	   = GetSharedPtr();
+			auto instance = std::make_shared<SocketPoolWorker>(SocketPoolWorker::PrivateToken{nullptr}, pool);
+
+			if (instance->Initialize())
+			{
+				return instance;
+			}
+
+			return nullptr;
+		}
+
 		bool UninitializeWorkers(const std::vector<std::shared_ptr<SocketPoolWorker>> &worker_list);
 
 		ov::String _name;
 
 		SocketType _type = SocketType::Unknown;
 
+		bool _thread_per_socket = false;
+
 		bool _initialized = false;
 
 		mutable std::mutex _worker_list_mutex;
 		std::vector<std::shared_ptr<SocketPoolWorker>> _worker_list;
+		
+		// Worker releaser 
+		ov::DelayQueue _timer{"SocketPoolWorkerReleaser"};
 	};
 }  // namespace ov

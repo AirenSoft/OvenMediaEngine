@@ -74,6 +74,7 @@ bool PhysicalPort::Create(const char *name,
 						  ov::SocketType type,
 						  const ov::SocketAddress &address,
 						  int worker_count,
+						  bool thread_per_socket,
 						  int send_buffer_size,
 						  int recv_buffer_size,
 						  const OnSocketCreated on_socket_created)
@@ -97,11 +98,11 @@ bool PhysicalPort::Create(const char *name,
 	{
 		case ov::SocketType::Srt:
 		case ov::SocketType::Tcp:
-			result = CreateServerSocket(name, type, address, worker_count, send_buffer_size, recv_buffer_size, on_socket_created);
+			result = CreateServerSocket(name, type, address, worker_count, thread_per_socket, send_buffer_size, recv_buffer_size, on_socket_created);
 			break;
 
 		case ov::SocketType::Udp:
-			result = CreateDatagramSocket(name, type, address, worker_count, on_socket_created);
+			result = CreateDatagramSocket(name, type, address, worker_count, thread_per_socket, on_socket_created);
 			break;
 
 		case ov::SocketType::Unknown:
@@ -117,11 +118,12 @@ bool PhysicalPort::CreateServerSocket(
 	ov::SocketType type,
 	const ov::SocketAddress &address,
 	int worker_count,
+	bool thread_per_socket,
 	int send_buffer_size,
 	int recv_buffer_size,
 	const OnSocketCreated on_socket_created)
 {
-	_socket_pool = ov::SocketPool::Create(GetSocketPoolName(type, name, address), type);
+	_socket_pool = ov::SocketPool::Create(GetSocketPoolName(type, name, address), type, thread_per_socket);
 
 	if (_socket_pool != nullptr)
 	{
@@ -166,9 +168,10 @@ bool PhysicalPort::CreateDatagramSocket(
 	ov::SocketType type,
 	const ov::SocketAddress &address,
 	int worker_count,
+	bool thread_per_socket,
 	const OnSocketCreated on_socket_created)
 {
-	_socket_pool = ov::SocketPool::Create(GetSocketPoolName(type, name, address), type);
+	_socket_pool = ov::SocketPool::Create(GetSocketPoolName(type, name, address), type, thread_per_socket);
 
 	if (_socket_pool != nullptr)
 	{
