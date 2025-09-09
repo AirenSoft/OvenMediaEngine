@@ -231,7 +231,7 @@ components:
           type: boolean
         audioMap:
           $ref: '#/components/schemas/AudioMap'
-    Stream:
+    StreamMapStream:
       type: object
       required: [name]
       properties:
@@ -246,9 +246,36 @@ components:
         stream:
           type: array
           items:
-            $ref: '#/components/schemas/Stream'
-    StreamMetrics:
+            $ref: '#/components/schemas/StreamMapStream'
+    Stream:
       type: object
+      required: [name,input,outputs]
+      properties:
+        name:
+          type: string
+        input:
+          type: object
+          required: [sourceType,tracks]
+          properties:
+            createdTime:
+              type: string
+              format: date-time
+            sourceType:
+              type: string
+            sourceUrl:
+              type: string
+            tracks:
+              $ref: '#/components/schemas/Tracks'
+        outputs:
+          type: object
+          required: [name,tracks]
+          properties:
+            name:
+              type: string
+            tracks:
+              $ref: '#/components/schemas/Tracks'
+            playlists:
+              $ref: '#/components/schemas/Playlists'
     StreamPush:
       type: object
       required: [stream,protocol,url]
@@ -553,7 +580,7 @@ components:
           type: string
         lookahead:
           type: integer
-          format: int32       
+          format: int32
     ImageProfile:
       type: object
       properties:
@@ -1081,7 +1108,7 @@ components:
           format: int32
         avgThroughputOut:
           type: integer
-          format: int32     
+          format: int32
         maxThroughputIn:
           type: integer
           format: int32
@@ -1173,7 +1200,7 @@ components:
             - $ref: '#/components/schemas/HttpStatus'
             - properties:
                 response:
-                  type: object      
+                  type: object
     Statuses:
       description: response statuses
       content:
@@ -1339,7 +1366,7 @@ paths:
     delete:
       operationId: VHostDelete
       tags: [api]
-      summary: Delete virtual host 
+      summary: Delete virtual host
       responses:
         '200':
           $ref: '#/components/responses/Status'
@@ -1405,7 +1432,7 @@ paths:
                     - $ref: '#/components/schemas/HttpStatus'
                     - properties:
                         response:
-                          type: object             
+                          type: object
         '400':
           $ref: '#/components/responses/Empty'
         '401':
@@ -1657,34 +1684,11 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required: [name,input,outputs]
-                properties:
-                  name:
-                    type: string
-                  input:
-                    type: object
-                    required: [sourceType,tracks]
-                    properties: 
-                      createdTime:
-                        type: string
-                        format: date-time
-                      sourceType:
-                        type: string
-                      sourceUrl:
-                        type: string
-                      tracks:
-                        $ref: '#/components/schemas/Tracks'
-                  outputs:
-                    type: object
-                    required: [name,tracks]
-                    properties:
-                      name:
-                        type: string
-                      tracks:
-                        $ref: '#/components/schemas/Tracks'
-                      playlists:
-                        $ref: '#/components/schemas/Playlists'
+                allOf:
+                  - $ref: '#/components/schemas/HttpStatus'
+                  - properties:
+                      response:
+                        $ref: '#/components/schemas/Stream'
         '401':
           $ref: '#/components/responses/Status'
         '404':
