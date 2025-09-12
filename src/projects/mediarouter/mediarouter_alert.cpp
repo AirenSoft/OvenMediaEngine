@@ -20,7 +20,6 @@ using namespace cmn;
 MediaRouterAlert::MediaRouterAlert()
 {
 	_alert_count_bframe = 0;
-	_alert_count_out_of_order = 0;
 }
 
 MediaRouterAlert::~MediaRouterAlert()

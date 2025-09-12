@@ -45,5 +45,4 @@ public:
 	std::map<MediaTrackId, int64_t> _last_pts_ms;	
 
 	uint32_t _alert_count_bframe;
-	uint32_t _alert_count_out_of_order;
 };

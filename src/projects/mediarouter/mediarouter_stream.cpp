@@ -269,12 +269,8 @@ std::shared_ptr<MediaPacket> MediaRouteStream::PopAndNormalize()
 		// So, the code below is a temporary measure to avoid this problem. A more fundamental solution should be considered.
 		if (pop_media_packet->GetDts() >= media_packet->GetDts())
 		{
-			// TODO(Keukhan): Move to mediarouter_alert
-			if (_alert_count_out_of_order++ < 10)
-			{
-				logtw("[%s/%s] Detected out of order DTS of packet. track_id:%d dts:%lld->%lld",
-					  _stream->GetApplicationName(), _stream->GetName().CStr(), pop_media_packet->GetTrackId(), pop_media_packet->GetDts(), media_packet->GetDts());
-			}
+			logtw("[%s/%s] Detected out of order DTS of packet. track_id:%d dts:%lld->%lld",
+				  _stream->GetApplicationName(), _stream->GetName().CStr(), pop_media_packet->GetTrackId(), pop_media_packet->GetDts(), media_packet->GetDts());
 
 			// If a packet has entered this function, it's a really weird stream.
 			// It must be seen that the order of the packets is jumbled.
