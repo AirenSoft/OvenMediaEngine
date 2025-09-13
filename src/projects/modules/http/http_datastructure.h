@@ -73,18 +73,18 @@ namespace http
 	{
 		Unknown = 0x0000,
 
-		Get = 0x0001,
-		Head = 0x0002,
-		Post = 0x0004,
-		Put = 0x0008,
-		Delete = 0x0010,
+		Get		= 0x0001,
+		Head	= 0x0002,
+		Post	= 0x0004,
+		Put		= 0x0008,
+		Delete	= 0x0010,
 		Connect = 0x0020,
 		Options = 0x0040,
-		Trace = 0x0080,
+		Trace	= 0x0080,
 
-		Patch = 0x0100,
+		Patch	= 0x0100,
 
-		All = Get | Head | Post | Put | Delete | Connect | Options | Trace | Patch
+		All		= Get | Head | Post | Put | Delete | Connect | Options | Trace | Patch
 	};
 
 	constexpr inline Method operator|(Method lhs, Method rhs)
@@ -119,101 +119,118 @@ namespace http
 		return lhs;
 	}
 
-	// RFC7231 - 6. Response Status Codes
-	// +------+-------------------------------+--------------------------+
-	// | Code | Reason-Phrase                 | Defined in...            |
-	// +------+-------------------------------+--------------------------+
-	// | 100  | Continue                      | Section 6.2.1            |
-	// | 101  | Switching Protocols           | Section 6.2.2            |
-	// | 200  | OK                            | Section 6.3.1            |
-	// | 201  | Created                       | Section 6.3.2            |
-	// | 202  | Accepted                      | Section 6.3.3            |
-	// | 203  | Non-Authoritative Information | Section 6.3.4            |
-	// | 204  | No Content                    | Section 6.3.5            |
-	// | 205  | Reset Content                 | Section 6.3.6            |
-	// | 206  | Partial Content               | Section 4.1 of [RFC7233] |
-	// | 300  | Multiple Choices              | Section 6.4.1            |
-	// | 301  | Moved Permanently             | Section 6.4.2            |
-	// | 302  | Found                         | Section 6.4.3            |
-	// | 303  | See Other                     | Section 6.4.4            |
-	// | 304  | Not Modified                  | Section 4.1 of [RFC7232] |
-	// | 305  | Use Proxy                     | Section 6.4.5            |
-	// | 307  | Temporary Redirect            | Section 6.4.7            |
-	// | 400  | Bad Request                   | Section 6.5.1            |
-	// | 401  | Unauthorized                  | Section 3.1 of [RFC7235] |
-	// | 402  | Payment Required              | Section 6.5.2            |
-	// | 403  | Forbidden                     | Section 6.5.3            |
-	// | 404  | Not Found                     | Section 6.5.4            |
-	// | 405  | Method Not Allowed            | Section 6.5.5            |
-	// | 406  | Not Acceptable                | Section 6.5.6            |
-	// | 407  | Proxy Authentication Required | Section 3.2 of [RFC7235] |
-	// | 408  | Request Timeout               | Section 6.5.7            |
-	// | 409  | Conflict                      | Section 6.5.8            |
-	// | 410  | Gone                          | Section 6.5.9            |
-	// | 411  | Length Required               | Section 6.5.10           |
-	// | 412  | Precondition Failed           | Section 4.2 of [RFC7232] |
-	// | 413  | Payload Too Large             | Section 6.5.11           |
-	// | 414  | URI Too Long                  | Section 6.5.12           |
-	// | 415  | Unsupported Media Type        | Section 6.5.13           |
-	// | 416  | Range Not Satisfiable         | Section 4.4 of [RFC7233] |
-	// | 417  | Expectation Failed            | Section 6.5.14           |
-	// | 426  | Upgrade Required              | Section 6.5.15           |
-	// | 500  | Internal Server Error         | Section 6.6.1            |
-	// | 501  | Not Implemented               | Section 6.6.2            |
-	// | 502  | Bad Gateway                   | Section 6.6.3            |
-	// | 503  | Service Unavailable           | Section 6.6.4            |
-	// | 504  | Gateway Timeout               | Section 6.6.5            |
-	// | 505  | HTTP Version Not Supported    | Section 6.6.6            |
-	// +------+-------------------------------+--------------------------+
+	// RFC9110 - 18.3. Status Code Registration
+	//
+	// +------+-------------------------------+---------+
+	// | Code | Description                   | Section |
+	// +------+-------------------------------+---------+
+	// | 100  | Continue                      | 15.2.1  |
+	// | 101  | Switching Protocols           | 15.2.2  |
+	// | 200  | OK                            | 15.3.1  |
+	// | 201  | Created                       | 15.3.2  |
+	// | 202  | Accepted                      | 15.3.3  |
+	// | 203  | Non-Authoritative Information | 15.3.4  |
+	// | 204  | No Content                    | 15.3.5  |
+	// | 205  | Reset Content                 | 15.3.6  |
+	// | 206  | Partial Content               | 15.3.7  |
+	// | 300  | Multiple Choices              | 15.4.1  |
+	// | 301  | Moved Permanently             | 15.4.2  |
+	// | 302  | Found                         | 15.4.3  |
+	// | 303  | See Other                     | 15.4.4  |
+	// | 304  | Not Modified                  | 15.4.5  |
+	// | 305  | Use Proxy                     | 15.4.6  |
+	// | 306  | (Unused)                      | 15.4.7  |
+	// | 307  | Temporary Redirect            | 15.4.8  |
+	// | 308  | Permanent Redirect            | 15.4.9  |
+	// | 400  | Bad Request                   | 15.5.1  |
+	// | 401  | Unauthorized                  | 15.5.2  |
+	// | 402  | Payment Required              | 15.5.3  |
+	// | 403  | Forbidden                     | 15.5.4  |
+	// | 404  | Not Found                     | 15.5.5  |
+	// | 405  | Method Not Allowed            | 15.5.6  |
+	// | 406  | Not Acceptable                | 15.5.7  |
+	// | 407  | Proxy Authentication Required | 15.5.8  |
+	// | 408  | Request Timeout               | 15.5.9  |
+	// | 409  | Conflict                      | 15.5.10 |
+	// | 410  | Gone                          | 15.5.11 |
+	// | 411  | Length Required               | 15.5.12 |
+	// | 412  | Precondition Failed           | 15.5.13 |
+	// | 413  | Content Too Large             | 15.5.14 |
+	// | 414  | URI Too Long                  | 15.5.15 |
+	// | 415  | Unsupported Media Type        | 15.5.16 |
+	// | 416  | Range Not Satisfiable         | 15.5.17 |
+	// | 417  | Expectation Failed            | 15.5.18 |
+	// | 418  | (Unused)                      | 15.5.19 |
+	// | 421  | Misdirected Request           | 15.5.20 |
+	// | 422  | Unprocessable Content         | 15.5.21 |
+	// | 426  | Upgrade Required              | 15.5.22 |
+	// | 500  | Internal Server Error         | 15.6.1  |
+	// | 501  | Not Implemented               | 15.6.2  |
+	// | 502  | Bad Gateway                   | 15.6.3  |
+	// | 503  | Service Unavailable           | 15.6.4  |
+	// | 504  | Gateway Timeout               | 15.6.5  |
+	// | 505  | HTTP Version Not Supported    | 15.6.6  |
+	// +------+-------------------------------+---------+
 	enum class StatusCode : uint16_t
 	{
-		Unknown = 0,
+		Unknown						= 0,
 
-		Continue = 100,
-		SwitchingProtocols = 101,
-		OK = 200,
-		Created = 201,
-		Accepted = 202,
+		Continue					= 100,
+		SwitchingProtocols			= 101,
+		OK							= 200,
+		Created						= 201,
+		Accepted					= 202,
 		NonAuthoritativeInformation = 203,
-		NoContent = 204,
-		ResetContent = 205,
-		PartialContent = 206,
-		// RFC 4918 (https://tools.ietf.org/html/rfc4918#section-11.1)
-		MultiStatus = 207,
-		MultipleChoices = 300,
-		MovedPermanently = 301,
-		Found = 302,
-		SeeOther = 303,
-		NotModified = 304,
-		UseProxy = 305,
-		TemporaryRedirect = 307,
-		BadRequest = 400,
-		Unauthorized = 401,
-		PaymentRequired = 402,
-		Forbidden = 403,
-		NotFound = 404,
-		MethodNotAllowed = 405,
-		NotAcceptable = 406,
+		NoContent					= 204,
+		ResetContent				= 205,
+		PartialContent				= 206,
+		// WebDAV - RFC 4918 (https://tools.ietf.org/html/rfc4918#section-11.1)
+		MultiStatus					= 207,
+		MultipleChoices				= 300,
+		MovedPermanently			= 301,
+		Found						= 302,
+		SeeOther					= 303,
+		NotModified					= 304,
+		UseProxy					= 305,
+		Unused_306					= 306,
+		TemporaryRedirect			= 307,
+		PermanentRedirect			= 308,
+		BadRequest					= 400,
+		Unauthorized				= 401,
+		PaymentRequired				= 402,
+		Forbidden					= 403,
+		NotFound					= 404,
+		MethodNotAllowed			= 405,
+		NotAcceptable				= 406,
 		ProxyAuthenticationRequired = 407,
-		RequestTimeout = 408,
-		Conflict = 409,
-		Gone = 410,
-		LengthRequired = 411,
-		PreconditionFailed = 412,
-		PayloadTooLarge = 413,
-		URITooLong = 414,
-		UnsupportedMediaType = 415,
-		RangeNotSatisfiable = 416,
-		ExpectationFailed = 417,
-		Locked = 423,
-		FailedDependency = 424,
-		UpgradeRequired = 426,
-		InternalServerError = 500,
-		NotImplemented = 501,
-		BadGateway = 502,
-		ServiceUnavailable = 503,
-		GatewayTimeout = 504,
-		HTTPVersionNotSupported = 505
+		RequestTimeout				= 408,
+		Conflict					= 409,
+		Gone						= 410,
+		LengthRequired				= 411,
+		PreconditionFailed			= 412,
+		ContentTooLarge				= 413,
+		URITooLong					= 414,
+		UnsupportedMediaType		= 415,
+		RangeNotSatisfiable			= 416,
+		ExpectationFailed			= 417,
+		Unused_418					= 418,
+		MisdirectedRequest			= 421,
+		UnprocessableContent		= 422,
+		// WebDAV - RFC 4918 (https://tools.ietf.org/html/rfc4918#section-11.2)
+		// UnprocessableEntity			= 422,
+		// WebDAV - RFC 4918 (https://tools.ietf.org/html/rfc4918#section-11.3)
+		Locked						= 423,
+		// WebDAV - RFC 4918 (https://tools.ietf.org/html/rfc4918#section-11.4)
+		FailedDependency			= 424,
+		UpgradeRequired				= 426,
+		InternalServerError			= 500,
+		NotImplemented				= 501,
+		BadGateway					= 502,
+		ServiceUnavailable			= 503,
+		GatewayTimeout				= 504,
+		HTTPVersionNotSupported		= 505,
+		// WebDAV - RFC 4918 (https://tools.ietf.org/html/rfc4918#section-11.5)
+		InsufficientStorage			= 507,
 	};
 
 #define HTTP_IF_EXPR(condition, expr) \
@@ -246,7 +263,9 @@ namespace http
 			OV_CASE_RETURN(StatusCode::SeeOther, true);
 			OV_CASE_RETURN(StatusCode::NotModified, true);
 			OV_CASE_RETURN(StatusCode::UseProxy, true);
+			OV_CASE_RETURN(StatusCode::Unused_306, true);
 			OV_CASE_RETURN(StatusCode::TemporaryRedirect, true);
+			OV_CASE_RETURN(StatusCode::PermanentRedirect, true);
 			OV_CASE_RETURN(StatusCode::BadRequest, true);
 			OV_CASE_RETURN(StatusCode::Unauthorized, true);
 			OV_CASE_RETURN(StatusCode::PaymentRequired, true);
@@ -260,11 +279,14 @@ namespace http
 			OV_CASE_RETURN(StatusCode::Gone, true);
 			OV_CASE_RETURN(StatusCode::LengthRequired, true);
 			OV_CASE_RETURN(StatusCode::PreconditionFailed, true);
-			OV_CASE_RETURN(StatusCode::PayloadTooLarge, true);
+			OV_CASE_RETURN(StatusCode::ContentTooLarge, true);
 			OV_CASE_RETURN(StatusCode::URITooLong, true);
 			OV_CASE_RETURN(StatusCode::UnsupportedMediaType, true);
 			OV_CASE_RETURN(StatusCode::RangeNotSatisfiable, true);
 			OV_CASE_RETURN(StatusCode::ExpectationFailed, true);
+			OV_CASE_RETURN(StatusCode::Unused_418, true);
+			OV_CASE_RETURN(StatusCode::MisdirectedRequest, true);
+			OV_CASE_RETURN(StatusCode::UnprocessableContent, true);
 			OV_CASE_RETURN(StatusCode::Locked, true);
 			OV_CASE_RETURN(StatusCode::FailedDependency, true);
 			OV_CASE_RETURN(StatusCode::UpgradeRequired, true);
@@ -274,6 +296,7 @@ namespace http
 			OV_CASE_RETURN(StatusCode::ServiceUnavailable, true);
 			OV_CASE_RETURN(StatusCode::GatewayTimeout, true);
 			OV_CASE_RETURN(StatusCode::HTTPVersionNotSupported, true);
+			OV_CASE_RETURN(StatusCode::InsufficientStorage, true);
 		}
 
 		return false;
@@ -299,8 +322,10 @@ namespace http
 			OV_CASE_RETURN(StatusCode::Found, "Found");
 			OV_CASE_RETURN(StatusCode::SeeOther, "See Other");
 			OV_CASE_RETURN(StatusCode::NotModified, "Not Modified");
+			OV_CASE_RETURN(StatusCode::Unused_306, "(Unused_306)");
 			OV_CASE_RETURN(StatusCode::UseProxy, "Use Proxy");
 			OV_CASE_RETURN(StatusCode::TemporaryRedirect, "Temporary Redirect");
+			OV_CASE_RETURN(StatusCode::PermanentRedirect, "Permanent Redirect");
 			OV_CASE_RETURN(StatusCode::BadRequest, "Bad Request");
 			OV_CASE_RETURN(StatusCode::Unauthorized, "Unauthorized");
 			OV_CASE_RETURN(StatusCode::PaymentRequired, "Payment Required");
@@ -314,11 +339,14 @@ namespace http
 			OV_CASE_RETURN(StatusCode::Gone, "Gone");
 			OV_CASE_RETURN(StatusCode::LengthRequired, "Length Required");
 			OV_CASE_RETURN(StatusCode::PreconditionFailed, "Precondition Failed");
-			OV_CASE_RETURN(StatusCode::PayloadTooLarge, "Payload Too Large");
+			OV_CASE_RETURN(StatusCode::ContentTooLarge, "Content Too Large");
 			OV_CASE_RETURN(StatusCode::URITooLong, "URI Too Long");
 			OV_CASE_RETURN(StatusCode::UnsupportedMediaType, "Unsupported Media Type");
 			OV_CASE_RETURN(StatusCode::RangeNotSatisfiable, "Range Not Satisfiable");
 			OV_CASE_RETURN(StatusCode::ExpectationFailed, "Expectation Failed");
+			OV_CASE_RETURN(StatusCode::Unused_418, "(Unused_418)");
+			OV_CASE_RETURN(StatusCode::MisdirectedRequest, "Misdirected Request");
+			OV_CASE_RETURN(StatusCode::UnprocessableContent, "Unprocessable Content");
 			OV_CASE_RETURN(StatusCode::Locked, "Locked");
 			OV_CASE_RETURN(StatusCode::FailedDependency, "Failed Dependency");
 			OV_CASE_RETURN(StatusCode::UpgradeRequired, "Upgrade Required");
@@ -328,6 +356,7 @@ namespace http
 			OV_CASE_RETURN(StatusCode::ServiceUnavailable, "Service Unavailable");
 			OV_CASE_RETURN(StatusCode::GatewayTimeout, "Gateway Timeout");
 			OV_CASE_RETURN(StatusCode::HTTPVersionNotSupported, "HTTP Version Not Supported");
+			OV_CASE_RETURN(StatusCode::InsufficientStorage, "Insufficient Storage");
 		}
 
 		return "Unknown";
@@ -437,8 +466,8 @@ namespace http
 		{
 			Completed,
 			Error,
-			Moved,  	// Control is transferred to another thread so DO NOT close the connection
-			NotFound	// Handler not found
+			Moved,	  // Control is transferred to another thread so DO NOT close the connection
+			NotFound  // Handler not found
 		};
 	}  // namespace svr
 }  // namespace http
