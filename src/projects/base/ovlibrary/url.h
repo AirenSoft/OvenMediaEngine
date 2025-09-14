@@ -23,6 +23,15 @@ namespace ov
 		// <scheme>://<host>[:<port>][/<path/to/resource>][?<query string>]
 		static std::shared_ptr<Url> Parse(const ov::String &url);
 
+		// Checks if the given URL is absolute URL
+		//
+		// Absolute URL: <scheme>://<host>[:<port>][/<path/to/resource>][?<query string>]
+		// Relative URL: <path/to/resource>[?<query string>]
+		//
+		// Example of absolute URL: http://airensoft.com/path/to/resource
+		// Example of relative URL: /path/to/resource or path/to/resource
+		static bool IsAbsolute(const const char *url);
+
 		// Getters and Setters (Setters are NOT THREAD-SAFE)
 		OV_DEFINE_CONST_GETTER(Source, _source)
 		bool SetSource(const ov::String &value);

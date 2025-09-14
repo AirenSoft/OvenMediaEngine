@@ -73,12 +73,12 @@ namespace ov
 			return "";
 		}
 
-		const auto val = value.CStr();
+		const auto val	  = value.CStr();
 		const auto length = value.GetLength();
 
 		ov::String result_string;
 		result_string.SetLength(length);
-		auto result = result_string.GetBuffer();
+		auto result			= result_string.GetBuffer();
 		size_t result_index = 0;
 
 		char place_holder[3]{};
@@ -95,8 +95,8 @@ namespace ov
 					auto val2 = val[index + 2];
 					if (::isxdigit(val1) && ::isxdigit(val2))
 					{
-						place_holder[0] = val1;
-						place_holder[1] = val2;
+						place_holder[0]		 = val1;
+						place_holder[1]		 = val2;
 						result[result_index] = static_cast<char>(::strtol(place_holder, nullptr, 16));
 						index += 3;
 						result_index++;
@@ -116,6 +116,13 @@ namespace ov
 		}
 		result_string.SetLength(result_index);
 		return result_string;
+	}
+
+	bool Url::IsAbsolute(const char *url)
+	{
+		static ov::Regex absolute_url_regex = ov::Regex::CompiledRegex(R"(^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/)");
+
+		return absolute_url_regex.Matches(url).IsMatched();
 	}
 
 	bool Url::SetSource(const ov::String &value)
@@ -182,40 +189,40 @@ namespace ov
 		if (matches.GetError() != nullptr)
 		{
 			// Invalid URL
-			_scheme = "";
-			_id = "";
+			_scheme	  = "";
+			_id		  = "";
 			_password = "";
-			_host = "";
-			_port = 0;
-			_path = "";
+			_host	  = "";
+			_port	  = 0;
+			_path	  = "";
 			_path_components.clear();
-			_query_string = "";
+			_query_string	  = "";
 			_has_query_string = false;
-			_query_parsed = false;
+			_query_parsed	  = false;
 
-			_app = "";
-			_stream = "";
-			_file = "";
+			_app			  = "";
+			_stream			  = "";
+			_file			  = "";
 
 			return false;
 		}
 
 		auto group_list = matches.GetNamedGroupList();
 
-		_scheme = group_list["scheme"].GetValue();
-		_id = group_list["id"].GetValue();
-		_password = group_list["password"].GetValue();
-		_host = group_list["host"].GetValue();
-		_port = ov::Converter::ToUInt32(group_list["port"].GetValue());
-		_path = group_list["path"].GetValue();
+		_scheme			= group_list["scheme"].GetValue();
+		_id				= group_list["id"].GetValue();
+		_password		= group_list["password"].GetValue();
+		_host			= group_list["host"].GetValue();
+		_port			= ov::Converter::ToUInt32(group_list["port"].GetValue());
+		_path			= group_list["path"].GetValue();
 		// _path_components, _app, _stream, _file will be set in UpdatePathComponentsFromPath()
 		if (UpdatePathComponentsFromPath() == false)
 		{
 			return false;
 		}
-		_query_string = group_list["qs"].GetValue();
+		_query_string	  = group_list["qs"].GetValue();
 		_has_query_string = (_query_string.IsEmpty() == false);
-		_query_parsed = false;
+		_query_parsed	  = false;
 
 		return true;
 	}
@@ -241,7 +248,7 @@ namespace ov
 
 		_query_string.Append(key);
 		_has_query_string = true;
-		_query_parsed = false;
+		_query_parsed	  = false;
 
 		return true;
 	}
@@ -255,7 +262,7 @@ namespace ov
 
 		_query_string.AppendFormat("%s=%s", key.CStr(), Encode(value).CStr());
 		_has_query_string = true;
-		_query_parsed = false;
+		_query_parsed	  = false;
 
 		return true;
 	}
@@ -277,7 +284,7 @@ namespace ov
 		}
 
 		_has_query_string = true;
-		_query_parsed = false;
+		_query_parsed	  = false;
 
 		return true;
 	}
@@ -360,9 +367,9 @@ namespace ov
 		// split <path> to /<app>/<stream>[/<file>[/<remaining>]] (Up to 5 tokens)
 		_path_components = _path.Split("/");
 
-		_app = "";
-		_stream = "";
-		_file = "";
+		_app			 = "";
+		_stream			 = "";
+		_file			 = "";
 
 		switch (_path_components.size())
 		{
@@ -465,21 +472,21 @@ namespace ov
 
 	Url &Url::operator=(const Url &other) noexcept
 	{
-		_source = other._source;
-		_scheme = other._scheme;
-		_id = other._id;
-		_password = other._password;
-		_host = other._host;
-		_port = other._port;
-		_path = other._path;
-		_path_components = other._path_components;
+		_source			  = other._source;
+		_scheme			  = other._scheme;
+		_id				  = other._id;
+		_password		  = other._password;
+		_host			  = other._host;
+		_port			  = other._port;
+		_path			  = other._path;
+		_path_components  = other._path_components;
 		_has_query_string = other._has_query_string;
-		_query_string = other._query_string;
-		_query_parsed = other._query_parsed;
-		_query_map = other._query_map;
-		_app = other._app;
-		_stream = other._stream;
-		_file = other._file;
+		_query_string	  = other._query_string;
+		_query_parsed	  = other._query_parsed;
+		_query_map		  = other._query_map;
+		_app			  = other._app;
+		_stream			  = other._stream;
+		_file			  = other._file;
 
 		return *this;
 	}
