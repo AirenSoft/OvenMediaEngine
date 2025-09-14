@@ -30,7 +30,7 @@ namespace ov
 		//
 		// Example of absolute URL: http://airensoft.com/path/to/resource
 		// Example of relative URL: /path/to/resource or path/to/resource
-		static bool IsAbsolute(const const char *url);
+		static bool IsAbsolute(const char *url);
 
 		// Getters and Setters (Setters are NOT THREAD-SAFE)
 		OV_DEFINE_CONST_GETTER(Source, _source)
