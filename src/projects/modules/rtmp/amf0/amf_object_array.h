@@ -42,6 +42,8 @@ public:
 	void ToString(ov::String &description, size_t indent = 0) const override;
 	ov::String ToString(size_t indent = 0) const override;
 
+	std::vector<AmfPropertyPair> GetPropertyPairs() const;
+	
 protected:
 	std::vector<AmfPropertyPair> _amf_property_pairs;
 };

@@ -46,10 +46,10 @@ std::shared_ptr<AmfTextDataEvent> AmfTextDataEvent::Parse(const Json::Value &jso
 	{
 		return nullptr;
 	}
-	
+
 	auto object = std::make_shared<AmfTextDataEvent>();
 
-	auto data = json["data"];
+	auto data	= json["data"];
 	for (const auto &key : data.getMemberNames())
 	{
 		auto value = data[key];
@@ -64,12 +64,74 @@ std::shared_ptr<AmfTextDataEvent> AmfTextDataEvent::Parse(const Json::Value &jso
 		}
 		else if (value.isString())
 		{
-			// TODO: Refactor this code. Duplicate code exists in AmfTextDataEvent::Parse and MediaRouterEventGener::MakeAMFData
-			// Replace ${EpochTime} with current epoch time
-			ov::String str_value = value.asString().c_str();
-			str_value = str_value.Replace("${EpochTime}", ov::String::FormatString("%lld", ov::Time::GetTimestampInMs()));
-			
-			object->Append(key.c_str(), str_value.CStr());
+			object->Append(key.c_str(), value.asString().c_str());
+		}
+	}
+
+	return object;
+}
+
+bool AmfTextDataEvent::IsValid(const pugi::xml_node &xml)
+{
+	ov::String amf_type = xml.child_value("AmfType");
+	if (!(amf_type.UpperCaseString() == "ONTEXTDATA"))
+	{
+		return false;
+	}
+
+	auto data_node = xml.child("Data");
+	if (data_node.empty())
+	{
+		return false;
+	}
+
+	return true;
+}
+
+
+std::shared_ptr<AmfTextDataEvent> AmfTextDataEvent::Parse(const pugi::xml_node &xml)
+{
+	auto object = std::make_shared<AmfTextDataEvent>();
+	if (object == nullptr)
+	{
+		return nullptr;
+	}
+
+	auto data_node = xml.child("Data");
+	if (data_node.empty())
+	{
+		// logte("AMF event must have Data node");
+		return nullptr;
+	}
+
+	size_t child_node_count = std::distance(data_node.begin(), data_node.end());
+	if (child_node_count > 0)
+	{
+		// Complex data
+		for (pugi::xml_node data_child_node = data_node.first_child(); data_child_node; data_child_node = data_child_node.next_sibling())
+		{
+			ov::String key	= data_child_node.name();
+			ov::String type = data_child_node.attribute("type").as_string();
+			if (type.IsEmpty())
+			{
+				type = "string";
+			}
+			ov::String value = data_child_node.child_value();
+
+			if (type == "double" || type == "number" || type == "float")
+			{
+				double double_value = atof(value.CStr());
+				object->Append(key.CStr(), double_value);
+			}
+			else if (type == "boolean" || type == "bool")
+			{
+				bool bool_value = (strcmp(value.CStr(), "true") == 0);
+				object->Append(key.CStr(), bool_value);
+			}
+			else
+			{
+				object->Append(key.CStr(), value.CStr());
+			}
 		}
 	}
 
@@ -78,29 +140,35 @@ std::shared_ptr<AmfTextDataEvent> AmfTextDataEvent::Parse(const Json::Value &jso
 
 AmfTextDataEvent::AmfTextDataEvent()
 {
-	_arrays = std::make_shared<AmfEcmaArray>();
-}
-
-bool AmfTextDataEvent::Append(const char *name, const bool value)
-{
-	return _arrays->Append(name, AmfProperty(value));
-}
-
-bool AmfTextDataEvent::Append(const char *name, const double value)
-{
-	return _arrays->Append(name, AmfProperty(value));
-}
-
-bool AmfTextDataEvent::Append(const char *name, const char *value)
-{
-	return _arrays->Append(name, AmfProperty(value));
+	_arrays = nullptr;
 }
 
 std::shared_ptr<ov::Data> AmfTextDataEvent::Serialize() const
 {
 	AmfDocument doc;
 	doc.AppendProperty(AmfProperty("onTextData"));
-	doc.AppendProperty(*_arrays.get());
+
+	auto arrays = std::make_shared<AmfEcmaArray>();
+
+	for (const auto &[name, property] : _arrays->GetPropertyPairs())
+	{
+		if (property.GetType() == AmfTypeMarker::String)
+		{
+			ov::String str_value = property.GetString();
+			str_value			 = str_value.Replace("${EpochTime}", ov::String::FormatString("%lld", ov::Time::GetTimestampInMs()));
+
+			arrays->Append(name.CStr(), AmfProperty(str_value.CStr()));
+		}
+		else
+		{
+			arrays->Append(name.CStr(), property);
+		}
+	}
+
+	if (arrays != nullptr)
+	{
+		doc.AppendProperty(*arrays.get());
+	}
 
 	ov::ByteStream byte_stream;
 	if (doc.Encode(byte_stream) == false)

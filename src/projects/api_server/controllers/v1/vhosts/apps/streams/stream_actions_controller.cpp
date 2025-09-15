@@ -715,6 +715,21 @@ namespace api
 
 				return amf_event->Serialize();
 			}
+			else if (AmfUserDataEvent::IsMatch(amf_type))
+			{
+				if (AmfUserDataEvent::IsValid(event) == false)
+				{
+					throw http::HttpError(http::StatusCode::BadRequest, "data is required in events");
+				}
+
+				auto amf_event = AmfUserDataEvent::Parse(event);
+				if (amf_event == nullptr)
+				{
+					throw http::HttpError(http::StatusCode::BadRequest, "Could not parse amf data");
+				}
+
+				return amf_event->Serialize();
+			}				
 			else if (AmfCuePointEvent::IsMatch(amf_type))
 			{
 				if (AmfCuePointEvent::IsValid(event) == false)
@@ -742,30 +757,18 @@ namespace api
 			}
 
 			// only first event is used
-			auto event						  = events[0];
-			H264SEI::PayloadType payload_type = H264SEI::PayloadType::USER_DATA_UNREGISTERED;
-			if (event.isMember("seiType") == true && event["seiType"].isString() == true)
+			auto event = events[0];
+
+			if (SEIEvent::IsValid(event) == false)
 			{
-				payload_type = H264SEI::StringToPayloadType(ov::String(event["seiType"].asString().c_str()));
+				throw http::HttpError(http::StatusCode::BadRequest, "Unknown seiType or Invalid format");
 			}
 
-			// data (optional)
-			std::shared_ptr<ov::Data> payload_data = nullptr;
-			if (event.isMember("data") == true && event["data"].isString() == true)
+			auto sei_event = SEIEvent::Parse(event);
+			if (sei_event == nullptr)
 			{
-				payload_data = std::make_shared<ov::Data>(event["data"].asString().c_str(), event["data"].asString().size());
+				throw http::HttpError(http::StatusCode::BadRequest, "Could not parse sei data");
 			}
-			else
-			{
-				throw http::HttpError(http::StatusCode::BadRequest, "data is required in events");
-			}
-
-			auto sei_event = std::make_shared<H264SEI>();
-			sei_event->SetPayloadType(payload_type);
-			sei_event->SetPayloadTimeCode(ov::Time::GetTimestampInMs());
-			sei_event->SetPayloadData(payload_data);
-
-			logtd("%s", sei_event->GetInfoString().CStr());
 
 			return sei_event->Serialize();
 		}

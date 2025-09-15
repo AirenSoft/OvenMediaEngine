@@ -864,28 +864,7 @@ namespace pvd
 		return true;
 	}
 
-	bool RtmpStream::OnAmfTextData(const std::shared_ptr<const RtmpChunkHeader> &header, const AmfDocument &document)
-	{
-		int64_t pts_in_ms = 0;
-		if (_last_video_pts_in_ms > _last_audio_pts_in_ms)
-		{
-			pts_in_ms = _last_video_pts_in_ms + _last_video_pts_clock.Elapsed();
-		}
-		else
-		{
-			pts_in_ms = _last_audio_pts_in_ms + _last_audio_pts_clock.Elapsed();
-		}
-
-		ov::ByteStream byte_stream;
-		if (document.Encode(byte_stream) == false)
-		{
-			return false;
-		}
-
-		return SendDataFrame(pts_in_ms, cmn::BitstreamFormat::AMF, cmn::PacketType::EVENT, byte_stream.GetDataPointer(), false);
-	}
-
-	bool RtmpStream::OnAmfCuePoint(const std::shared_ptr<const RtmpChunkHeader> &header, const AmfDocument &document)
+	bool RtmpStream::OnAmfCustomData(const std::shared_ptr<const RtmpChunkHeader> &header, const AmfDocument &document)
 	{
 		int64_t pts_in_ms = 0;
 		if (_last_video_pts_in_ms > _last_audio_pts_in_ms)

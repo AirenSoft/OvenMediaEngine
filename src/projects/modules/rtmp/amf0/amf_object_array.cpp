@@ -271,3 +271,8 @@ ov::String AmfObjectArray::ToString(size_t indent) const
 	ToString(description, indent);
 	return description;
 }
+
+std::vector<AmfPropertyPair> AmfObjectArray::GetPropertyPairs() const
+{
+	return _amf_property_pairs;
+}
