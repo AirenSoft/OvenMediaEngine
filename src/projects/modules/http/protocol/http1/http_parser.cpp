@@ -172,8 +172,7 @@ namespace http
 					return StatusCode::BadRequest;
 				}
 
-				// Convert all header names to lower case
-				ov::String field_name = line.Left(static_cast<size_t>(colon_index)).LowerCaseString();
+				ov::String field_name = line.Left(static_cast<size_t>(colon_index));
 				// Eliminate OWS(optional white space) to simplify processing
 				ov::String field_value = line.Substring(colon_index + 1).Trim();
 
