@@ -114,7 +114,7 @@ namespace http
 
 			ov::String Http2Request::GetHeader(const ov::String &key) const noexcept
 			{
-				auto it = _headers.find(key.LowerCaseString());
+				auto it = _headers.find(key);
 				if (it == _headers.end())
 				{
 					return "";
@@ -125,7 +125,7 @@ namespace http
 
 			bool Http2Request::IsHeaderExists(const ov::String &key) const noexcept
 			{
-				auto it = _headers.find(key.LowerCaseString());
+				auto it = _headers.find(key);
 				if (it == _headers.end())
 				{
 					return false;

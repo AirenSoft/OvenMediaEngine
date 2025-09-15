@@ -69,11 +69,17 @@ namespace http
 				_interceptor_list.push_back(interceptor);
 			}
 
+			void ClearInterceptors()
+			{
+				std::unique_lock lock(_interceptor_list_mutex);
+				_interceptor_list.clear();
+			}
+
 			// Request headers (Headers to be sent to the HTTP server)
 			void SetRequestHeader(const ov::String &key, const ov::String &value);
 			std::optional<ov::String> GetRequestHeader(const ov::String &key);
-			const HttpHeaderMap &GetRequestHeaders() const;
-			HttpHeaderMap &GetRequestHeaders();
+			const HttpHeaderMap GetRequestHeaders() const;
+			void RemoveRequestHeader(const ov::String &key);
 
 			// HttpClientV2 can send a request body even when the method is GET, but the server may not actually accept it
 			void SetRequestBody(const std::shared_ptr<const ov::Data> &body);
@@ -81,6 +87,7 @@ namespace http
 			{
 				SetRequestBody(body.ToData(false));
 			}
+			const std::shared_ptr<const ov::Data> GetRequestBody() const;
 
 			// If the request is made successfully in non-blocking mode, it returns a `CancelToken`,
 			// otherwise, it returns `nullptr` in blocking mode or when an error occurs during the request.
@@ -180,7 +187,7 @@ namespace http
 
 			prot::h1::HttpResponseParser _parser;
 
-			std::recursive_mutex _request_mutex;
+			mutable std::recursive_mutex _request_mutex;
 			std::atomic<bool> _requested = false;
 
 			ov::String _url;

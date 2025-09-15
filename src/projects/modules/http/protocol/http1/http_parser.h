@@ -75,7 +75,7 @@ namespace http
 
 				std::optional<ov::String> GetHeader(const ov::String &key) const noexcept
 				{
-					auto item = _headers.find(key.LowerCaseString());
+					auto item = _headers.find(key);
 
 					if (item == _headers.cend())
 					{

@@ -87,15 +87,6 @@ namespace http
 				return;
 			}
 
-#if DEBUG
-			auto iterator = _request_header_map.find(key);
-
-			if (iterator != _request_header_map.end())
-			{
-				logtw("Old value found: %s for key: %s", iterator->second.CStr(), key.CStr());
-			}
-#endif	// DEBUG
-
 			_request_header_map[key] = value;
 		}
 
@@ -111,19 +102,34 @@ namespace http
 			return iterator->second;
 		}
 
-		const HttpHeaderMap &HttpClientV2::GetRequestHeaders() const
+		const HttpHeaderMap HttpClientV2::GetRequestHeaders() const
 		{
+			std::lock_guard lock_guard(_request_mutex);
+
 			return _request_header_map;
 		}
 
-		HttpHeaderMap &HttpClientV2::GetRequestHeaders()
+		void HttpClientV2::RemoveRequestHeader(const ov::String &key)
 		{
-			return _request_header_map;
+			std::lock_guard lock_guard(_request_mutex);
+
+			if (_requested)
+			{
+				logte("Could not remove header after request: %s", key.CStr());
+				return;
+			}
+
+			_request_header_map.erase(key);
 		}
 
 		void HttpClientV2::SetRequestBody(const std::shared_ptr<const ov::Data> &body)
 		{
 			_request_body = body->Clone();
+		}
+
+		const std::shared_ptr<const ov::Data> HttpClientV2::GetRequestBody() const
+		{
+			return _request_body;
 		}
 
 		void HttpClientV2::OnConnected(const std::shared_ptr<const ov::SocketError> &error)
