@@ -92,6 +92,8 @@ namespace http
 
 		std::optional<ov::String> HttpClientV2::GetRequestHeader(const ov::String &key)
 		{
+			std::lock_guard lock_guard(_request_mutex);
+			
 			auto iterator = _request_header_map.find(key);
 
 			if (iterator == _request_header_map.end())
