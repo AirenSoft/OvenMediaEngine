@@ -93,7 +93,7 @@ namespace ov
 		template <typename Tsocket = ov::Socket, typename... Targuments>
 		std::shared_ptr<Tsocket> AllocSocket(const SocketFamily family, Targuments... args)
 		{
-			std::shared_ptr<SocketPoolWorker> worker = GetIdleWorker();
+			std::shared_ptr<SocketPoolWorker> worker = GetLeastBusyWorker();
 			if (worker != nullptr)
 			{
 				auto socket = worker->AllocSocket<Tsocket>(family, args...);
@@ -108,23 +108,6 @@ namespace ov
 			}
 
 			return nullptr;
-		}
-
-		bool ReleaseSocketPoolWorker(const std::shared_ptr<SocketPoolWorker> &worker)
-		{
-			std::lock_guard lock_guard(_worker_list_mutex);
-
-			auto iterator = std::find(_worker_list.begin(), _worker_list.end(), worker);
-			if (iterator != _worker_list.end())
-			{
-				auto worker = *iterator;
-				worker->Uninitialize();
-
-				_worker_list.erase(iterator);
-				return true;
-			}
-
-			return false;
 		}
 
 		bool ReleaseSocket(const std::shared_ptr<Socket> &socket)
@@ -143,13 +126,13 @@ namespace ov
 
 	protected:
 		// This method will increase the number of sockets for that worker by 1
-		std::shared_ptr<SocketPoolWorker> GetIdleWorker()
+		std::shared_ptr<SocketPoolWorker> GetLeastBusyWorker()
 		{
 			std::lock_guard lock_guard(_worker_list_mutex);
 
 			if (_thread_per_socket)
 			{
-				auto instance = CreateWorker();
+				auto instance = CreateWorker(GetSharedPtr());
 				if (instance != nullptr)
 				{
 					instance->IncreaseSocketCount();
@@ -173,9 +156,10 @@ namespace ov
 			return worker;
 		}
 
-		std::shared_ptr<SocketPoolWorker> CreateWorker()
+		std::shared_ptr<SocketPoolWorker> CreateWorker(const std::shared_ptr<ov::SocketPool> &pool)
 		{
-			auto pool	   = GetSharedPtr();
+			OV_ASSERT2(pool != nullptr);
+
 			auto instance = std::make_shared<SocketPoolWorker>(SocketPoolWorker::PrivateToken{nullptr}, pool);
 
 			if (instance->Initialize())
@@ -190,16 +174,16 @@ namespace ov
 
 		ov::String _name;
 
-		SocketType _type = SocketType::Unknown;
+		SocketType _type		= SocketType::Unknown;
 
 		bool _thread_per_socket = false;
 
-		bool _initialized = false;
+		bool _initialized		= false;
 
 		mutable std::mutex _worker_list_mutex;
 		std::vector<std::shared_ptr<SocketPoolWorker>> _worker_list;
-		
-		// Worker releaser 
+
+		// Worker releaser
 		ov::DelayQueue _timer{"SocketPoolWorkerReleaser"};
 	};
 }  // namespace ov

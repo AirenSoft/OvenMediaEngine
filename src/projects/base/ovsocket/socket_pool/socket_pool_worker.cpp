@@ -77,7 +77,7 @@ namespace ov
 
 		_stop_epoll_thread = true;
 
-		if (_epoll_thread.joinable() && _epoll_thread.get_id() != std::this_thread::get_id())
+		if (_epoll_thread.joinable())
 		{
 			_epoll_thread.join();
 		}

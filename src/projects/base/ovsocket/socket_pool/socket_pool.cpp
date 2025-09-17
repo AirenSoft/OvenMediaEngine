@@ -109,7 +109,7 @@ namespace ov
 
 			for (int index = 0; index < worker_count; index++)
 			{
-				auto instance = CreateWorker();
+				auto instance = CreateWorker(pool);
 				if (instance == nullptr)
 				{
 					succeeded = false;
