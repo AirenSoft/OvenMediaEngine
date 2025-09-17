@@ -80,7 +80,7 @@ namespace pub
 		for (const auto &address : address_list)
 		{
 			auto physical_port = physical_port_manager->CreatePort(
-				"SRTPub", ov::SocketType::Srt, address, worker_count, 0, 0,
+				"SRTPub", ov::SocketType::Srt, address, worker_count, false, 0, 0,
 				[=](const std::shared_ptr<ov::Socket> &socket) -> std::shared_ptr<ov::Error> {
 					return SrtOptionProcessor::SetOptions(socket, srt_bind_config.GetOptions());
 				});

@@ -28,6 +28,7 @@ public:
 											 ov::SocketType type,
 											 const ov::SocketAddress &address,
 											 int worker_count = PHYSICAL_PORT_USE_DEFAULT_COUNT,
+											 bool thread_per_socket = false, // if true, worker_count is ignored
 											 int send_buffer_size = 0,
 											 int recv_buffer_size = 0,
 											 const PhysicalPort::OnSocketCreated on_socket_created = nullptr);

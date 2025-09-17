@@ -883,6 +883,7 @@ namespace ov
 		{
 			std::lock_guard lock_guard(_socket_map_mutex);
 			_socket_map.erase(socket->GetNativeHandle());
+			DecreaseSocketCount();
 		}
 
 		return (error == nullptr);

@@ -20,9 +20,10 @@
 
 namespace ov
 {
-	SocketPool::SocketPool(PrivateToken token, const char *name, SocketType type)
+	SocketPool::SocketPool(PrivateToken token, const char *name, SocketType type, bool thread_per_socket)
 		: _name(name),
-		  _type(type)
+		  _type(type),
+		  _thread_per_socket(thread_per_socket)
 	{
 	}
 
@@ -52,6 +53,40 @@ namespace ov
 			return false;
 		}
 
+		if (_thread_per_socket)
+		{
+			_initialized  = true;
+			logai("Socket pool (%s) is initialized with thread per socket mode", ToString().CStr());
+
+			_timer.Push(
+				[this](void *parameter) -> ov::DelayQueueAction {
+					std::lock_guard lock_guard(_worker_list_mutex);
+
+					for (auto iterator = _worker_list.begin(); iterator != _worker_list.end();)
+					{
+						auto worker = *iterator;
+
+						if (worker->_socket_count == 0)
+						{
+							logad("Releasing idle worker: %s", worker->ToString().CStr());
+							worker->Uninitialize();
+
+							iterator = _worker_list.erase(iterator);
+						}
+						else
+						{
+							++iterator;
+						}
+					}
+
+					return ov::DelayQueueAction::Repeat;
+				},
+				1000);
+			_timer.Start();
+
+			return true;
+		}
+
 		if (worker_count < 0)
 		{
 			logae("Invalid worker count: %d", worker_count);
@@ -74,9 +109,8 @@ namespace ov
 
 			for (int index = 0; index < worker_count; index++)
 			{
-				auto instance = std::make_shared<SocketPoolWorker>(SocketPoolWorker::PrivateToken{nullptr}, pool);
-
-				if (instance->Initialize() == false)
+				auto instance = CreateWorker(pool);
+				if (instance == nullptr)
 				{
 					succeeded = false;
 					break;

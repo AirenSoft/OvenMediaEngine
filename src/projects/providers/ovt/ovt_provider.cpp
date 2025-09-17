@@ -52,7 +52,7 @@ namespace pvd
 	{
 		if(_client_socket_pool == nullptr)
 		{
-			_client_socket_pool = ov::SocketPool::Create("OvtProvider", ov::SocketType::Tcp);
+			_client_socket_pool = ov::SocketPool::Create("OvtProvider", ov::SocketType::Tcp, false);
 			_client_socket_pool->Initialize(_worker_count);
 		}
 

@@ -40,6 +40,7 @@ public:
 				ov::SocketType type,
 				const ov::SocketAddress &address,
 				int worker_count,
+				bool thread_per_socket,
 				int send_buffer_size,
 				int recv_buffer_size,
 				const OnSocketCreated on_socket_created);
@@ -92,6 +93,7 @@ protected:
 							ov::SocketType type,
 							const ov::SocketAddress &address,
 							int worker_count,
+							bool thread_per_socket,
 							int send_buffer_size,
 							int recv_buffer_size,
 							const OnSocketCreated on_socket_created);
@@ -100,6 +102,7 @@ protected:
 							  ov::SocketType type,
 							  const ov::SocketAddress &address,
 							  int worker_count,
+							  bool thread_per_socket,
 							  const OnSocketCreated on_socket_created);
 
 	// For TCP physical port
