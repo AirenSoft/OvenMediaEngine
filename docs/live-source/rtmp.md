@@ -8,6 +8,8 @@ RTMP is one of the most widely used protocols in live streaming.
 
 `<Providers>` ingests streams that come from a media source. OvenMediaEngine supports RTMP protocol. You can set it in the configuration as follows:
 
+### Bind
+
 ```markup
 <!-- /Server/Bind/Providers -->
 <Providers>
@@ -19,13 +21,6 @@ RTMP is one of the most widely used protocols in live streaming.
     </RTMP>
     ...
 </Providers>
-
-<!-- /Server/VirtualHosts/VirtualHost/Applications/Application -->
-<Providers>
-    ...
-    <RTMP />
-    ...
-</Providers>
 ```
 
 When a live source inputs to the `<Application>`, a stream is automatically created in the `<Application>`. The created stream is passed to Encoder and Publisher.
@@ -35,6 +30,19 @@ When a live source inputs to the `<Application>`, a stream is automatically crea
 {% hint style="warning" %}
 Using `ThreadPerSocket` can prevent a session thread from blocking while waiting for the Control Server to respond during AdmissionWebhooks, which would otherwise stop other sessions from proceeding. However, if too many sessions are connected, the overhead from thread context switching can become very high. On a 16-core system, practical cases have shown that around 100 sessions can run without issues.
 {% endhint %}
+
+### Application
+
+RTMP input can be turned on/off for each application. As follows Setting enables the RTMP input function of the application.
+
+```
+<!-- /Server/VirtualHosts/VirtualHost/Applications/Application -->
+<Providers>
+    ...
+    <RTMP />
+    ...
+</Providers>
+```
 
 ## RTMP live stream
 

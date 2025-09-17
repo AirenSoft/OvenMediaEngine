@@ -19,9 +19,9 @@ Set the SRT listen port as follows:
     <SRT>
         <Port>9998,9999</Port>
         <WorkerCount>1</WorkerCount>
-	<ThreadPerSocket>true</ThreadPerSocket>
-	
-	<StreamMap>
+        <ThreadPerSocket>true</ThreadPerSocket>
+        
+        <StreamMap>
             <Stream>
                 <Port>9999</Port>
                 <StreamPath>default/app/stream</StreamPath>
