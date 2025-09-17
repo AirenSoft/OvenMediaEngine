@@ -23,8 +23,6 @@ RTMP is one of the most widely used protocols in live streaming.
 </Providers>
 ```
 
-When a live source inputs to the `<Application>`, a stream is automatically created in the `<Application>`. The created stream is passed to Encoder and Publisher.
-
 <table><thead><tr><th width="212">Property</th><th>Description</th></tr></thead><tbody><tr><td>Port</td><td>Specifies the TCP port number that listens for incoming RTMP connections.</td></tr><tr><td>WorkerCount (default : 1)</td><td>Defines the number of worker threads for handling RTMP sockets. If the number of incoming RTMP sessions increases, you can raise this value to distribute traffic more efficiently.</td></tr><tr><td>ThreadPerSocket (default : false)</td><td>Determines whether each socket gets its own dedicated thread. If it is set to <strong>true</strong>, <code>WorkerCount</code> is ignored, and a new thread is created for every session when it connects, then terminated when the session ends. </td></tr></tbody></table>
 
 {% hint style="warning" %}
