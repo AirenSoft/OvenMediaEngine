@@ -14,7 +14,8 @@ RTMP is one of the most widely used protocols in live streaming.
     ...
     <RTMP>
         <Port>1935</Port>
-        ...
+        <WorkerCount>1</WorkerCount>
+        <ThreadPerSocket>false</ThreadPerSocket>
     </RTMP>
     ...
 </Providers>
@@ -28,6 +29,12 @@ RTMP is one of the most widely used protocols in live streaming.
 ```
 
 When a live source inputs to the `<Application>`, a stream is automatically created in the `<Application>`. The created stream is passed to Encoder and Publisher.
+
+<table><thead><tr><th width="212">Property</th><th>Description</th></tr></thead><tbody><tr><td>Port</td><td>Specifies the TCP port number that listens for incoming RTMP connections.</td></tr><tr><td>WorkerCount (default : 1)</td><td>Defines the number of worker threads for handling RTMP sockets. If the number of incoming RTMP sessions increases, you can raise this value to distribute traffic more efficiently.</td></tr><tr><td>ThreadPerSocket (default : false)</td><td>Determines whether each socket gets its own dedicated thread. If it is set to <strong>true</strong>, <code>WorkerCount</code> is ignored, and a new thread is created for every session when it connects, then terminated when the session ends. </td></tr></tbody></table>
+
+{% hint style="warning" %}
+Using `ThreadPerSocket` can prevent a session thread from blocking while waiting for the Control Server to respond during AdmissionWebhooks, which would otherwise stop other sessions from proceeding. However, if too many sessions are connected, the overhead from thread context switching can become very high. On a 16-core system, practical cases have shown that around 100 sessions can run without issues.
+{% endhint %}
 
 ## RTMP live stream
 
