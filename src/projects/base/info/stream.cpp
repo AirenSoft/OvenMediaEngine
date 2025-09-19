@@ -295,10 +295,6 @@ namespace info
 				logw("DEBUG", "Public label '%s' already exists for track ID %d", label.CStr(), track->GetId());
 			}
 		}
-		else
-		{
-			logw("DEBUG", "Track with empty label added. Track ID: %d", track->GetId());
-		}
 
 		return true;
 	}

@@ -280,7 +280,9 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 	output_track->SetMediaType(cmn::MediaType::Audio);
 	output_track->SetId(NewTrackId());
 	output_track->SetVariantName(profile.GetName());
-	output_track->SetPublicName(input_track->GetPublicName());
+
+	ov::String public_name = ov::String::FormatString("%s_%d", input_track->GetPublicName().CStr(), output_track->GetId());
+	output_track->SetPublicName(public_name);
 	output_track->SetLanguage(input_track->GetLanguage());
 	output_track->SetCharacteristics(input_track->GetCharacteristics());
 	output_track->SetOriginBitstream(input_track->GetOriginBitstream());
