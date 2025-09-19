@@ -376,13 +376,13 @@ namespace mpegts
 	uint32_t Packet::Parse()
 	{
 		// already parsed
-		if(_ts_parser != nullptr)
+		if (_ts_parser != nullptr)
 		{
 			return 0;
 		}
 
 		// this time, ome only supports for 188 bytes mpegts packet
-		if(_data->GetLength() < MPEGTS_MIN_PACKET_SIZE)
+		if (_data->GetLength() < MPEGTS_MIN_PACKET_SIZE)
 		{
 			return 0;
 		}
@@ -394,7 +394,7 @@ namespace mpegts
 
 		_sync_byte = _ts_parser->ReadBytes<uint8_t>();
 		_transport_error_indicator = _ts_parser->ReadBoolBit();
-		if(_transport_error_indicator)
+		if (_transport_error_indicator)
 		{
 			// error
 			return 0;	
@@ -407,29 +407,42 @@ namespace mpegts
 		_adaptation_field_control = _ts_parser->ReadBits<uint8_t>(2);
 		_continuity_counter = _ts_parser->ReadBits<uint8_t>(4);
 		
-		if(HasAdaptationField())
+		if (HasAdaptationField())
 		{
-			if(ParseAdaptationHeader() == false)
+			if (ParseAdaptationHeader() == false)
 			{
-				logte("Could not parse adaptation header");
 				return 0;
 			}
 
 			_adaptation_field_size = 1 + _adaptation_field._length; // length(8bits) + adaptation_field.length
 		}
 
-		if(HasPayload())
+		if (HasPayload())
 		{
-			ParsePayload();
+			if (ParsePayload() == false)
+			{
+				return 0;
+			}
 		}
 		
 		// Now, it must be 188 bytes
+		if (_ts_parser->BytesConsumed() != MPEGTS_MIN_PACKET_SIZE)
+		{
+			logte("Invalid mpegts packet size: %d, consumed: %d", _data->GetLength(), _ts_parser->BytesConsumed());
+			return 0;
+		}
+
 		return _ts_parser->BytesConsumed();
 	}
 
 	bool Packet::ParseAdaptationHeader()
 	{
 		_adaptation_field._length = _ts_parser->ReadBytes<uint8_t>();
+		if (_adaptation_field._length > MPEGTS_MIN_PACKET_SIZE - MPEGTS_HEADER_SIZE)
+		{
+			logte("Invalid adaptation field length: %d", _adaptation_field._length);
+			return false;
+		}
 		
 		_ts_parser->StartSection();
 
@@ -476,6 +489,12 @@ namespace mpegts
 			}
 		}	
 		
+		if (_ts_parser->BytesSetionConsumed() > _adaptation_field._length)
+		{
+			logte("Invalid adaptation field length: %d, consumed: %d", _adaptation_field._length, _ts_parser->BytesSetionConsumed());
+			return false;
+		}
+
 		// It may contain 
 		auto skip_bytes = _adaptation_field._length - _ts_parser->BytesSetionConsumed();
 
@@ -484,6 +503,12 @@ namespace mpegts
 
 	bool Packet::ParsePayload()
 	{
+		if (_packet_size < _ts_parser->BytesConsumed())
+		{
+			logte("Invalid packet size: %d, consumed: %d", _packet_size, _ts_parser->BytesConsumed());
+			return false;
+		}
+
 		_payload = _ts_parser->CurrentPosition();
 		_payload_length = _packet_size - _ts_parser->BytesConsumed();
 		_payload_data = std::make_shared<ov::Data>(_payload, _payload_length);
