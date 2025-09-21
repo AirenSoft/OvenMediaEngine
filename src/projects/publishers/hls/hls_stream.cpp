@@ -26,7 +26,7 @@
 [Legacy HLS (Version 3) URLs]
 
 * Master Playlist
-http[s]://<host>:<port>/<application_name>/<stream_name>/ts:playlist.m3u8 
+http[s]://<host>:<port>/<application_name>/<stream_name>/ts:playlist.m3u8
 http[s]://<host>:<port>/<application_name>/<stream_name>/playlist.m3u8?format=ts
 
 * Media Playlist
@@ -387,7 +387,7 @@ void HlsStream::OnEvent(const std::shared_ptr<MediaEvent> &event)
 
 	switch(event->GetCommandType())
 	{
-		case MediaEvent::CommandType::ConcludeLive: 
+		case MediaEvent::CommandType::ConcludeLive:
 		{
 			auto [result, message] = ConcludeLive();
 			if (result == true)
@@ -913,7 +913,7 @@ void HlsStream::InitializeAllDumps()
 
 			auto dump_item = std::make_shared<mdl::Dump>();
 			dump_item->SetId(dump.GetId());
-			dump_item->SetOutputPath(*output_path);
+			dump_item->SetOutputPath(output_path);
 			dump_item->SetPlaylists(dump.GetPlaylists());
 			dump_item->SetEnabled(true);
 
@@ -1025,7 +1025,7 @@ bool HlsStream::DumpSegment(const std::shared_ptr<mdl::Dump> &dump, const ov::St
 	}
 
 	std::shared_ptr<ov::Data> playlist_data;
-	if (segment_number == 0) 
+	if (segment_number == 0)
 	{
 		playlist_data = playlist->ToString(false).ToData(false);
 		if (!playlist_data)
