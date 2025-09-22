@@ -217,7 +217,7 @@ bool LLHlsStream::Start()
 
 			auto dump_item = std::make_shared<mdl::Dump>();
 			dump_item->SetId(dump.GetId());
-			dump_item->SetOutputPath(*output_path);
+			dump_item->SetOutputPath(output_path);
 			dump_item->SetPlaylists(dump.GetPlaylists());
 			dump_item->SetEnabled(true);
 
@@ -1083,7 +1083,7 @@ void LLHlsStream::SendDataFrame(const std::shared_ptr<MediaPacket> &media_packet
 				auto scte_out_duration_ms = scte35_event->GetDurationMsec();
 				auto scte_in_timestamp_ms = timestamp_ms + scte_out_duration_ms;
 				auto scte_in_data = Scte35Event::Create(mpegts::SpliceCommandType::SPLICE_INSERT, scte35_event->GetID(), false, scte_in_timestamp_ms, scte_out_duration_ms, false)->Serialize();
-				
+
 				// xxx-OUT marker will create one more segment, so we need to shift the sequence number by 1
 				if (InsertMarkerToAllPackagers(media_packet->GetTrackId(), cmn::BitstreamFormat::SCTE35, scte_in_timestamp_ms, scte_in_data) == false)
 				{
