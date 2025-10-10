@@ -184,10 +184,10 @@ namespace pvd
 			return false;
 		}
 
-		auto subtitle_track = GetTrack(label);
+		auto subtitle_track = GetTrackByLabel(label);
 		if (subtitle_track == nullptr)
 		{
-			logte("Subtitle track is not found. %s/%s(%u)", GetApplicationName(), GetName().CStr(), GetId());
+			logte("Subtitle label(%s) is not found. %s/%s(%u)", label.CStr(), GetApplicationName(), GetName().CStr(), GetId());
 			return false;
 		}
 

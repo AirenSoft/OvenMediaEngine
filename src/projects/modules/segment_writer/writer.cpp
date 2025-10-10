@@ -154,6 +154,7 @@ static AVCodecID AvCodecIdFromMediaCodecId(cmn::MediaCodecId codec_id)
 		WRITER_CASE(cmn::MediaCodecId::Jpeg, AV_CODEC_ID_JPEG2000)
 		WRITER_CASE(cmn::MediaCodecId::Png, AV_CODEC_ID_PNG)
 		WRITER_CASE(cmn::MediaCodecId::Webp, AV_CODEC_ID_WEBP)
+		WRITER_CASE(cmn::MediaCodecId::Whisper, AV_CODEC_ID_NONE)
 		WRITER_CASE(cmn::MediaCodecId::WebVTT, AV_CODEC_ID_NONE)
 	}
 

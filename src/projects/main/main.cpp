@@ -117,6 +117,7 @@ int main(int argc, char *argv[])
 	INIT_EXTERNAL_MODULE("SRT", InitializeSrt);
 	INIT_EXTERNAL_MODULE("OpenSSL", InitializeOpenSsl);
 	INIT_EXTERNAL_MODULE("SRTP", InitializeSrtp);
+	INIT_EXTERNAL_MODULE("Whisper.cpp", InitializeWhisper);
 
 	//--------------------------------------------------------------------
 	// Create the modules

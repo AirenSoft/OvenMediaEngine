@@ -85,5 +85,8 @@ namespace ov
 		static double NtpTsToSeconds(uint32_t msw, uint32_t lsw);
 
 		static uint32_t ToSynchSafe(uint32_t value);
+
+		// Rescale timestamp value from one timescale to another
+		static int64_t Rescale(int64_t value, int64_t to_timescale, int64_t from_timescale);
 	};
 }  // namespace ov

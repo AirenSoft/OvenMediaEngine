@@ -27,6 +27,7 @@
 #include "codec/encoder/encoder_png.h"
 #include "codec/encoder/encoder_vp8.h"
 #include "codec/encoder/encoder_webp.h"
+#include "codec/encoder/encoder_whisper.h"
 
 #include "transcoder_gpu.h"
 #include "transcoder_private.h"
@@ -274,7 +275,16 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 					break;
 			}
 			break;
-		}		
+		}
+		else if (candidate->GetCodecId() == cmn::MediaCodecId::Whisper)
+		{
+			switch (candidate->GetModuleId())
+			{
+				default:
+				CASE_CREATE_CODEC_IFNEED(DEFAULT, EncoderWhisper);
+					break;
+			}
+		}
 		else
 		{
 			OV_ASSERT(false, "Not supported codec: %d", track->GetCodecId());
@@ -340,13 +350,18 @@ void TranscodeEncoder::SetEncoderId(int32_t encoder_id)
 
 bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track)
 {
+	return Configure(output_track, MAX_QUEUE_SIZE);
+}
+
+bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track, size_t max_queue_size)
+{
 	_track = output_track;	
 	_track->SetOriginBitstream(GetBitstreamFormat());
 
 	auto name = ov::String::FormatString("enc_%s_t%d", cmn::GetCodecIdString(GetCodecID()), _track->GetId());
 	auto urn = std::make_shared<info::ManagedQueue::URN>(_stream_info.GetApplicationInfo().GetVHostAppName(), _stream_info.GetName(), "trs", name);
 	_input_buffer.SetUrn(urn);
-	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
+	_input_buffer.SetThreshold(max_queue_size);
 
 	// This is used to prevent the from creating frames from rescaler/resampler filter. 
 	// Because of hardware resource limitations.
@@ -362,7 +377,6 @@ bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track)
 
 	return (_track != nullptr);
 }
-
 
 std::shared_ptr<MediaTrack> &TranscodeEncoder::GetRefTrack()
 {

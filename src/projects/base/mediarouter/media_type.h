@@ -107,7 +107,8 @@ namespace cmn
 		Jpeg,
 		Png,
 		Webp,
-		WebVTT
+		WebVTT,
+		Whisper
 	};
 
 	// DeviceId is used to identify a hwardware accelerator device.
@@ -277,6 +278,7 @@ namespace cmn
 			OV_CASE_RETURN(cmn::MediaCodecId::Png, false);
 			OV_CASE_RETURN(cmn::MediaCodecId::Webp, false);
 			OV_CASE_RETURN(cmn::MediaCodecId::WebVTT, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Whisper, false);
 		}
 
 		return false;
@@ -303,6 +305,7 @@ namespace cmn
 			OV_CASE_RETURN(cmn::MediaCodecId::Png, true);
 			OV_CASE_RETURN(cmn::MediaCodecId::Webp, true);
 			OV_CASE_RETURN(cmn::MediaCodecId::WebVTT, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Whisper, false);
 		}
 
 		return false;
@@ -329,6 +332,7 @@ namespace cmn
 			OV_CASE_RETURN(cmn::MediaCodecId::Png, false);
 			OV_CASE_RETURN(cmn::MediaCodecId::Webp, false);
 			OV_CASE_RETURN(cmn::MediaCodecId::WebVTT, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Whisper, false);
 		}
 
 		return false;
@@ -516,6 +520,7 @@ namespace cmn
 			OV_CASE_RETURN(MediaCodecId::Opus, "OPUS");
 			// Subtitle codecs
 			OV_CASE_RETURN(MediaCodecId::WebVTT, "WebVTT");
+			OV_CASE_RETURN(MediaCodecId::Whisper, "WHISPER");
 		}
 
 		return "Unknown";

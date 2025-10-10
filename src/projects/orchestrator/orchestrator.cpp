@@ -726,6 +726,36 @@ namespace ocst
 		return nullptr;
 	}
 
+	std::shared_ptr<pvd::Stream> Orchestrator::GetProviderStream(const std::shared_ptr<const info::Stream> &stream_info)
+	{
+		// Get ProviderType from SourceType
+		ProviderType provider_type = stream_info->GetProviderType();
+		if (provider_type == ProviderType::Unknown)
+		{
+			return nullptr;
+		}
+
+		auto provider = std::dynamic_pointer_cast<pvd::Provider>(GetProviderFromType(provider_type));
+		if (provider == nullptr)
+		{
+			return nullptr;
+		}
+
+		auto application = provider->GetApplicationByName(stream_info->GetApplicationInfo().GetVHostAppName());
+		if (application == nullptr)
+		{
+			return nullptr;
+		}
+
+		auto prov_stream = application->GetStreamByName(stream_info->GetName());
+		if (prov_stream == nullptr)
+		{
+			return nullptr;
+		}
+		
+		return prov_stream;
+	}
+
 	CommonErrorCode Orchestrator::IsExistStreamInOriginMapStore(const info::VHostAppName &vhost_app_name, const ov::String &stream_name) const
 	{
 		auto vhost = GetVirtualHost(vhost_app_name);

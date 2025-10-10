@@ -352,3 +352,62 @@ const char *GetSpdlogVersion()
 
 	return version;
 }
+
+//--------------------------------------------------------------------
+// Related to whisper.cpp
+//--------------------------------------------------------------------
+
+#include <whisper.h>
+
+static void OnWhisperLog(enum ggml_log_level level, const char *text, void *ud) 
+{ 
+	const char *WHISPER_LOG_TAG = "Whisper";
+	AVClass *clazz = nullptr;
+
+	ov::String message(text);
+	if (message.HasSuffix("\n"))
+	{
+		// Remove new line character
+		message.SetLength(message.GetLength() - 1);
+	}
+
+	switch (level)
+	{
+		case GGML_LOG_LEVEL_ERROR:
+			::ov_log_internal(OVLogLevelError, WHISPER_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s", message.CStr());
+			break;
+
+		case GGML_LOG_LEVEL_WARN:
+			::ov_log_internal(OVLogLevelWarning, WHISPER_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s", message.CStr());
+			break;
+
+		case GGML_LOG_LEVEL_INFO:
+			::ov_log_internal(OVLogLevelInformation, WHISPER_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s", message.CStr());
+			break;
+
+		case GGML_LOG_LEVEL_NONE:
+		case GGML_LOG_LEVEL_DEBUG:
+		default:
+			::ov_log_internal(OVLogLevelDebug, WHISPER_LOG_TAG, __FILE__, __LINE__, __PRETTY_FUNCTION__, "%s", message.CStr());
+			break;
+	}
+}
+
+std::shared_ptr<ov::Error> InitializeWhisper()
+{
+	ggml_backend_load_all();
+
+	whisper_log_set(OnWhisperLog, nullptr);
+
+	return nullptr;
+}
+
+const char *GetWhisperCppVersion()
+{
+	return whisper_version();
+}
+
+const char *GetGgmlVersion()
+{
+	return ggml_version();
+}

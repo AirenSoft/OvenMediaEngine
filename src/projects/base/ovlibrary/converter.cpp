@@ -548,4 +548,9 @@ namespace ov
 
 		return x_final;
 	}
+
+	int64_t Converter::Rescale(int64_t value, int64_t to_timescale, int64_t from_timescale)
+	{
+		return ((value / from_timescale) * to_timescale) + (((value % from_timescale) * to_timescale + (from_timescale / 2)) / from_timescale);
+	}
 }  // namespace ov

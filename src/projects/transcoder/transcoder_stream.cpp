@@ -558,6 +558,78 @@ size_t TranscoderStream::CreateOutputStreams()
 		logti("%s Output stream has been created. [%s/%s(%u)]", _log_prefix.CStr(), _application_info.GetVHostAppName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
 	}
 
+	auto cfg_media_option_subtitles = GetOutputProfilesCfg()->GetMediaOptions().GetSubtitle();
+	
+	cfg::vhost::app::oprf::OutputProfile cfg_new_output_profile;
+	if (cfg_media_option_subtitles.IsEnabled())
+	{
+		auto new_output_profile_name = ov::String::FormatString("TranscriptionProcess_%s", _input_stream->GetName().CStr());
+		cfg_new_output_profile.SetInternal(true);
+		cfg_new_output_profile.SetName(new_output_profile_name);
+		cfg_new_output_profile.SetOutputStreamName(new_output_profile_name);
+
+		cfg::vhost::app::oprf::Encodes encodes;
+		int i = 0;
+		for (const auto &subtitle_rendition : cfg_media_option_subtitles.GetRenditions())
+		{
+			bool enabled = false;
+			auto cfg_transcription = subtitle_rendition.GetTranscription(&enabled);
+			if (enabled)
+			{
+				// Make SpeechToTextProfile
+				auto name = ov::String::FormatString("SpeechToText_%d", i);
+				auto engine = cfg_transcription.GetEngine();
+				auto model = cfg_transcription.GetModel();
+				auto model_path = ov::GetFilePath(model, cfg::ConfigManager::GetInstance()->GetConfigPath());
+				// check if the model file exists
+				if (access(model_path.CStr(), F_OK) != 0)
+				{
+					logte("The transcription model file does not exist. model(%s)", model_path.CStr());
+					continue;
+				}
+
+				auto input_audio_track = _input_stream->GetMediaTrackByOrder(cmn::MediaType::Audio, cfg_transcription.GetAudioIndexHint());
+				auto output_subtitle_track = _input_stream->GetTrackByLabel(subtitle_rendition.GetLabel());
+
+				if (input_audio_track == nullptr || output_subtitle_track == nullptr)
+				{
+					logte("Could not find input audio track or output subtitle track for transcription. AudioIndexHint(%d), SubtitleLabel(%s)", cfg_transcription.GetAudioIndexHint(), subtitle_rendition.GetLabel().CStr());
+					continue;
+				}
+
+				cfg::vhost::app::oprf::SpeechToTextProfile speech_to_text_profile(name,
+																				engine,
+																				model_path,
+																				input_audio_track->GetId(),
+																				output_subtitle_track->GetId());
+				speech_to_text_profile.SetSourceLanguage(cfg_transcription.GetSourceLanguage());
+				speech_to_text_profile.SetTranslation(cfg_transcription.GetTranslation());
+				speech_to_text_profile.SetOutputTrackLabel(subtitle_rendition.GetLabel());
+
+				encodes.AddSpeechToTextProfiles(speech_to_text_profile);
+			}
+
+			cfg_new_output_profile.SetEncodes(encodes);
+
+			i++;
+		}
+
+		if (cfg_new_output_profile.GetEncodes().GetSpeechToTextProfileList().size() > 0)
+		{
+			auto output_stream = CreateOutputStream(cfg_new_output_profile);
+			if (output_stream == nullptr)
+			{
+				logte("Could not create output stream for transcription");
+			}
+			else
+			{
+				_output_streams.insert(std::make_pair(output_stream->GetName(), output_stream));
+
+				logti("%s Output stream(transcription) has been created. [%s/%s(%u)]", _log_prefix.CStr(), _application_info.GetVHostAppName().CStr(), output_stream->GetName().CStr(), output_stream->GetId());
+			}
+		}
+	}
+
 	return _output_streams.size();
 }
 
@@ -638,12 +710,38 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 
 					AddComposite(ProfileToSerialize(input_track_id, profile), _input_stream, input_track, output_stream, output_track);
 				}
+
+				// SpeechToText Profile
+				for (auto &profile : cfg_output_profile.GetEncodes().GetSpeechToTextProfileList())
+				{
+					// Check if the input track is matched.
+					if (static_cast<int32_t>(profile.GetInputTrackId()) != input_track_id)
+					{
+						continue;
+					}
+
+					auto output_track = CreateOutputTrack(input_track, profile);
+					if (output_track == nullptr)
+					{
+						logtw("Failed to create media tracks for transcription. Encoding options need to be checked. InputTrack(%d), SpeechToTextProfile(%s)", input_track_id, profile.GetName().CStr());
+						continue;
+					}
+
+					output_stream->AddTrack(output_track);
+					AddComposite(ProfileToSerialize(input_track_id, profile), _input_stream, input_track, output_stream, output_track);
+				}
 			}
 			break;
 			
 			// If there is a data type track in the input stream, it must be created equally in all output streams.
 			case cmn::MediaType::Data: 
 			case cmn::MediaType::Subtitle:{
+					// Data or Subtitle must be duplicated even if there is no profile, unless
+					if (cfg_output_profile.IsInternal() == true)
+					{
+						continue;
+					}
+			
 					auto output_track = CreateOutputTrackDataType(input_track);
 					if (output_track == nullptr)
 					{

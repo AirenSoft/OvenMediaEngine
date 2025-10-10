@@ -76,6 +76,18 @@ ov::String TranscoderStreamInternal::ProfileToSerialize(const uint32_t track_id,
 									profile.GetChannel());
 }
 
+ov::String TranscoderStreamInternal::ProfileToSerialize(const uint32_t track_id, const cfg::vhost::app::oprf::SpeechToTextProfile &profile)
+{
+	return ov::String::FormatString("I=%d,O=%s:%s:%d:%d:%s:%s",
+									track_id,
+									profile.GetEngine().CStr(),
+									profile.GetModel().CStr(),
+									profile.GetInputTrackId(),
+									profile.GetOutputTrackId(),
+									profile.GetSourceLanguage().CStr(),
+									profile.ShouldTranslate() ? "true" : "false");
+}
+
 ov::String TranscoderStreamInternal::ProfileToSerialize(const uint32_t track_id)
 {
 	return ov::String::FormatString("I=%d,O=bypass", track_id);
@@ -450,6 +462,48 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrackDataType(
 	return output_track;
 }
 
+std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const std::shared_ptr<MediaTrack> &input_track, const cfg::vhost::app::oprf::SpeechToTextProfile &profile)
+{
+	auto output_track = std::make_shared<MediaTrack>();
+	if (output_track == nullptr)
+	{
+		return nullptr;
+	}
+
+	output_track->SetMediaType(cmn::MediaType::Subtitle);
+	output_track->SetId(NewTrackId());
+	output_track->SetVariantName(ov::String::FormatString("SpeechToText_%d", output_track->GetId()));
+	output_track->SetPublicName(ov::String::FormatString("SpeechToText_%d", output_track->GetId()));
+	output_track->SetLanguage(profile.GetSourceLanguage());
+	
+	output_track->SetCodecId(cmn::MediaCodecId::Whisper);
+	
+	output_track->SetOriginBitstream(input_track->GetOriginBitstream());
+	output_track->SetTimeBase(input_track->GetTimeBase());
+
+	// Set Speech-To-Text specific properties
+	output_track->SetEngine(profile.GetEngine());
+	output_track->SetModel(profile.GetModel());
+	output_track->SetSourceLanguage(profile.GetSourceLanguage());
+	output_track->SetTranslation(profile.ShouldTranslate());
+	output_track->SetOutputLabel(profile.GetOutputTrackLabel());
+
+	if (profile.GetEngine().LowerCaseString() == "whisper")
+	{
+		// Whisper only supports 16kHz mono audio input and float sample format.
+		output_track->SetSampleRate(16000);
+		output_track->SetTimeBase(1, 16000);
+		output_track->GetChannel().SetLayout(cmn::AudioChannel::Layout::LayoutMono);
+		output_track->GetSample().SetFormat(cmn::AudioSample::Format::Flt);
+	}
+	else
+	{
+		logte("Unsupported Speech-To-Text engine: %s", profile.GetEngine().CStr());
+		return nullptr;
+	}
+
+	return output_track;
+}
 
 bool TranscoderStreamInternal::IsMatchesBypassCondition(const std::shared_ptr<MediaTrack> &input_track, const cfg::vhost::app::oprf::VideoProfile &profile)
 {

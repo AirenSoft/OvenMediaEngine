@@ -10,6 +10,7 @@
 
 #include "video_track.h"
 #include "audio_track.h"
+#include "subtitle_track.h"
 
 #include "decoder_configuration_record.h"
 
@@ -17,7 +18,7 @@
 
 typedef uint32_t MediaTrackId;
 
-class MediaTrack : public VideoTrack, public AudioTrack
+class MediaTrack : public VideoTrack, public AudioTrack, public SubtitleTrack
 {
 public:
 	MediaTrack();
@@ -66,15 +67,6 @@ public:
 	// Language (rfc5646)
 	void SetLanguage(const ov::String &language);
 	ov::String GetLanguage() const;
-
-	void SetAutoSelect(bool auto_select);
-	bool IsAutoSelect() const;
-
-	void SetDefault(bool def);
-	bool IsDefault() const;
-
-	void SetForced(bool forced);
-	bool IsForced() const;
 
 	// Characteristics (e.g. "main", "sign", "visually-impaired")
 	void SetCharacteristics(const ov::String &characteristics);
@@ -166,15 +158,10 @@ protected:
 	ov::String _variant_name;
 	int _group_index = -1;
 
-	// Set by AudioMap or VideoMap
+	// Set by AudioMap or VideoMap or SubtitleMap
 	ov::String _public_name;
 	ov::String _language;
 	ov::String _characteristics;
-
-	// For subtitle 
-	bool _auto_select = false;
-	bool _default = false;
-	bool _forced = false;
 
 	// Bitstream format 
 	cmn::BitstreamFormat _origin_bitstream_format = cmn::BitstreamFormat::Unknown;
@@ -193,6 +180,7 @@ protected:
 	bool _byass;
 	// Bypass (Set by user)
 	bool _bypass_conf;
+
 
 	// Time of start frame(packet)
 	int64_t _start_frame_time;

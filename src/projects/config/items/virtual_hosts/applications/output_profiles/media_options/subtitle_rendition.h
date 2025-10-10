@@ -8,6 +8,8 @@
 //==============================================================================
 #pragma once
 
+#include "transcription/transcription.h"
+
 namespace cfg
 {
 	namespace vhost
@@ -24,6 +26,7 @@ namespace cfg
 					bool _auto_select = false;
 					bool _default = false;
 					bool _forced = false;
+					Transcription _transcription;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetLabel, _label)
@@ -31,6 +34,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsAutoSelect, _auto_select)
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsDefault, _default)
 					CFG_DECLARE_CONST_REF_GETTER_OF(IsForced, _forced)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetTranscription, _transcription)
 
 					void SetDefault(bool is_default)
 					{
@@ -49,6 +53,7 @@ namespace cfg
 						Register("Language", &_language);
 						Register<Optional>("AutoSelect", &_auto_select);
 						Register<Optional>("Forced", &_forced);
+						Register<Optional>("Transcription", &_transcription);
 					}
 				};
 			}  // namespace oprf

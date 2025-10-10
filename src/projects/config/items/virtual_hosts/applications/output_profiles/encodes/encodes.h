@@ -11,6 +11,7 @@
 #include "audio_profile.h"
 #include "image_profile.h"
 #include "video_profile.h"
+#include "speech_to_text_profile.h"
 
 namespace cfg
 {
@@ -26,11 +27,18 @@ namespace cfg
 					std::vector<AudioProfile> _audio_profiles;
 					std::vector<VideoProfile> _video_profiles;
 					std::vector<ImageProfile> _image_profiles;
+					std::vector<SpeechToTextProfile> _speech_to_text_profiles;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetAudioProfileList, _audio_profiles);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetVideoProfileList, _video_profiles);
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetImageProfileList, _image_profiles);
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetSpeechToTextProfileList, _speech_to_text_profiles);
+
+					void AddSpeechToTextProfiles(const SpeechToTextProfile &profiles)
+					{
+						_speech_to_text_profiles.push_back(profiles);
+					}
 
 				protected:
 					void MakeList() override

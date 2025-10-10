@@ -45,7 +45,9 @@ public:
 
 	virtual void Flush();
 
-	bool Configure(std::shared_ptr<MediaTrack> output_track) override;
+	virtual bool Configure(std::shared_ptr<MediaTrack> output_track) override;
+	bool Configure(std::shared_ptr<MediaTrack> output_track, size_t max_queue_size);
+
 	void SendBuffer(std::shared_ptr<const MediaFrame> media_frame) override;
 
 protected:

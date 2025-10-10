@@ -40,4 +40,5 @@ void PrintBanner()
 	logti("  JsonCpp: %s", GetJsonCppVersion());
 	logti("  jemalloc: %s", GetJemallocVersion());
 	logti("  spdlog: %s", GetSpdlogVersion());
+	logti("  whisper.cpp: %s (ggml: %s)", GetWhisperCppVersion(), GetGgmlVersion());
 }

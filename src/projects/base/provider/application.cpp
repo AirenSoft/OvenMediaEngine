@@ -146,7 +146,7 @@ namespace pvd
 		{
 			for (const auto &rendition : subtitle_config.GetRenditions())
 			{
-				if (stream->GetTrack(rendition.GetLabel()) != nullptr)
+				if (stream->GetTrackByLabel(rendition.GetLabel()) != nullptr)
 				{
 					logtw("Subtitle track with label '%s' already exists in stream '%s'. Skipping addition.", rendition.GetLabel().CStr(), stream->GetName().CStr());
 					continue;

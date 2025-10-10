@@ -49,6 +49,7 @@ bool MediaTrack::Update(const MediaTrack &media_track)
 		return false;
 	}
 
+	// common
 	_media_type = media_track._media_type;
 
 	_codec_id = media_track._codec_id;
@@ -58,24 +59,6 @@ bool MediaTrack::Update(const MediaTrack &media_track)
 	_variant_name = media_track._variant_name;
 	_language = media_track._language;
 	_characteristics = media_track._characteristics;
-
-	_auto_select = media_track._auto_select;
-	_default = media_track._default;
-	_forced = media_track._forced;
-
-	// Video
-	_framerate = media_track._framerate;
-	_framerate_conf = media_track._framerate_conf;
-
-	_width = media_track._width;
-	_width_conf  = media_track._width_conf;
-	
-	_height = media_track._height;
-	_height_conf = media_track._height_conf;
-
-	// Audio
-	_sample = media_track._sample;
-	_channel_layout = media_track._channel_layout;
 
 	_time_base = media_track._time_base;
 
@@ -91,6 +74,29 @@ bool MediaTrack::Update(const MediaTrack &media_track)
 	_decoder_configuration_record = media_track._decoder_configuration_record;
 
 	_origin_bitstream_format = media_track._origin_bitstream_format;
+
+	// Video
+	_framerate = media_track._framerate;
+	_framerate_conf = media_track._framerate_conf;
+
+	_width = media_track._width;
+	_width_conf  = media_track._width_conf;
+	
+	_height = media_track._height;
+	_height_conf = media_track._height_conf;
+
+	// Audio
+	_sample = media_track._sample;
+	_channel_layout = media_track._channel_layout;
+
+	// Subtitle
+	_auto_select = media_track._auto_select;
+	_default = media_track._default;
+	_forced = media_track._forced;
+	_engine = media_track._engine;
+	_model = media_track._model;
+	_source_language = media_track._source_language;
+	_translation = media_track._translation;
 
 	return true;
 }
@@ -161,35 +167,6 @@ void MediaTrack::SetCharacteristics(const ov::String &characteristics)
 ov::String MediaTrack::GetCharacteristics() const
 {
 	return _characteristics;
-}
-
-void MediaTrack::SetAutoSelect(bool auto_select)
-{
-	_auto_select = auto_select;
-}
-bool MediaTrack::IsAutoSelect() const
-{
-	return _auto_select;
-}
-
-void MediaTrack::SetDefault(bool def)
-{
-	_default = def;
-}
-
-bool MediaTrack::IsDefault() const
-{
-	return _default;
-}
-
-void MediaTrack::SetForced(bool forced)
-{
-	_forced = forced;
-}
-
-bool MediaTrack::IsForced() const
-{
-	return _forced;
 }
 
 void MediaTrack::SetMediaType(MediaType type)

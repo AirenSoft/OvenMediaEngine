@@ -26,12 +26,44 @@ namespace cfg
 					ov::String _output_stream_name;
 					Encodes _encodes;
 					std::vector<Playlist> _playlists;
+					bool _internal = false;
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetOutputStreamName, _output_stream_name)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetEncodes, _encodes)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetPlaylists, _playlists)
+
+					// Setters
+					void SetName(const ov::String &name)
+					{
+						_name = name;
+					}
+
+					void SetOutputStreamName(const ov::String &output_stream_name)
+					{
+						_output_stream_name = output_stream_name;
+					}
+
+					void SetEncodes(const Encodes &encodes)
+					{
+						_encodes = encodes;
+					}
+					
+					void SetPlaylists(const std::vector<Playlist> &playlists)
+					{
+						_playlists = playlists;
+					}
+
+					void SetInternal(bool internal)
+					{
+						_internal = internal;
+					}
+
+					bool IsInternal() const
+					{
+						return _internal;
+					}
 
 				protected:
 					void MakeList() override

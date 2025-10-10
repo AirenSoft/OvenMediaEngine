@@ -367,7 +367,7 @@ namespace info
 		return item->second;
 	}
 
-	const std::shared_ptr<MediaTrack> Stream::GetTrack(const ov::String &public_label) const
+	const std::shared_ptr<MediaTrack> Stream::GetTrackByLabel(const ov::String &public_label) const
 	{
 		auto label_it = _public_label_map.find(public_label);
 		if (label_it == _public_label_map.end())

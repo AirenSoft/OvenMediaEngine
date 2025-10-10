@@ -99,6 +99,7 @@ namespace pvd::rtmp
 			OV_CASE_RETURN(cmn::MediaCodecId::Png, false);
 			OV_CASE_RETURN(cmn::MediaCodecId::Webp, false);
 			OV_CASE_RETURN(cmn::MediaCodecId::WebVTT, false);
+			OV_CASE_RETURN(cmn::MediaCodecId::Whisper, false);
 		}
 		return false;
 	}

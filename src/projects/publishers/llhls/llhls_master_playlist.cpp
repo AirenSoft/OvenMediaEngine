@@ -37,7 +37,7 @@ bool LLHlsMasterPlaylist::AddMediaCandidateGroup(const std::shared_ptr<const Med
 	new_group->_group_id = track_group->GetName();
 
 	// Add media info
-	bool first = true;
+	// bool first = true;
 	for (auto &track : track_group->GetTracks())
 	{
 		auto new_media_info = std::make_shared<MediaInfo>();
@@ -55,7 +55,7 @@ bool LLHlsMasterPlaylist::AddMediaCandidateGroup(const std::shared_ptr<const Med
 		new_media_info->_track = track;
 
 		new_group->_media_infos.push_back(new_media_info);
-		first = false;
+		// first = false;
 	}
 
 	std::lock_guard<std::shared_mutex> lock(_media_groups_guard);

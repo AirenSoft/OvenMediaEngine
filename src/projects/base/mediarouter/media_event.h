@@ -19,6 +19,9 @@ public:
 	{
 		NOP = 0, // No Operation
 		ConcludeLive, // Conclude Live, transits the stream to VOD if possible
+		DetectedSubtitleLanguage, // Detected Subtitle Language
+		// Data format (json)
+		// { "trackLabel": "Origin", "language": "en" }
 	};
 
 	MediaEvent(CommandType command_type, const std::shared_ptr<ov::Data> &command_data)

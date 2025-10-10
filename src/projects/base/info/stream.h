@@ -73,7 +73,7 @@ namespace info
 		bool RemoveTrack(uint32_t id);
 		
 		const std::shared_ptr<MediaTrack> GetTrack(int32_t id) const;
-		const std::shared_ptr<MediaTrack> GetTrack(const ov::String &public_label) const;
+		const std::shared_ptr<MediaTrack> GetTrackByLabel(const ov::String &public_label) const;
 		const std::map<int32_t, std::shared_ptr<MediaTrack>> &GetTracks() const;
 
 		const std::shared_ptr<MediaTrackGroup> GetMediaTrackGroup(const ov::String &group_name) const;

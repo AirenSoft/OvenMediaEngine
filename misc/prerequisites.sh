@@ -22,12 +22,13 @@ NVCC_HDR_VERSION=11.1.5.2
 X264_VERSION=31e19f92
 WEBP_VERSION=1.5.0
 SPDLOG_VERSION=1.15.1
+WHISPER_VERSION=1.8.0
 
 INTEL_QSV_HWACCELS=false
 NETINT_LOGAN_HWACCELS=false
 NETINT_LOGAN_PATCH_PATH=""
 NETINT_LOGAN_XCODER_COMPILE_PATH=""
-NVIDIA_NV_CODEC_HWACCELS=false
+NVIDIA_NV_HWACCELS=false
 XILINX_XMA_CODEC_HWACCELS=false
 VIDEOLAN_X264_CODEC=true
 
@@ -216,7 +217,7 @@ install_nasm()
 }
 
 install_nvcc_hdr() {
-    if [ "$NVIDIA_NV_CODEC_HWACCELS" = true ] ; then    
+    if [ "$NVIDIA_NV_HWACCELS" = true ] ; then    
         (DIR=${TEMP_PATH}/nvcc-hdr && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
@@ -261,7 +262,7 @@ install_ffmpeg()
     fi
 
     # If there is an enable-nvc option, add nvcodec
-    if [ "$NVIDIA_NV_CODEC_HWACCELS" = true ] ; then
+    if [ "$NVIDIA_NV_HWACCELS" = true ] ; then
         ADDI_CFLAGS+="-I/usr/local/cuda/include "
         ADDI_LDFLAGS="-L/usr/local/cuda/lib64 "
         ADDI_LICENSE+=" --enable-nonfree "
@@ -461,6 +462,34 @@ index 87df1e83..e83f8576 100644
     rm -rf ${DIR} ) || fail_exit "spdlog"
 }
 
+install_whisper()
+{
+	WHISPER_CUDA=0
+	if [ "$NVIDIA_NV_HWACCELS" = true ] ; then    
+		WHISPER_CUDA=1
+	fi
+
+	# 61: Pascal - GeForce GTX 10 series (e.g., GTX 1060, 1080)
+		## NOTE: Legacy. Dropped in CUDA 12.0 and later. Requires CUDA 11.x or older to build.
+	# 70: Volta - Titan V, Tesla V100
+		## NOTE: Legacy. Dropped in CUDA 12.0 and later. Requires CUDA 11.x or older to build.
+	# 75: Turing - GeForce RTX 20 series & GTX 16 series
+	# 80: Ampere - A100 (Datacenter GPU)
+	# 86: Ampere - GeForce RTX 30 series (Desktop/Laptop)
+	# 89: Ada Lovelace - GeForce RTX 40 series (Laptop versions)
+	WHISPER_CUDA_ARCH="61;75;86"
+
+	(DIR=${TEMP_PATH}/whisper && \
+	mkdir -p ${DIR} && \
+	cd ${DIR} && \
+	curl -sSLf https://github.com/ggml-org/whisper.cpp/archive/refs/tags/v${WHISPER_VERSION}.tar.gz | tar -xz --strip-components=1 && \
+	cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${PREFIX} -DCMAKE_INSTALL_RPATH=${PREFIX}/lib -DBUILD_SHARED_LIBS=ON -DGGML_CUDA=${WHISPER_CUDA} -DCMAKE_CUDA_ARCHITECTURES=${WHISPER_CUDA_ARCH} && \
+	cd build && \
+	make -j$(nproc) && \
+	sudo make install && \
+	rm -rf ${DIR} ) || fail_exit "whisper"
+}
+
 install_base_ubuntu()
 {
     sudo apt-get install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc uuid-dev
@@ -597,7 +626,7 @@ case $i in
     shift
     ;;
     --enable-nvc|--enable-nv)
-    NVIDIA_NV_CODEC_HWACCELS=true
+    NVIDIA_NV_HWACCELS=true
     shift
     ;;
     --enable-xma)
@@ -678,6 +707,7 @@ then
         libpcre2
         hiredis
         spdlog
+		whisper
     )
 fi
 

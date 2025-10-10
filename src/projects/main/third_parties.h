@@ -60,3 +60,10 @@ const char *GetJemallocVersion();
 // Related to spdlog
 //--------------------------------------------------------------------
 const char *GetSpdlogVersion();
+
+//--------------------------------------------------------------------
+// Related to whisper.cpp
+//--------------------------------------------------------------------
+std::shared_ptr<ov::Error> InitializeWhisper();
+const char *GetWhisperCppVersion();
+const char *GetGgmlVersion();
