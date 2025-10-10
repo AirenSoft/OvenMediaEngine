@@ -1,6 +1,6 @@
 # Send Subtitles
 
-Using this API, you can insert subtitles into a stream in real time. By specifying the label of the subtitle track defined in the [application config](../../../../../subtitles.md), you can insert multiple subtitles at once.
+Using this API, you can insert subtitles into a stream in real time. By specifying the label of the subtitle track defined in the [application config](../../../../../subtitles/), you can insert multiple subtitles at once.
 
 > ### Request
 

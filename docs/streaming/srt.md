@@ -102,13 +102,13 @@ OBS Studio offers the ability to add an SRT stream as an input source. To use th
 
 Once added, you will see the SRT stream as a source, as shown below. This added source can be used just like any other media source.
 
-<figure><img src="../.gitbook/assets/image (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 ### VLC
 
 You can also playback the SRT stream in VLC. Simply select `Media` > `Open Network Stream` from the menu and enter the SRT URL:
 
-<figure><img src="../.gitbook/assets/image (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 <figure><img src="../.gitbook/assets/image (3) (1).png" alt=""><figcaption></figcaption></figure>
 
