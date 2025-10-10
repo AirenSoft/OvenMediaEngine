@@ -2,9 +2,9 @@
 
 From OvenMediaEngine 0.19.1 and later, you can insert subtitles into live streams in real time using the API.&#x20;
 
-<figure><img src=".gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
 
-<figure><img src=".gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 {% hint style="info" %}
 Currently, only the LL-HLS publisher is supported. HLS and WebRTC will be supported in future releases.
@@ -54,8 +54,8 @@ To enable subtitles, add a `subtitles` section under  `<Application><OutputProfi
 
 Once subtitle tracks are enabled, you can insert subtitles in real time using the OvenMediaEngine subtitle API. See the API documentation for details.
 
-{% content-ref url="rest-api/v1/virtualhost/application/stream/send-event-1.md" %}
-[send-event-1.md](rest-api/v1/virtualhost/application/stream/send-event-1.md)
+{% content-ref url="../rest-api/v1/virtualhost/application/stream/send-event-1.md" %}
+[send-event-1.md](../rest-api/v1/virtualhost/application/stream/send-event-1.md)
 {% endcontent-ref %}
 
 ### Playlist Subtitle Disable per Playlist
