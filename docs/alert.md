@@ -14,10 +14,8 @@ Alert can be set up on `<Server>`, as shown below.
 		<Url>http://192.168.0.161:9595/alert/notification</Url>
 		<SecretKey>1234</SecretKey>
 		<Timeout>3000</Timeout>
-		<RulesFile>AlertRules.xml</RulesFile>
 		<Rules>
 			<Ingress>
-				<StreamStatus />
 				<MinBitrate>2000000</MinBitrate>
 				<MaxBitrate>4000000</MaxBitrate>
 				<MinFramerate>15</MinFramerate>
@@ -31,11 +29,6 @@ Alert can be set up on `<Server>`, as shown below.
 				<LongKeyFrameInterval />
 				<HasBFrames />
 			</Ingress>
-			<Egress>
-				<StreamStatus />
-				<LLHLSReady />
-				<HLSReady />
-			</Egress>
 		</Rules>
 	</Alert>
 </Server>
@@ -46,45 +39,13 @@ Alert can be set up on `<Server>`, as shown below.
 | Url       | The HTTP Server to receive the notification. HTTP and HTTPS are available.                                                   |
 | Secretkey | The secret key used when encrypting with HMAC-SHA1<br />For more information, see <a href="alert.md#security">Security</a>.  |
 | Timeout   | Time to wait for a response after request. (in milliseconds)                                                                 |
-| RulesFile | (Optional) Manages alert detection rules in a separate external file.                                                        |
-| Rules     | (Optional) Defines anomalies and patterns of interest to be detected. This section is ignored if `<RulesFile>` is set.       |
-
-### Rules File
-
-You can define anomalies and patterns of interest to be detected in a separate file. OvenMediaEngine monitors this file for changes and applies any updates immediately without requiring a restart. If you anticipate needing to modify detection rules during service operation, we recommend using `<RulesFile>`.
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<Rules>
-	<Ingress>
-		<StreamStatus />
-		<MinBitrate>2000000</MinBitrate>
-		<MaxBitrate>4000000</MaxBitrate>
-		<MinFramerate>15</MinFramerate>
-		<MaxFramerate>60</MaxFramerate>
-		<MinWidth>1280</MinWidth>
-		<MinHeight>720</MinHeight>
-		<MaxWidth>1920</MaxWidth>
-		<MaxHeight>1080</MaxHeight>
-		<MinSamplerate>16000</MinSamplerate>
-		<MaxSamplerate>50400</MaxSamplerate>
-		<LongKeyFrameInterval />
-		<HasBFrames />
-	</Ingress>
-	<Egress>
-		<StreamStatus />
-		<LLHLSReady />
-		<HLSReady />
-	</Egress>
-</Rules>
-```
+| Rules     | Defines anomalies and patterns of interest to be detected.                                                                   |
 
 ### Rules
 
 | Key     |                      | Description                                                                           |
 | ------- | -------------------- | ------------------------------------------------------------------------------------- |
-| Ingress | StreamStatus         | It detects the creation, failure, readiness, and deletion states of a ingress stream. |
-|         | MinBitrate           | Detects when the ingress stream's bitrate is lower than the set value.                |
+| Ingress | MinBitrate           | Detects when the ingress stream's bitrate is lower than the set value.                |
 |         | MaxBitrate           | Detects when the ingress stream's bitrate is greater than the set value.              |
 |         | MinFramerate         | Detects when the ingress stream's framerate is lower than the set value.              |
 |         | MaxFramerate         | Detects when the ingress stream's framerate is greater than the set value.            |
@@ -96,9 +57,6 @@ You can define anomalies and patterns of interest to be detected in a separate f
 |         | MaxSamplerate        | Detects when the ingress stream's samplerate is greater than the set value.           |
 |         | LongKeyFrameInterval | Detects when the ingress stream's keyframe interval is too long (exceeds 4 seconds).  |
 |         | HasBFrames           | Detects when there are B-frames in the ingress stream.                                |
-| Egress  | StreamStatus         | It detects the creation, readiness, and deletion states of a egress stream.           |
-|         | LLHLSReady           | Detects the point in time when Low-Latency HLS playback becomes available.            |
-|         | HLSReady             | Detects the point in time when HLS playback becomes available.                        |
 
 ## Notification
 
@@ -171,7 +129,7 @@ Here is a detailed explanation of each element of JSON payload:
 
 | Element    | Description                                                                                                                                                                       |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| sourceUri  | URI information of the detected source.<br />`INGRESS`: #&#x3C;vhost>#&#x3C;application>/&#x3C;input_stream><br />`EGRESS`: #&#x3C;vhost>#&#x3C;application>/&#x3C;output_stream> |
+| sourceUri  | URI information of the detected source.<br />`INGRESS`: #&#x3C;vhost>#&#x3C;application>/&#x3C;input_stream>                                                                      |
 | messages   | List of messages detected by the Rules.                                                                                                                                           |
 | sourceInfo | Detailed information about the source at the time of detection. It is identical to the response of the REST API's source information query for the detected source.               |
 | type       | It represents the format of the JSON payload. The information of the JSON elements can vary depending on the value of the type.                                                   |
@@ -196,11 +154,6 @@ Here is a detailed explanation of each element of JSON payload:
 |         | INGRESS\_SAMPLERATE\_HIGH                          | The ingress stream's current samplerate (`%d`) is higher than the configured samplerate (`%d`)                                   |
 |         | INGRESS\_LONG\_KEY\_FRAME\_INTERVAL                | The ingress stream's current keyframe interval (`%.1f` seconds) is too long. Please use a keyframe interval of 4 seconds or less |
 |         | INGRESS\_HAS\_BFRAME                               | There are B-Frames in the ingress stream                                                                                         |
-| EGRESS  | EGRESS\_STREAM\_CREATED                            | A new egress stream has been created                                                                                             |
-|         | EGRESS\_STREAM\_PREPARED                           | A egress stream has been prepared                                                                                                |
-|         | EGRESS\_STREAM\_DELETED                            | A egress stream has been deleted                                                                                                 |
-|         | EGRESS\_LLHLS\_READY                               | LLHLS stream is ready to play - initial segment(s) have been generated                                                           |
-|         | EGRESS\_HLS\_READY                                 | HLS stream is ready to play - initial segment(s) have been generated                                                             |
 
 #### Security
 
