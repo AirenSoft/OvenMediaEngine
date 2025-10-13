@@ -494,6 +494,7 @@ install_base_ubuntu()
 {
     sudo apt-get install -y build-essential autoconf libtool zlib1g-dev tclsh cmake curl pkg-config bc uuid-dev
 	sudo apt-get install -y git
+	sudo apt-get install -y libgomp1
 }
 
 install_base_fedora()
@@ -501,6 +502,7 @@ install_base_fedora()
     sudo yum install -y gcc-c++ make autoconf libtool zlib-devel tcl cmake bc libuuid-devel 
     sudo yum install -y perl-IPC-Cmd
 	sudo yum install -y git
+	sudo yum install -y libgomp
 }
 
 install_base_rhel()
@@ -508,6 +510,7 @@ install_base_rhel()
     sudo dnf install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake libuuid-devel
     sudo dnf install -y perl-IPC-Cmd
 	sudo dnf install -y git
+	sudo dnf install -y libgomp
 
     if [[ "${OSVERSION}" == "9" ]]; then
         sudo dnf install -y perl-FindBin
@@ -523,6 +526,7 @@ install_base_amazon()
     sudo yum install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake libuuid-devel
     sudo yum install -y perl-IPC-Cmd
 	sudo yum install -y git
+	sudo yum install -y libgomp
 }
 
 install_base_macos()
