@@ -76,7 +76,7 @@ const char *GetFFmpegSwScaleVersion()
 
 static void OnFFmpegLog(void *avcl, int level, const char *fmt, va_list args)
 {
-	const char *FFMPEG_LOG_TAG = "FFmpeg";
+	static const char *FFMPEG_LOG_TAG = "FFmpeg";
 	AVClass *clazz = nullptr;
 	ov::String message;
 
@@ -361,8 +361,7 @@ const char *GetSpdlogVersion()
 
 static void OnWhisperLog(enum ggml_log_level level, const char *text, void *ud) 
 { 
-	const char *WHISPER_LOG_TAG = "Whisper";
-	AVClass *clazz = nullptr;
+	static const char *WHISPER_LOG_TAG = "Whisper";
 
 	ov::String message(text);
 	if (message.HasSuffix("\n"))
