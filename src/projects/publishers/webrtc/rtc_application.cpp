@@ -27,7 +27,7 @@ RtcApplication::RtcApplication(const std::shared_ptr<pub::Publisher> &publisher,
 							   const std::shared_ptr<RtcSignallingServer> &rtc_signalling)
 	: Application(publisher, application_info)
 {
-	_ice_port = ice_port;
+	_ice_port		= ice_port;
 	_rtc_signalling = rtc_signalling;
 }
 
@@ -81,7 +81,7 @@ bool RtcApplication::Start()
 	{
 		_certificate = std::make_shared<Certificate>();
 
-		auto error = _certificate->Generate();
+		auto error	 = _certificate->Generate();
 		if (error != nullptr)
 		{
 			logte("Cannot create certificate: %s", error->What());
