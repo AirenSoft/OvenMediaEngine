@@ -58,6 +58,7 @@ LOCAL_STATIC_LIBRARIES := \
 	file_provider \
 	managed_queue \
 	ffmpeg_wrapper \
+	event \
 	
 
 # rtsp_provider 

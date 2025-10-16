@@ -1545,7 +1545,12 @@ void TranscoderStream::BypassPacket(const std::shared_ptr<MediaPacket> &packet)
 		
 		if (packet->GetBitstreamFormat() == cmn::BitstreamFormat::OVEN_EVENT)
 		{
-			auto event_packet = std::static_pointer_cast<MediaEvent>(packet);
+			auto event_packet = std::dynamic_pointer_cast<MediaEvent>(packet);
+			if (event_packet == nullptr)
+			{
+				logte("%s Invalid event packet. InputTrack(%d)", _log_prefix.CStr(), input_track_id);
+				continue;
+			}
 			clone = event_packet->Clone();
 		}
 		else 

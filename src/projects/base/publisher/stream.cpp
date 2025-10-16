@@ -1,6 +1,7 @@
 #include "stream.h"
 #include "application.h"
 #include "publisher_private.h"
+#include <base/event/command/commands.h>
 
 namespace pub
 {
@@ -476,6 +477,44 @@ namespace pub
 		else
 		{
 			session->OnMessageReceived(message);
+		}
+
+		return true;
+	}
+
+	bool Stream::ProcessEvent(const std::shared_ptr<MediaEvent> &event)
+	{
+		if (event == nullptr)
+		{
+			return false;
+		}
+
+		switch (event->GetCommandType())
+		{
+			case EventCommand::Type::UpdateSubtitleLanguage:
+			{
+				auto command = event->GetCommand<EventCommandUpdateLanguage>();
+				if (command != nullptr)
+				{
+					auto track = GetTrackByLabel(command->GetTrackLabel());
+					if (track != nullptr)
+					{
+						auto old_language = track->GetLanguage();
+						track->SetLanguage(command->GetLanguage());
+						logtd("[%s/%s(%u)] Subtitle track language has been updated %s -> %s", GetApplicationName(), GetName().CStr(), GetId(), old_language.CStr(), track->GetLanguage().CStr());
+					}
+					else
+					{
+						logtw("Cannot find subtitle track by label : %s - %s/%s(%u)", command->GetTrackLabel().CStr(), GetApplicationName(), GetName().CStr(), GetId());
+					}
+				}
+
+				break;
+			}
+
+			default:
+				// Do nothing
+				break;
 		}
 
 		return true;

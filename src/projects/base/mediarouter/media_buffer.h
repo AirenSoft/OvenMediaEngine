@@ -103,6 +103,8 @@ public:
 		_data = std::make_shared<ov::Data>(data, data_size);
 	}
 
+	virtual ~MediaPacket() = default;
+
 	cmn::MediaType GetMediaType() const noexcept
 	{
 		return _media_type;

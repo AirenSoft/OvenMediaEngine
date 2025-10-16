@@ -4,6 +4,7 @@
 
 #include "publisher.h"
 #include "publisher_private.h"
+#include <base/event/media_event.h>
 
 namespace pub
 {
@@ -145,7 +146,14 @@ namespace pub
 			{
 				if (media_packet->GetBitstreamFormat() == cmn::BitstreamFormat::OVEN_EVENT)
 				{
-					auto event = std::static_pointer_cast<MediaEvent>(media_packet);
+					auto event = std::dynamic_pointer_cast<MediaEvent>(media_packet);
+					if (event == nullptr)
+					{
+						logtw("MediaPacket is not MediaEvent. Cannot process event. %s/%s(%u)", stream->GetApplicationName(), stream->GetName().CStr(), stream->GetId());
+						continue;
+					}
+
+					stream->ProcessEvent(event);
 					stream->OnEvent(event);
 				}
 				else

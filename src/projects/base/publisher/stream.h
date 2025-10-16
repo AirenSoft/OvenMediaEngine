@@ -5,7 +5,7 @@
 #include "base/info/stream.h"
 #include "base/info/push.h"
 #include "base/mediarouter/media_buffer.h"
-#include "base/mediarouter/media_event.h"
+#include "base/event/media_event.h"
 #include "modules/managed_queue/managed_queue.h"
 #include "session.h"
 
@@ -128,6 +128,8 @@ namespace pub
 		bool BroadcastPacket(const std::any &packet);
 
 		bool SendMessage(const std::shared_ptr<Session> &session, const std::any &message);
+
+		bool ProcessEvent(const std::shared_ptr<MediaEvent> &event);
 
 		// Child must implement this function for packetizing and call BroadcastPacket to delivery to all sessions.
 		virtual void SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet) = 0;

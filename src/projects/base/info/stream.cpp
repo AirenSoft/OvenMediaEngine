@@ -54,10 +54,17 @@ namespace info
 
 		_track_group_map = stream._track_group_map;
 
+		_public_label_map = stream._public_label_map;
+
+		_from_origin_map_store = stream._from_origin_map_store;
+
 		_playlists = stream._playlists;
 		_representation_type = stream._representation_type;
 
+		_origin_stream_uuid = stream._origin_stream_uuid;
 		_on_air = stream._on_air;
+
+		_timestamp_mode = stream._timestamp_mode;
 	}
 
 	Stream::Stream(StreamSourceType source)

@@ -14,7 +14,7 @@
 #include "provider_private.h"
 #include "base/provider/pull_provider/stream_props.h"
 #include "base/provider/pull_provider/stream.h"
-
+#include <base/event/command/commands.h>
 
 namespace pvd
 {
@@ -226,6 +226,9 @@ namespace pvd
 			return false;
 		}
 
+		ProcessEvent(event);
+
+		// Forward
 		auto data_track = GetFirstTrackByType(cmn::MediaType::Data);
 		if (data_track == nullptr)
 		{
@@ -235,8 +238,44 @@ namespace pvd
 
 		event->SetMsid(GetMsid());
 		event->SetTrackId(data_track->GetId());
+		event->SetPacketType(cmn::PacketType::EVENT);
+		event->SetBitstreamFormat(cmn::BitstreamFormat::OVEN_EVENT);
+		event->SetHighPriority(true);
 
 		return SendFrame(event);
+	}
+
+	bool Stream::ProcessEvent(const std::shared_ptr<MediaEvent> &event)
+	{
+		if (event == nullptr)
+		{
+			return false;
+		}
+
+		switch (event->GetCommandType())
+		{
+			case EventCommand::Type::UpdateSubtitleLanguage:
+			{
+				auto command = event->GetCommand<EventCommandUpdateLanguage>();
+				if (command != nullptr)
+				{
+					auto track = GetTrackByLabel(command->GetTrackLabel());
+					if (track != nullptr)
+					{
+						auto old_language = track->GetLanguage();
+						track->SetLanguage(command->GetLanguage());
+						logtd("[%s/%s(%u)] Subtitle track language has been updated %s -> %s", GetApplicationName(), GetName().CStr(), GetId(), old_language.CStr(), track->GetLanguage().CStr());
+					}
+				}
+
+				break;
+			}
+			default:
+				// Do nothing
+				break;
+		}
+
+		return true;
 	}
 
 	std::shared_ptr<const ov::Url> Stream::GetRequestedUrl() const

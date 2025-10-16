@@ -17,6 +17,8 @@
 #include <base/modules/data_format/scte35_event/scte35_event.h>
 #include <base/modules/data_format/webvtt/webvtt_frame.h>
 
+#include <base/event/command/commands.h>
+
 #include "../../../../../api_private.h"
 
 namespace api
@@ -435,7 +437,7 @@ namespace api
 				urgent = request_body["urgent"].asBool();
 			}
 
-			auto media_event = std::make_shared<MediaEvent>(MediaEvent::CommandType::ConcludeLive, nullptr);
+			auto media_event = MediaEvent::BuildEvent(std::make_shared<EventCommandConcludeLive>());
 			media_event->SetHighPriority(urgent);
 
 			if (source_stream->SendEvent(media_event) == false)

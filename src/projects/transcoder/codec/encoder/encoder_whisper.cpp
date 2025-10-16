@@ -8,6 +8,7 @@
 //==============================================================================
 #include <orchestrator/orchestrator.h>
 #include <base/modules/data_format/webvtt/webvtt_frame.h>
+#include <base/event/command/commands.h>
 
 #include "encoder_whisper.h"
 #include "../../transcoder_private.h"
@@ -250,10 +251,10 @@ void EncoderWhisper::CodecThread()
 
 			if (lang_prob > 0.9f)
 			{
-				_source_language = lang_str;
+				// _source_language = lang_str;
 				logti("Set source language [label : %s] to %s with high confidence (id=%d) with probabilities:[%f]", _track->GetOutputTrackLabel().CStr(), lang_str, lang_id, lang_prob);
 
-				SendLangDetectionEvent(_track->GetOutputTrackLabel(), _source_language);
+				SendLangDetectionEvent(_track->GetOutputTrackLabel(), lang_str);
 			}
 			else
 			{
@@ -438,29 +439,17 @@ bool EncoderWhisper::SendLangDetectionEvent(const ov::String &label, const ov::S
 		return true;
 	}
 
-	logtc("Detected subtitle language: %s -> %s", _source_language.CStr(), language.CStr());
+	logti("Detected subtitle language: %s -> %s", _source_language.CStr(), language.CStr());
 
 	_source_language = language;
 
-	Json::Value event_data;
-	event_data["trackLabel"] = label.CStr();
-	event_data["language"] = language.CStr();
-
-	auto data = ov::Json::Stringify(event_data).ToData(false);
-
-	auto event = std::make_shared<MediaEvent>(MediaEvent::CommandType::DetectedSubtitleLanguage, data);
+	auto event = MediaEvent::BuildEvent(EventCommandUpdateLanguage::Create(label, language));
+	event->SetHighPriority(true);
 	if (_parent_stream->SendEvent(event) == false)
 	{
 		logte("[%s/%s] Could not send language detection event.", _stream_info.GetApplicationName(), _stream_info.GetName().CStr());
 		return false;
 	}
-
-	// 25.10.02 이 이후로 구현하기
-	// 1. output stream의 track의 soruce_language가 auto인 경우는 prepared 되지 않게 해야 함 (inbound stream은 auto여도 상관 없음)
-	// 2. 이 이벤트를 받으면 trackLabel에 해당하는 track의 language를 변경함
-	// 3. 매뉴얼에 auto인 경우는 whisper가 언어를 감지하기 전까지 stream이 ready되지 않으니 주의하도록 경고
-
-	// 아니면 기본은 und로 해놓고, 감지된 언어로 바꾸는 것도 방법일 듯. 이러면 HLS쪽에서도 master playlist를 업데이트 해야하고, 그러면 다시 접속해야만 그것이 player에 반영될것임. 뭐가 좋을까? 
 
 	return true;
 }

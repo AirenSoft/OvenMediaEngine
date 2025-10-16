@@ -1257,7 +1257,7 @@ void LLHlsStream::OnEvent(const std::shared_ptr<MediaEvent> &event)
 
 	switch (event->GetCommandType())
 	{
-		case MediaEvent::CommandType::ConcludeLive: {
+		case EventCommand::Type::ConcludeLive: {
 			auto [result, message] = ConcludeLive();
 			if (result == true)
 			{
@@ -1267,6 +1267,13 @@ void LLHlsStream::OnEvent(const std::shared_ptr<MediaEvent> &event)
 			{
 				logte("LLHlsStream(%s/%s) - Failed to conclude live(%s)", GetApplication()->GetVHostAppName().CStr(), GetName().CStr(), message.CStr());
 			}
+			break;
+		}
+		case EventCommand::Type::UpdateSubtitleLanguage: {
+			std::unique_lock<std::mutex> guard(_master_playlists_lock);
+			logti("LLHlsStream(%s/%s) - Clear master playlist cache for subtitle language update.", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
+			_master_playlists.clear();
+			guard.unlock();
 			break;
 		}
 		default:

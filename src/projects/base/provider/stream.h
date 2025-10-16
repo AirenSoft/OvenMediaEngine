@@ -14,7 +14,7 @@
 #include "monitoring/monitoring.h"
 
 #include <base/mediarouter/media_buffer.h>
-#include <base/mediarouter/media_event.h>
+#include <base/event/media_event.h>
 #include <base/mediarouter/mediarouter_interface.h>
 
 namespace pvd
@@ -121,6 +121,9 @@ namespace pvd
 		void ResetSourceStreamTimestamp();
 		int64_t GetDeltaTimestamp(uint32_t track_id, int64_t timestamp, int64_t max_timestamp);
 		void UpdateReconnectTimeToBasetime();
+
+		// Processing events
+		bool ProcessEvent(const std::shared_ptr<MediaEvent> &event);
 
 		// TrackID : Timestamp(us)
 		// For the by delta update method

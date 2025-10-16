@@ -387,7 +387,7 @@ void HlsStream::OnEvent(const std::shared_ptr<MediaEvent> &event)
 
 	switch(event->GetCommandType())
 	{
-		case MediaEvent::CommandType::ConcludeLive:
+		case EventCommand::Type::ConcludeLive:
 		{
 			auto [result, message] = ConcludeLive();
 			if (result == true)
