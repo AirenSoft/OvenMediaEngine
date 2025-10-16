@@ -45,7 +45,7 @@ bool WebRtcPublisher::StartSignallingServer(const cfg::Server &server_config, co
 
 	bool is_configured;
 	auto worker_count = signalling_config.GetWorkerCount(&is_configured);
-	worker_count = is_configured ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
+	worker_count	  = is_configured ? worker_count : HTTP_SERVER_USE_DEFAULT_COUNT;
 
 	bool is_port_configured;
 	auto &port_config = signalling_config.GetPort(&is_port_configured);
@@ -97,7 +97,7 @@ bool WebRtcPublisher::StartICEPorts(const cfg::Server &server_config, const cfg:
 
 bool WebRtcPublisher::Start()
 {
-	auto server_config = GetServerConfig();
+	auto server_config		= GetServerConfig();
 	auto webrtc_bind_config = server_config.GetBind().GetPublishers().GetWebrtc();
 
 	if (webrtc_bind_config.IsParsed() == false)
@@ -203,15 +203,15 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 																		  const info::VHostAppName &vhost_app_name, const ov::String &host_name, const ov::String &stream_name,
 																		  std::vector<RtcIceCandidate> *ice_candidates, bool &tcp_relay)
 {
-	info::VHostAppName final_vhost_app_name = vhost_app_name;
-	ov::String final_host_name = host_name;
-	ov::String final_stream_name = stream_name;
+	info::VHostAppName final_vhost_app_name		= vhost_app_name;
+	ov::String final_host_name					= host_name;
+	ov::String final_stream_name				= stream_name;
 
 	[[maybe_unused]] RequestStreamResult result = RequestStreamResult::init;
-	auto request = ws_session->GetRequest();
-	auto remote_address = request->GetRemote()->GetRemoteAddress();
-	auto uri = request->GetUri();
-	auto final_url = ov::Url::Parse(uri);
+	auto request								= ws_session->GetRequest();
+	auto remote_address							= request->GetRemote()->GetRemoteAddress();
+	auto uri									= request->GetUri();
+	auto final_url								= ov::Url::Parse(uri);
 	if (final_url == nullptr)
 	{
 		logte("Could not parse the url: %s", uri.CStr());
@@ -226,10 +226,10 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 		final_url->SetPort(request->GetRemote()->GetLocalAddress()->Port());
 	}
 
-	auto requested_url = final_url;
-	auto request_info = std::make_shared<ac::RequestInfo>(final_url, nullptr , request->GetRemote(), request);
+	auto requested_url						   = final_url;
+	auto request_info						   = std::make_shared<ac::RequestInfo>(final_url, nullptr, request->GetRemote(), request);
 
-	uint64_t session_life_time = 0;
+	uint64_t session_life_time				   = 0;
 	auto [signed_policy_result, signed_policy] = Publisher::VerifyBySignedPolicy(request_info);
 	if (signed_policy_result == AccessController::VerificationResult::Pass)
 	{
@@ -277,9 +277,9 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 			}
 
 			final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
-			final_host_name = final_url->Host();
-			final_stream_name = final_url->Stream();
-			final_file_name = final_url->File();
+			final_host_name		 = final_url->Host();
+			final_stream_name	 = final_url->Stream();
+			final_file_name		 = final_url->File();
 		}
 	}
 	else if (webhooks_result == AccessController::VerificationResult::Error)
@@ -340,7 +340,7 @@ std::shared_ptr<const SessionDescription> WebRtcPublisher::OnRequestOffer(const 
 	if (_ice_candidate_list.empty() == false)
 	{
 		auto candidate_index_to_send = _current_ice_candidate_index++ % _ice_candidate_list.size();
-		const auto &candidates = _ice_candidate_list[candidate_index_to_send];
+		const auto &candidates		 = _ice_candidate_list[candidate_index_to_send];
 
 		ice_candidates->insert(ice_candidates->end(), candidates.cbegin(), candidates.cend());
 	}
@@ -422,18 +422,18 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 		return false;
 	}
 
-	auto final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
-	auto final_stream_name = final_url->Stream();
-	auto final_file_name = final_url->File();
+	auto final_vhost_app_name  = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
+	auto final_stream_name	   = final_url->Stream();
+	auto final_file_name	   = final_url->File();
 
-	auto request = ws_session->GetRequest();
-	auto remote_address = request->GetRemote()->GetRemoteAddress();
+	auto request			   = ws_session->GetRequest();
+	auto remote_address		   = request->GetRemote()->GetRemoteAddress();
 
 	ov::String remote_sdp_text = answer_sdp->ToString();
 	logtd("OnAddRemoteDescription: %s", remote_sdp_text.CStr());
 
 	auto application = GetApplicationByName(final_vhost_app_name);
-	auto stream = std::static_pointer_cast<RtcStream>(GetStream(final_vhost_app_name, final_stream_name));
+	auto stream		 = std::static_pointer_cast<RtcStream>(GetStream(final_vhost_app_name, final_stream_name));
 	if (!stream)
 	{
 		logte("Cannot find stream (%s/%s)", final_vhost_app_name.CStr(), final_stream_name.CStr());
@@ -441,7 +441,7 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 	}
 
 	auto ice_session_id = _ice_port->IssueUniqueSessionId();
-	auto session = RtcSession::Create(Publisher::GetSharedPtrAs<WebRtcPublisher>(), application, stream, final_file_name, offer_sdp, answer_sdp, _ice_port, ice_session_id, ws_session);
+	auto session		= RtcSession::Create(Publisher::GetSharedPtrAs<WebRtcPublisher>(), application, stream, final_file_name, offer_sdp, answer_sdp, _ice_port, ice_session_id, ws_session);
 	if (session != nullptr)
 	{
 		stream->AddSession(session);
@@ -494,7 +494,7 @@ bool WebRtcPublisher::OnChangeRendition(const std::shared_ptr<http::svr::ws::Web
 	}
 
 	auto final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(parsed_url->Host(), parsed_url->App());
-	auto final_stream_name = parsed_url->Stream();
+	auto final_stream_name	  = parsed_url->Stream();
 
 	logtd("ChangeRendition command received : %s/%s/%u", final_vhost_app_name.CStr(), final_stream_name.CStr(), offer_sdp->GetSessionId());
 
@@ -534,12 +534,12 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::WebSock
 	logti("Stop command received : %s/%s/%u", vhost_app_name.CStr(), stream_name.CStr(), offer_sdp->GetSessionId());
 
 	info::VHostAppName final_vhost_app_name = vhost_app_name;
-	ov::String final_stream_name = stream_name;
+	ov::String final_stream_name			= stream_name;
 
-	auto [final_url_exist, url] = ws_session->GetUserData("final_url");
+	auto [final_url_exist, url]				= ws_session->GetUserData("final_url");
 	if (final_url_exist == true && std::holds_alternative<ov::String>(url) == true)
 	{
-		ov::String uri = std::get<ov::String>(url);
+		ov::String uri					   = std::get<ov::String>(url);
 
 		std::shared_ptr<ov::Url> final_url = ov::Url::Parse(uri);
 		if (final_url == nullptr)
@@ -549,7 +549,7 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::WebSock
 		}
 
 		final_vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(final_url->Host(), final_url->App());
-		final_stream_name = final_url->Stream();
+		final_stream_name	 = final_url->Stream();
 	}
 
 	// Find Stream
@@ -568,10 +568,10 @@ bool WebRtcPublisher::OnStopCommand(const std::shared_ptr<http::svr::ws::WebSock
 	}
 
 	// Send Close to Admission Webhooks
-	auto request = ws_session->GetRequest();
+	auto request	   = ws_session->GetRequest();
 	auto requested_url = session->GetRequestedUrl();
-	auto final_url = session->GetFinalUrl();
-	auto request_info = std::make_shared<ac::RequestInfo>(requested_url, final_url, request->GetRemote(), request);
+	auto final_url	   = session->GetFinalUrl();
+	auto request_info  = std::make_shared<ac::RequestInfo>(requested_url, final_url, request->GetRemote(), request);
 	SendCloseAdmissionWebhooks(request_info);
 
 	DisconnectSessionInternal(session);
@@ -610,7 +610,7 @@ void WebRtcPublisher::OnStateChanged(IcePort &port, uint32_t session_id, IceConn
 	}
 
 	auto application = session->GetApplication();
-	auto stream = std::static_pointer_cast<RtcStream>(session->GetStream());
+	auto stream		 = std::static_pointer_cast<RtcStream>(session->GetStream());
 
 	switch (state)
 	{

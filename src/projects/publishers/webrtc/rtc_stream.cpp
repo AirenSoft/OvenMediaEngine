@@ -9,18 +9,16 @@
 #include "rtc_stream.h"
 
 #include <base/info/media_extradata.h>
+#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 #include <modules/bitstream/nalu/nal_stream_converter.h>
+#include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension_abs_send_time.h>
 #include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension_framemarking.h>
 #include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension_playout_delay.h>
-#include <modules/rtp_rtcp/rtp_header_extension/rtp_header_extension_abs_send_time.h>
-
-#include <modules/bitstream/h264/h264_decoder_configuration_record.h>
 
 #include "rtc_application.h"
+#include "rtc_common_types.h"
 #include "rtc_private.h"
 #include "rtc_session.h"
-
-#include "rtc_common_types.h"
 
 using namespace cmn;
 
@@ -95,9 +93,9 @@ RtcStream::RtcStream(const std::shared_ptr<pub::Application> application,
 					 const info::Stream &info,
 					 uint32_t worker_count)
 	: Stream(application, info),
-	_worker_count(worker_count)
+	  _worker_count(worker_count)
 {
-	_certificate = application->GetSharedPtrAs<RtcApplication>()->GetCertificate();
+	_certificate	= application->GetSharedPtrAs<RtcApplication>()->GetCertificate();
 	_vp8_picture_id = 0x8000;  // 1 {000 0000 0000 0000} 1 is marker for 15 bit length
 }
 
@@ -119,7 +117,7 @@ std::shared_ptr<const pub::Stream::DefaultPlaylistInfo> RtcStream::GetDefaultPla
 
 bool RtcStream::Start()
 {
-	if(GetState() != State::CREATED)
+	if (GetState() != State::CREATED)
 	{
 		return false;
 	}
@@ -129,15 +127,15 @@ bool RtcStream::Start()
 		return false;
 	}
 
-	auto webrtc_config = GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher();
+	auto webrtc_config	   = GetApplicationInfo().GetConfig().GetPublishers().GetWebrtcPublisher();
 
-	_rtx_enabled = webrtc_config.IsRtxEnabled();
-	_ulpfec_enabled = webrtc_config.IsUlpfecEnalbed();
+	_rtx_enabled		   = webrtc_config.IsRtxEnabled();
+	_ulpfec_enabled		   = webrtc_config.IsUlpfecEnalbed();
 	_jitter_buffer_enabled = webrtc_config.IsJitterBufferEnabled();
 
-	auto playoutDelay = webrtc_config.GetPlayoutDelay(&_playout_delay_enabled);
-	_playout_delay_min = playoutDelay.GetMin();
-	_playout_delay_max = playoutDelay.GetMax();
+	auto playoutDelay	   = webrtc_config.GetPlayoutDelay(&_playout_delay_enabled);
+	_playout_delay_min	   = playoutDelay.GetMin();
+	_playout_delay_max	   = playoutDelay.GetMax();
 
 	if (webrtc_config.GetBandwidthEstimationType() == WebRtcBandwidthEstimationType::TransportCc)
 	{
@@ -149,13 +147,13 @@ bool RtcStream::Start()
 	}
 
 	// MSID
-	_msid = ov::Random::GenerateString(36);
-	_cname = ov::Random::GenerateString(16);
+	_msid										   = ov::Random::GenerateString(36);
+	_cname										   = ov::Random::GenerateString(16);
 
 	// SSRC
-	_video_ssrc = ov::Random::GenerateUInt32();
-	_video_rtx_ssrc = ov::Random::GenerateUInt32();
-	_audio_ssrc = ov::Random::GenerateUInt32();
+	_video_ssrc									   = ov::Random::GenerateUInt32();
+	_video_rtx_ssrc								   = ov::Random::GenerateUInt32();
+	_audio_ssrc									   = ov::Random::GenerateUInt32();
 
 	std::shared_ptr<MediaTrack> _first_video_track = nullptr;
 	std::shared_ptr<MediaTrack> _first_audio_track = nullptr;
@@ -205,10 +203,10 @@ bool RtcStream::Start()
 
 		_default_playlist_name = default_playlist_info->file_name;
 
-		auto default_playlist = GetPlaylist(_default_playlist_name);
+		auto default_playlist  = GetPlaylist(_default_playlist_name);
 		if (default_playlist == nullptr)
 		{
-			auto playlist = std::make_shared<info::Playlist>(default_playlist_info->name, _default_playlist_name, true);
+			auto playlist  = std::make_shared<info::Playlist>(default_playlist_info->name, _default_playlist_name, true);
 			auto rendition = std::make_shared<info::Rendition>("default", _first_video_track ? _first_video_track->GetVariantName() : "", _first_audio_track ? _first_audio_track->GetVariantName() : "");
 
 			playlist->AddRendition(rendition);
@@ -216,7 +214,7 @@ bool RtcStream::Start()
 
 			AddPlaylist(playlist);
 		}
-	
+
 		auto rtc_master_playlist = CreateRtcMasterPlaylist(_default_playlist_name);
 
 		// lock
@@ -229,25 +227,25 @@ bool RtcStream::Start()
 		if (GetPlaylists().size() == 0)
 		{
 			logtw("RtcStream(%s/%s) - There is no playlist, WebRTC will not work for this stream.", GetApplication()->GetVHostAppName().CStr(), GetName().CStr());
-			Stop(); // Release resources
+			Stop();	 // Release resources
 			return false;
 		}
 	}
 
-	logti("WebRTC Stream has been created : %s/%u\nRtx(%s) Ulpfec(%s) JitterBuffer(%s) PlayoutDelay(%s min:%d max: %d)", 
-									GetName().CStr(), GetId(),
-									ov::Converter::ToString(_rtx_enabled).CStr(),
-									ov::Converter::ToString(_ulpfec_enabled).CStr(),
-									ov::Converter::ToString(_jitter_buffer_enabled).CStr(),
-									ov::Converter::ToString(_playout_delay_enabled).CStr(),
-									_playout_delay_min, _playout_delay_max);
-	
+	logti("WebRTC Stream has been created : %s/%u\nRtx(%s) Ulpfec(%s) JitterBuffer(%s) PlayoutDelay(%s min:%d max: %d)",
+		  GetName().CStr(), GetId(),
+		  ov::Converter::ToString(_rtx_enabled).CStr(),
+		  ov::Converter::ToString(_ulpfec_enabled).CStr(),
+		  ov::Converter::ToString(_jitter_buffer_enabled).CStr(),
+		  ov::Converter::ToString(_playout_delay_enabled).CStr(),
+		  _playout_delay_min, _playout_delay_max);
+
 	return Stream::Start();
 }
 
 bool RtcStream::Stop()
 {
-	if(GetState() != State::STARTED)
+	if (GetState() != State::STARTED)
 	{
 		return false;
 	}
@@ -257,7 +255,6 @@ bool RtcStream::Stop()
 
 	return Stream::Stop();
 }
-
 
 bool RtcStream::OnStreamUpdated(const std::shared_ptr<info::Stream> &info)
 {
@@ -272,13 +269,13 @@ bool RtcStream::IsSupportedCodec(cmn::MediaCodecId codec_id)
 {
 	switch (codec_id)
 	{
-	case cmn::MediaCodecId::H264:
-	case cmn::MediaCodecId::H265:
-	case cmn::MediaCodecId::Vp8:
-	case cmn::MediaCodecId::Opus:
-		return true;
-	default:
-		return false;
+		case cmn::MediaCodecId::H264:
+		case cmn::MediaCodecId::H265:
+		case cmn::MediaCodecId::Vp8:
+		case cmn::MediaCodecId::Opus:
+			return true;
+		default:
+			return false;
 	}
 
 	return false;
@@ -303,7 +300,7 @@ std::shared_ptr<const RtcMasterPlaylist> RtcStream::GetRtcMasterPlaylist(const o
 	}
 
 	std::shared_ptr<const RtcMasterPlaylist> rtc_master_playlist;
-	
+
 	//lock
 	std::shared_lock<std::shared_mutex> lock(_rtc_master_playlist_map_lock);
 	auto it = _rtc_master_playlist_map.find(file_name);
@@ -372,7 +369,7 @@ std::shared_ptr<RtcMasterPlaylist> RtcStream::CreateRtcMasterPlaylist(const ov::
 
 std::shared_ptr<const SessionDescription> RtcStream::GetSessionDescription(const ov::String &file_name)
 {
-	if(GetState() != State::STARTED)
+	if (GetState() != State::STARTED)
 	{
 		return nullptr;
 	}
@@ -457,7 +454,7 @@ std::shared_ptr<SessionDescription> RtcStream::CreateSessionDescription(const ov
 
 		auto payload = MakePayloadAttr(track);
 		media_desc->AddPayload(payload);
-		
+
 		// Add RTX
 		if (track->GetMediaType() == cmn::MediaType::Video && _rtx_enabled == true)
 		{
@@ -532,7 +529,7 @@ std::shared_ptr<MediaDescription> RtcStream::MakeVideoDescription() const
 	video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_FRAMEMARKING_ID, RTP_HEADER_EXTENSION_FRAMEMARKING_ATTRIBUTE);
 
 	// Experimental Code
-	if(_playout_delay_enabled == true)
+	if (_playout_delay_enabled == true)
 	{
 		video_media_desc->AddExtmap(RTP_HEADER_EXTENSION_PLAYOUT_DELAY_ID, RTP_HEADER_EXTENSION_PLAYOUT_DELAY_ATTRIBUTE);
 	}
@@ -578,7 +575,7 @@ std::shared_ptr<MediaDescription> RtcStream::MakeAudioDescription() const
 	{
 		audio_media_desc->AddExtmap(RTP_HEADER_EXTENSION_ABS_SEND_TIME_ID, RTP_HEADER_EXTENSION_ABS_SEND_TIME_ATTRIBUTE);
 	}
-	
+
 	return audio_media_desc;
 }
 
@@ -604,19 +601,19 @@ std::shared_ptr<PayloadAttr> RtcStream::MakePayloadAttr(const std::shared_ptr<co
 				ov::String profile_string;
 
 				profile_string.Format("%02x%02x%02x",
-					config->ProfileIndication(),
-					config->Compatibility(),
-					config->LevelIndication());
+									  config->ProfileIndication(),
+									  config->Compatibility(),
+									  config->LevelIndication());
 
-				//(Getroot's Note) The software decoder of Firefox or Chrome cannot play when 64001f (High, 3.1) stream is input. 
-				// However, when I put the fake information of 42e01f in FMTP, I confirmed that both Firefox and Chrome play well (high profile, but stream without B-Frame). 
+				//(Getroot's Note) The software decoder of Firefox or Chrome cannot play when 64001f (High, 3.1) stream is input.
+				// However, when I put the fake information of 42e01f in FMTP, I confirmed that both Firefox and Chrome play well (high profile, but stream without B-Frame).
 				// I thought it would be better to put 42e01f in fmtp than put the correct value, so I decided to put fake information.
 				profile_string = "42e01f";
 
 				payload->SetFmtp(ov::String::FormatString(
-						// NonInterleaved => packetization-mode=1
-						"packetization-mode=1;profile-level-id=%s;level-asymmetry-allowed=1",
-						profile_string.CStr()));
+					// NonInterleaved => packetization-mode=1
+					"packetization-mode=1;profile-level-id=%s;level-asymmetry-allowed=1",
+					profile_string.CStr()));
 			}
 
 			break;
@@ -636,8 +633,8 @@ std::shared_ptr<PayloadAttr> RtcStream::MakePayloadAttr(const std::shared_ptr<co
 			break;
 		default:
 			logti("Unsupported codec(%s/%s) is being input from media track",
-					cmn::GetMediaTypeString(track->GetMediaType()),
-					cmn::GetCodecIdString(track->GetCodecId()));
+				  cmn::GetMediaTypeString(track->GetMediaType()),
+				  cmn::GetCodecIdString(track->GetCodecId()));
 			return nullptr;
 	}
 
@@ -657,7 +654,7 @@ std::shared_ptr<PayloadAttr> RtcStream::MakePayloadAttr(const std::shared_ptr<co
 std::shared_ptr<PayloadAttr> RtcStream::MakeRtxPayloadAttr(const std::shared_ptr<const MediaTrack> &track) const
 {
 	uint8_t source_payload_type = PayloadTypeFromCodecId(track->GetCodecId());
-	uint8_t rtx_payload_type = RtxPayloadTypeFromCodecId(track->GetCodecId());
+	uint8_t rtx_payload_type	= RtxPayloadTypeFromCodecId(track->GetCodecId());
 
 	if (source_payload_type == 0 || rtx_payload_type == 0)
 	{
@@ -691,7 +688,7 @@ bool RtcStream::OnRtpPacketized(std::shared_ptr<RtpPacket> packet)
 
 void RtcStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if(_jitter_buffer_enabled)
+	if (_jitter_buffer_enabled)
 	{
 		PushToJitterBuffer(media_packet);
 	}
@@ -703,7 +700,7 @@ void RtcStream::SendVideoFrame(const std::shared_ptr<MediaPacket> &media_packet)
 
 void RtcStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if(_jitter_buffer_enabled)
+	if (_jitter_buffer_enabled)
 	{
 		PushToJitterBuffer(media_packet);
 	}
@@ -715,20 +712,20 @@ void RtcStream::SendAudioFrame(const std::shared_ptr<MediaPacket> &media_packet)
 
 void RtcStream::PushToJitterBuffer(const std::shared_ptr<MediaPacket> &media_packet)
 {
-	if(GetState() != State::STARTED)
+	if (GetState() != State::STARTED)
 	{
 		return;
 	}
 
 	_jitter_buffer_delay.PushMediaPacket(media_packet);
 
-	while(auto media_packet = _jitter_buffer_delay.PopNextMediaPacket())
+	while (auto media_packet = _jitter_buffer_delay.PopNextMediaPacket())
 	{
-		if(media_packet->GetMediaType() == cmn::MediaType::Video)
+		if (media_packet->GetMediaType() == cmn::MediaType::Video)
 		{
 			PacketizeVideoFrame(media_packet);
 		}
-		else if(media_packet->GetMediaType() == cmn::MediaType::Audio)
+		else if (media_packet->GetMediaType() == cmn::MediaType::Audio)
 		{
 			PacketizeAudioFrame(media_packet);
 		}
@@ -773,11 +770,11 @@ void RtcStream::PacketizeVideoFrame(const std::shared_ptr<MediaPacket> &media_pa
 		return;
 	}
 
-	auto frame_type = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
+	auto frame_type	   = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::VideoFrameKey : FrameType::VideoFrameDelta;
 	// video timescale is always 90000hz in WebRTC
-	auto timestamp = ((double)media_packet->GetPts() * media_track->GetTimeBase().GetExpr() * 90000);
+	auto timestamp	   = ((double)media_packet->GetPts() * media_track->GetTimeBase().GetExpr() * 90000);
 	auto ntp_timestamp = ov::Converter::SecondsToNtpTs((double)media_packet->GetPts() * media_track->GetTimeBase().GetExpr());
-	auto data = media_packet->GetData();
+	auto data		   = media_packet->GetData();
 	auto fragmentation = media_packet->GetFragHeader();
 
 	packetizer->Packetize(frame_type,
@@ -805,10 +802,10 @@ void RtcStream::PacketizeAudioFrame(const std::shared_ptr<MediaPacket> &media_pa
 		return;
 	}
 
-	auto frame_type = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::AudioFrameKey : FrameType::AudioFrameDelta;
-	auto timestamp = media_packet->GetPts();
+	auto frame_type	   = (media_packet->GetFlag() == MediaPacketFlag::Key) ? FrameType::AudioFrameKey : FrameType::AudioFrameDelta;
+	auto timestamp	   = media_packet->GetPts();
 	auto ntp_timestamp = ov::Converter::SecondsToNtpTs((double)media_packet->GetPts() * media_track->GetTimeBase().GetExpr());
-	auto data = media_packet->GetData();
+	auto data		   = media_packet->GetData();
 	auto fragmentation = media_packet->GetFragHeader();
 
 	packetizer->Packetize(frame_type,
@@ -842,24 +839,24 @@ void RtcStream::MakeRtpVideoHeader(const CodecSpecificInfo *info, RTPVideoHeader
 			rtp_video_header->codec = cmn::MediaCodecId::Vp8;
 			rtp_video_header->codec_header.vp8.InitRTPVideoHeaderVP8();
 			// With Ulpfec, picture id is needed.
-			rtp_video_header->codec_header.vp8.picture_id = AllocateVP8PictureID();
+			rtp_video_header->codec_header.vp8.picture_id	 = AllocateVP8PictureID();
 			rtp_video_header->codec_header.vp8.non_reference = info->codec_specific.vp8.non_reference;
-			rtp_video_header->codec_header.vp8.temporal_idx = info->codec_specific.vp8.temporal_idx;
-			rtp_video_header->codec_header.vp8.layer_sync = info->codec_specific.vp8.layer_sync;
-			rtp_video_header->codec_header.vp8.tl0_pic_idx = info->codec_specific.vp8.tl0_pic_idx;
-			rtp_video_header->codec_header.vp8.key_idx = info->codec_specific.vp8.key_idx;
-			rtp_video_header->simulcast_idx = info->codec_specific.vp8.simulcast_idx;
+			rtp_video_header->codec_header.vp8.temporal_idx	 = info->codec_specific.vp8.temporal_idx;
+			rtp_video_header->codec_header.vp8.layer_sync	 = info->codec_specific.vp8.layer_sync;
+			rtp_video_header->codec_header.vp8.tl0_pic_idx	 = info->codec_specific.vp8.tl0_pic_idx;
+			rtp_video_header->codec_header.vp8.key_idx		 = info->codec_specific.vp8.key_idx;
+			rtp_video_header->simulcast_idx					 = info->codec_specific.vp8.simulcast_idx;
 			return;
 		case cmn::MediaCodecId::H264:
-			rtp_video_header->codec = cmn::MediaCodecId::H264;
+			rtp_video_header->codec								   = cmn::MediaCodecId::H264;
 			rtp_video_header->codec_header.h26X.packetization_mode = info->codec_specific.h26X.packetization_mode;
-			rtp_video_header->simulcast_idx = info->codec_specific.h26X.simulcast_idx;
+			rtp_video_header->simulcast_idx						   = info->codec_specific.h26X.simulcast_idx;
 			return;
 
 		case cmn::MediaCodecId::H265:
-			rtp_video_header->codec = cmn::MediaCodecId::H265;
+			rtp_video_header->codec								   = cmn::MediaCodecId::H265;
 			rtp_video_header->codec_header.h26X.packetization_mode = info->codec_specific.h26X.packetization_mode;
-			rtp_video_header->simulcast_idx = info->codec_specific.h26X.simulcast_idx;
+			rtp_video_header->simulcast_idx						   = info->codec_specific.h26X.simulcast_idx;
 			return;
 		default:
 			break;
@@ -883,8 +880,8 @@ uint32_t RtcStream::GetSsrc(cmn::MediaType media_type)
 }
 
 void RtcStream::AddPacketizer(const std::shared_ptr<const MediaTrack> &track)
-{	
-	uint32_t ssrc = GetSsrc(track->GetMediaType());
+{
+	uint32_t ssrc		 = GetSsrc(track->GetMediaType());
 	uint8_t payload_type = PayloadTypeFromCodecId(track->GetCodecId());
 
 	if (ssrc == 0 || payload_type == 0)
@@ -893,7 +890,7 @@ void RtcStream::AddPacketizer(const std::shared_ptr<const MediaTrack> &track)
 	}
 
 	logtd("Add Packetizer : codec(%u) id(%u) pt(%d) ssrc(%u)", track->GetCodecId(), track->GetId(), payload_type, ssrc);
-	
+
 	auto packetizer = std::make_shared<RtpPacketizer>(RtpPacketizerInterface::GetSharedPtr());
 	packetizer->SetCodec(track->GetCodecId());
 	packetizer->SetPayloadType(payload_type);
@@ -917,7 +914,7 @@ void RtcStream::AddPacketizer(const std::shared_ptr<const MediaTrack> &track)
 	}
 
 	// Experimental : PlayoutDelay extension
-	if(_playout_delay_enabled == true)
+	if (_playout_delay_enabled == true)
 	{
 		packetizer->SetPlayoutDelay(_playout_delay_min, _playout_delay_max);
 	}
@@ -945,21 +942,21 @@ ov::String RtcStream::GetRtpHistoryKey(uint32_t track_id, uint8_t payload_type)
 void RtcStream::AddRtpHistory(const std::shared_ptr<const MediaTrack> &track)
 {
 	auto origin_payload_type = PayloadTypeFromCodecId(track->GetCodecId());
-	auto rtx_payload_type = RtxPayloadTypeFromCodecId(track->GetCodecId());
+	auto rtx_payload_type	 = RtxPayloadTypeFromCodecId(track->GetCodecId());
 
 	if (origin_payload_type == 0 || rtx_payload_type == 0)
 	{
 		return;
 	}
 
-	auto history = std::make_shared<RtpHistory>(origin_payload_type, rtx_payload_type, _video_rtx_ssrc, MAX_RTP_RECORDS);
+	auto history															= std::make_shared<RtpHistory>(origin_payload_type, rtx_payload_type, _video_rtx_ssrc, MAX_RTP_RECORDS);
 	_rtp_history_map[GetRtpHistoryKey(track->GetId(), origin_payload_type)] = history;
 
 	if (_ulpfec_enabled == true)
 	{
-		auto red_pt = static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE);
-		auto red_rtx_pt = static_cast<uint8_t>(FixedRtcPayloadType::RED_RTX_PAYLOAD_TYPE);
-		auto red_history = std::make_shared<RtpHistory>(red_pt, red_rtx_pt, _video_rtx_ssrc, MAX_RTP_RECORDS);
+		auto red_pt												   = static_cast<uint8_t>(FixedRtcPayloadType::RED_PAYLOAD_TYPE);
+		auto red_rtx_pt											   = static_cast<uint8_t>(FixedRtcPayloadType::RED_RTX_PAYLOAD_TYPE);
+		auto red_history										   = std::make_shared<RtpHistory>(red_pt, red_rtx_pt, _video_rtx_ssrc, MAX_RTP_RECORDS);
 
 		_rtp_history_map[GetRtpHistoryKey(track->GetId(), red_pt)] = red_history;
 	}
@@ -979,7 +976,7 @@ std::shared_ptr<RtpHistory> RtcStream::GetHistory(uint32_t track_id, uint8_t ori
 
 std::shared_ptr<RtxRtpPacket> RtcStream::GetRtxRtpPacket(uint32_t track_id, uint8_t origin_payload_type, uint16_t origin_sequence_number)
 {
-	if(GetState() != State::STARTED)
+	if (GetState() != State::STARTED)
 	{
 		return nullptr;
 	}

@@ -138,11 +138,7 @@ Here is a detailed explanation of each element of JSON payload:
 
 | Type    | Code                                               | Description                                                                                                                      |
 | ------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| INGRESS | INGRESS\_STREAM\_CREATED                           | A new ingress stream has been created                                                                                            |
-|         | INGRESS\_STREAM\_PREPARED                          | A ingress stream has been prepared                                                                                               |
-|         | INGRESS\_STREAM\_DELETED                           | A ingress stream has been deleted                                                                                                |
-|         | INGRESS\_STREAM\_CREATION\_FAILED\_DUPLICATE\_NAME | Failed to create stream because the specified stream name is already in use                                                      |
-|         | INGRESS\_BITRATE\_LOW                              | The ingress stream's current bitrate (`%d` bps) is lower than the configured bitrate (`%d` bps)                                  |
+| INGRESS | INGRESS\_BITRATE\_LOW                              | The ingress stream's current bitrate (`%d` bps) is lower than the configured bitrate (`%d` bps)                                  |
 |         | INGRESS\_BITRATE\_HIGH                             | The ingress stream's current bitrate (`%d` bps) is higher than the configured bitrate (`%d` bps)                                 |
 |         | INGRESS\_FRAMERATE\_LOW                            | The ingress stream's current framerate (`%.2f` fps) is lower than the configured framerate (`%.2f` fps)                          |
 |         | INGRESS\_FRAMERATE\_HIGH                           | The ingress stream's current framerate (`%f` fps) is higher than the configured framerate (`%f` fps)                             |
