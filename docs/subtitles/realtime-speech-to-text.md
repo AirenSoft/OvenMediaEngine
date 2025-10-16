@@ -40,9 +40,9 @@ Fri Oct 10 21:34:25 2025
 
 If a driver is not installed, download it from the NVIDIA website or use the helper script provided in the OME repository.
 
-Official driver: https://www.nvidia.com/en-us/drivers/
+Official driver: [https://www.nvidia.com/en-us/drivers/](https://www.nvidia.com/en-us/drivers/)
 
-OME install script: https://github.com/AirenSoft/OvenMediaEngine/blob/master/misc/install\_nvidia\_driver.sh
+OME install script: [https://github.com/AirenSoft/OvenMediaEngine/blob/master/misc/install\_nvidia\_driver.sh](../../misc/install_nvidia_driver.sh)
 
 {% hint style="warning" %}
 The script installs the latest driver. Ensure your GPU supports the version being installed.
@@ -52,7 +52,7 @@ The script installs the latest driver. Ensure your GPU supports the version bein
 
 CUDA Toolkit is required to build whisper.cpp with GPU acceleration.
 
-* Download from: https://developer.nvidia.com/cuda-downloads
+* Download from: [https://developer.nvidia.com/cuda-downloads](https://developer.nvidia.com/cuda-downloads)
 * Use a version that matches your GPU generation.
   * For example, GeForce 10xx series (e.g., GTX 1060) typically requires **CUDA 11.8**. Newer toolkits such as 13.x may not support older GPUs.
 
