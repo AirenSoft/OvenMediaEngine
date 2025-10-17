@@ -169,7 +169,7 @@ namespace cfg
 
 	std::tuple<bool, ov::String> ConfigManager::GenerateServerID() const
 	{
-		return {true, ov::UUID::Generate()};
+		return {true, ov::UUID().ToString()};
 	}
 
 	void ConfigManager::LoadLoggerConfig(const ov::String &config_path)

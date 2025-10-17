@@ -8,27 +8,41 @@
 //==============================================================================
 #pragma once
 
+#include <uuid/uuid.h>
+
 #include "./ovlibrary.h"
 #include "./string.h"
-
-#include <uuid/uuid.h>
 
 namespace ov
 {
 	class UUID
 	{
 	public:
-		static String Generate()
+		UUID()
 		{
-			std::string res;
-			uuid_t uuid;
-
-			char uuid_cstr[37]; // 36 bytes uuid
-			uuid_generate(uuid);
-			uuid_unparse(uuid, uuid_cstr);
-			res = std::string(uuid_cstr);
-
-	        return res.c_str();
+			::uuid_generate(_uuid);
 		}
+
+		UUID(const UUID &other)		= default;
+		UUID(UUID &&other) noexcept = default;
+		~UUID()						= default;
+
+		String ToString() const
+		{
+			// The UUID string consist of 36 characters including the NULL character.
+			char uuid_cstr[UUID_STR_LEN];
+
+			::uuid_unparse(_uuid, uuid_cstr);
+
+			return uuid_cstr;
+		}
+
+		bool operator==(const UUID &other) const
+		{
+			return (::uuid_compare(_uuid, other._uuid) == 0);
+		}
+
+	private:
+		uuid_t _uuid;
 	};
-}
+}  // namespace ov
