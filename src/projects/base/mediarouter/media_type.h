@@ -119,7 +119,6 @@ namespace cmn
 		None = 0,
 		DEFAULT,   // SW
 		OPENH264,  // SW
-		BEAMR,	   // SW
 		X264,	   // SW
 		NVENC,	   // HW
 		QSV,	   // HW
@@ -138,7 +137,6 @@ namespace cmn
 			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, None);
 			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, DEFAULT);
 			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, OPENH264);
-			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, BEAMR);
 			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, X264);
 			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, NVENC);
 			OV_CASE_RETURN_ENUM_STRING(MediaCodecModuleId, QSV);
@@ -418,10 +416,6 @@ namespace cmn
 		{
 			return cmn::MediaCodecModuleId::OPENH264;
 		}
-		else if (name.HasSuffix("_BEAMR") || name.HasSuffix("BEAMR"))
-		{
-			return cmn::MediaCodecModuleId::BEAMR;
-		}
 		else if (name.HasSuffix("_NVENC") || name.HasSuffix("_NV") || name.HasSuffix("NV") || name.HasSuffix("NVENC"))
 		{
 			return cmn::MediaCodecModuleId::NVENC;
@@ -464,7 +458,6 @@ namespace cmn
 		{
 			OV_CASE_RETURN(MediaCodecModuleId::DEFAULT, "default");
 			OV_CASE_RETURN(MediaCodecModuleId::OPENH264, "openh264");
-			OV_CASE_RETURN(MediaCodecModuleId::BEAMR, "beamr");
 			OV_CASE_RETURN(MediaCodecModuleId::NVENC, "nvenc");
 			OV_CASE_RETURN(MediaCodecModuleId::QSV, "qsv");
 			OV_CASE_RETURN(MediaCodecModuleId::NILOGAN, "nilogan");

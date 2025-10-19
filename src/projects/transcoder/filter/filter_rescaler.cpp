@@ -120,7 +120,6 @@ bool FilterRescaler::InitializeFilterDescription()
 		ov::String desc = "";
 
 		if (output_module_id == cmn::MediaCodecModuleId::DEFAULT ||
-			output_module_id == cmn::MediaCodecModuleId::BEAMR ||
 			output_module_id == cmn::MediaCodecModuleId::OPENH264 ||
 			output_module_id == cmn::MediaCodecModuleId::X264 ||
 			output_module_id == cmn::MediaCodecModuleId::QSV ||
