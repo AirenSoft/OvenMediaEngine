@@ -94,7 +94,7 @@ endif
 # If libavcodec references libxrm.so, then the XMA library is supported
 ifeq ($(and \
   $(filter 0,$(call chk_pkg_exist,libxrm)), \
-  $(filter 0,$(call chk_so_references,$(CONFIG_LIBRARY_PATHS),libavcodec.so,libxrm.so)) \
+  $(filter 0,$(call chk_dd_exist,$(CONFIG_LIBRARY_PATHS),libavcodec.so,libxrm.so)) \
 ), 0)
 $(call add_pkg_config,libxma2api)
 $(call add_pkg_config,xvbm)
@@ -116,8 +116,14 @@ endif
 
 # Enable Netint Accelerator
 ifeq ($(call chk_lib_exist,libxcoder_logan.so), 0)
-$(info $(ANSI_YELLOW)- Netint Accelerator is enabled$(ANSI_RESET))
+HWACCELS_NILOGAN_ENABLED := true
 PROJECT_CXXFLAGS += -DHWACCELS_NILOGAN_ENABLED
+endif
+
+# Enable libx264 
+ifeq ($(call chk_dd_exist,$(CONFIG_LIBRARY_PATHS),libavcodec.so,libx264.so), 0)
+THIRDP_LIBX264_ENABLED := true
+PROJECT_CXXFLAGS += -DTHIRDP_LIBX264_ENABLED
 endif
 
 ifeq ($(shell echo $${OSTYPE}),linux-musl) 
