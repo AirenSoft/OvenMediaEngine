@@ -304,4 +304,32 @@ namespace ffmpeg
 
 		return cmn::VideoPixelFormatId::None;
 	}
+
+	AVPixelFormat compat::GetAVPixelFormatOfHWDevice(cmn::MediaCodecModuleId module_id, cmn::DeviceId gpu_id, bool is_sw_format)
+	{
+		auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(module_id, gpu_id);
+		if (hw_device_ctx == nullptr)
+		{
+			return AV_PIX_FMT_NONE;
+		}
+
+		auto constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx, nullptr);
+		if(constraints == nullptr)
+		{
+			return AV_PIX_FMT_NONE;
+		}
+
+		AVPixelFormat pix_fmt = AV_PIX_FMT_NONE;
+		if (is_sw_format == true)
+		{
+			pix_fmt = *(constraints->valid_sw_formats);
+		}
+		else {
+			pix_fmt = *(constraints->valid_hw_formats);
+		}
+
+		av_hwframe_constraints_free(&constraints);
+
+		return pix_fmt;
+	}
 }  // namespace ffmpeg
