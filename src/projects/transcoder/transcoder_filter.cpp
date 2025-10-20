@@ -8,6 +8,8 @@
 using namespace cmn;
 
 #define PTS_INCREMENT_LIMIT 15
+#define MAX_QUEUE_SIZE 5
+#define ENABLE_QUEUE_EXCEED_WAIT true
 
 TranscodeFilter::TranscodeFilter()
 	: _internal(nullptr)
@@ -56,7 +58,7 @@ bool TranscodeFilter::Configure(int32_t id,
 	_output_stream_info = output_stream_info;
 	_output_track = output_track;
 	
-	_timestamp_jump_threshold = (int64_t)_input_track->GetTimeBase().GetTimescale() * PTS_INCREMENT_LIMIT;
+	_timestamp_jump_threshold = (int64_t)GetInputTrack()->GetTimeBase().GetTimescale() * PTS_INCREMENT_LIMIT;
 
 	return CreateInternal();
 }
@@ -73,7 +75,7 @@ bool TranscodeFilter::CreateInternal()
 		_internal = nullptr;
 	}
 
-	switch (_input_track->GetMediaType())
+	switch (GetInputTrack()->GetMediaType())
 	{
 		case MediaType::Audio:
 			_internal = std::make_shared<FilterResampler>();
@@ -86,16 +88,17 @@ bool TranscodeFilter::CreateInternal()
 			return false;
 	}
 
-	auto name = ov::String::FormatString("filter_%s", cmn::GetMediaTypeString(_input_track->GetMediaType()));
+	auto name = ov::String::FormatString("filter_%s", cmn::GetMediaTypeString(GetInputTrack()->GetMediaType()));
 	auto urn = std::make_shared<info::ManagedQueue::URN>(
 		_input_stream_info->GetApplicationName(),
 		_input_stream_info->GetName(),
 		"trs",
 		name.LowerCaseString());
 	_internal->SetQueueUrn(urn);
+	_internal->SetQueuePolicy(ENABLE_QUEUE_EXCEED_WAIT, MAX_QUEUE_SIZE);
 	_internal->SetCompleteHandler(bind(&TranscodeFilter::OnComplete, this, std::placeholders::_1));
-	_internal->SetInputTrack(_input_track);
-	_internal->SetOutputTrack(_output_track);
+	_internal->SetInputTrack(GetInputTrack());
+	_internal->SetOutputTrack(GetOutputTrack());
 
 	return _internal->Start();
 }
@@ -151,7 +154,8 @@ bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 		return false;
 	}
 
-	// In case of pts/dts jumps
+	// Get the last timestamp and update it to the current timestamp.
+	// This is used to detect abnormal timestamp changes.
 	int64_t last_timestamp = _last_timestamp;
 	int64_t curr_timestamp = buffer->GetPts();
 	_last_timestamp = curr_timestamp;
@@ -168,25 +172,27 @@ bool TranscodeFilter::IsNeedUpdate(std::shared_ptr<MediaFrame> buffer)
 	// Check #2 - Resolution change
 	std::shared_lock<std::shared_mutex> lock(_mutex);
 
-	if (_input_track->GetMediaType() == MediaType::Video)
+	if (GetInputTrack()->GetMediaType() == MediaType::Video)
 	{
 		if (buffer->GetWidth() != (int32_t)_internal->GetInputWidth() ||
 			buffer->GetHeight() != (int32_t)_internal->GetInputHeight())
 		{
-			logti("Changed input resolution of %u track. (%dx%d -> %dx%d)", _input_track->GetId(), _internal->GetInputWidth(), _internal->GetInputHeight(), buffer->GetWidth(), buffer->GetHeight());
+			logti("Changed input resolution of %u track. (%dx%d -> %dx%d)", 
+				GetInputTrack()->GetId(), _internal->GetInputWidth(), _internal->GetInputHeight(), buffer->GetWidth(), buffer->GetHeight());
 
-			_input_track->SetWidth(buffer->GetWidth());
-			_input_track->SetHeight(buffer->GetHeight());
+			GetInputTrack()->SetWidth(buffer->GetWidth());
+			GetInputTrack()->SetHeight(buffer->GetHeight());
 
 			return true;
 		}
 	}
 
-	// When using an XMA scaler, resource allocation failures may occur intermittently.
-	// Avoid problems in this way until the underlying problem is resolved.
+	// Check #3 - Filter error state
+	//  When using an XMA scaler, resource allocation failures may occur intermittently.
+	//  Avoid problems in this way until the underlying problem is resolved.
 	if (_internal->GetState() == FilterBase::State::ERROR &&
-		_input_track->GetCodecModuleId() == cmn::MediaCodecModuleId::XMA &&
-		_output_track->GetCodecModuleId() == cmn::MediaCodecModuleId::XMA)
+		GetInputTrack()->GetCodecModuleId() == cmn::MediaCodecModuleId::XMA &&
+		GetOutputTrack()->GetCodecModuleId() == cmn::MediaCodecModuleId::XMA)
 	{
 		logtw("It is assumed that the XMA resource allocation failed. So, recreate the filter.");
 
@@ -205,6 +211,11 @@ void TranscodeFilter::OnComplete(std::shared_ptr<MediaFrame> frame)
 {
 	if (_complete_handler)
 	{
+		// Set the codec module and device ID of the output track.
+		// This is used when encoding with hardware acceleration.
+		frame->SetCodecModuleId(GetOutputTrack()->GetCodecModuleId());
+		frame->SetCodecDeviceId(GetOutputTrack()->GetCodecDeviceId());
+
 		_complete_handler(_id, frame);
 	}
 }

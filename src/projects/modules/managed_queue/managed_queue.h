@@ -23,7 +23,7 @@
 #define MANAGED_QUEUE_LOG_INTERVAL_IN_MSEC 5000
 
 // Deactivated as it is no longer used
-#define SKIP_MESSAGE_ENABLED 0
+#define SKIP_MESSAGE_ENABLED false
 #define SKIP_MESSAGE_CHECK_INTERVAL 500					 // 0.5 sec
 #define SKIP_MESSAGE_STABLE_FOR_RETRIEVE_INTERVAL 10000	 // 10 sec
 #define SKIP_MESSAGE_LOG_INTERVAL 5000					 // 1 sec
