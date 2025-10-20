@@ -23,6 +23,21 @@ public:
 		return cmn::MediaCodecId::Vp8;
 	}
 
+	cmn::MediaCodecModuleId GetModuleID() const noexcept
+	{
+		return cmn::MediaCodecModuleId::LIBVPX;
+	}
+
+	cmn::MediaType GetMediaType() const noexcept
+	{
+		return cmn::MediaType::Video;
+	}
+
+	bool IsHWAccel() const noexcept
+	{
+		return false;
+	}
+	
 	cmn::AudioSample::Format GetSupportAudioFormat() const noexcept override
 	{
 		return cmn::AudioSample::Format::None;

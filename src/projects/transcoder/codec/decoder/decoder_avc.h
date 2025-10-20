@@ -23,6 +23,21 @@ public:
 		return cmn::MediaCodecId::H264;
 	}
 
+	cmn::MediaCodecModuleId GetModuleID() const noexcept
+	{
+		return cmn::MediaCodecModuleId::DEFAULT;
+	}
+
+	cmn::MediaType GetMediaType() const noexcept
+	{
+		return cmn::MediaType::Video;
+	}
+
+	bool IsHWAccel() const noexcept
+	{
+		return false;
+	}
+
 	bool InitCodec();
 	void UninitCodec();
 	bool ReinitCodecIfNeed();

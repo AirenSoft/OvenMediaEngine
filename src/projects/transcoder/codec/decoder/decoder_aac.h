@@ -23,6 +23,21 @@ public:
 		return cmn::MediaCodecId::Aac;
 	}
 
+	cmn::MediaCodecModuleId GetModuleID() const noexcept
+	{
+		return cmn::MediaCodecModuleId::DEFAULT;
+	}
+
+	cmn::MediaType GetMediaType() const noexcept
+	{
+		return cmn::MediaType::Audio;
+	}
+
+	bool IsHWAccel() const noexcept
+	{
+		return false;
+	}
+
 	std::shared_ptr<const MediaPacket> _cur_pkt = nullptr;
 	size_t _pkt_offset = 0;
 	std::shared_ptr<const ov::Data> _cur_data = nullptr;

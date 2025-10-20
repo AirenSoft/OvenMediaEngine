@@ -23,6 +23,21 @@ public:
 		return cmn::MediaCodecId::H265;
 	}
 
+	cmn::MediaCodecModuleId GetModuleID() const noexcept
+	{
+		return cmn::MediaCodecModuleId::NILOGAN;
+	}
+
+	cmn::MediaType GetMediaType() const noexcept
+	{
+		return cmn::MediaType::Video;
+	}
+
+	bool IsHWAccel() const noexcept
+	{
+		return true;
+	}
+
 	cmn::AudioSample::Format GetSupportAudioFormat() const noexcept override
 	{
 		return cmn::AudioSample::Format::None;

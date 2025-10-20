@@ -23,6 +23,21 @@ public:
 		return cmn::MediaCodecId::Whisper;
 	}
 
+	cmn::MediaCodecModuleId GetModuleID() const noexcept
+	{
+		return cmn::MediaCodecModuleId::NVENC;
+	}
+
+	cmn::MediaType GetMediaType() const noexcept
+	{
+		return cmn::MediaType::Audio;
+	}
+
+	bool IsHWAccel() const noexcept
+	{
+		return true;
+	}
+
 	cmn::AudioSample::Format GetSupportAudioFormat() const noexcept override
 	{
 		return cmn::AudioSample::Format::S16;

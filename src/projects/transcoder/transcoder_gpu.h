@@ -2,7 +2,7 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Hyunjun Jang
+//  Created by Keukhan
 //  Copyright (c) 2020 AirenSoft. All rights reserved.
 //
 //==============================================================================
@@ -25,11 +25,17 @@ public:
 	bool Initialize();
 	bool Uninitialize();
 
-	bool IsSupported(cmn::MediaCodecModuleId id, int32_t gpu_id = 0);
+	bool IsSupported(cmn::MediaCodecModuleId id, cmn::DeviceId gpu_id = 0);
 
 	int32_t GetDeviceCount(cmn::MediaCodecModuleId id);
 
-	AVBufferRef *GetDeviceContext(cmn::MediaCodecModuleId id, int32_t gpu_id = 0);
+	AVBufferRef *GetDeviceContext(cmn::MediaCodecModuleId id, cmn::DeviceId gpu_id = 0);
+
+	int32_t GetExternalDeviceId(cmn::MediaCodecModuleId id, cmn::DeviceId gpu_id = 0);
+	
+	ov::String GetDeviceDisplayName(cmn::MediaCodecModuleId id, cmn::DeviceId gpu_id = 0);
+
+	ov::String GetDeviceBusId(cmn::MediaCodecModuleId id, cmn::DeviceId gpu_id = 0);
 
 	enum class IPType : int32_t
 	{
@@ -37,7 +43,8 @@ public:
 		ENCODER,
 		SCALER,
 	};
-	uint32_t GetUtilization(IPType type, cmn::MediaCodecModuleId id, int32_t gpu_id = 0);
+
+	uint32_t GetUtilization(IPType type, cmn::MediaCodecModuleId id, cmn::DeviceId gpu_id = 0);
 
 protected:
 	bool CheckSupportedQSV();
@@ -45,31 +52,42 @@ protected:
 	bool CheckSupportedNV();
 	bool CheckSupportedXMA();
 
-	AVBufferRef *GetDeviceContextQSV(int32_t gpu_id = 0);
-	AVBufferRef *GetDeviceContextNILOGAN(int32_t gpu_id = 0);
-	AVBufferRef *GetDeviceContextNV(int32_t gpu_id = 0);
+	AVBufferRef *GetDeviceContextQSV(cmn::DeviceId gpu_id = 0);
+	AVBufferRef *GetDeviceContextNILOGAN(cmn::DeviceId gpu_id = 0);
+	AVBufferRef *GetDeviceContextNV(cmn::DeviceId gpu_id = 0);
 
-	bool IsSupportedQSV(int32_t gpu_id = 0);
-	bool IsSupportedNILOGAN(int32_t gpu_id = 0);
-	bool IsSupportedNV(int32_t gpu_id = 0);
-	bool IsSupportedXMA(int32_t gpu_id = 0);
+	bool IsSupportedQSV(cmn::DeviceId gpu_id = 0);
+	bool IsSupportedNILOGAN(cmn::DeviceId gpu_id = 0);
+	bool IsSupportedNV(cmn::DeviceId gpu_id = 0);
+	bool IsSupportedXMA(cmn::DeviceId gpu_id = 0);
 
-	int32_t GetDeviceCountQSV();
-	int32_t GetDeviceCountNILOGAN();
-	int32_t GetDeviceCountNV();
-	int32_t GetDeviceCountXMA();
+	cmn::DeviceId GetDeviceCountQSV();
+	cmn::DeviceId GetDeviceCountNILOGAN();
+	cmn::DeviceId GetDeviceCountNV();
+	cmn::DeviceId GetDeviceCountXMA();
+
+	int32_t GetDeviceIdNV(cmn::DeviceId gpu_id = 0);
 
 	bool _initialized = false;
 
-	int32_t _device_count_xma;
+	std::vector<std::pair<cmn::MediaCodecModuleId, cmn::DeviceId>> _supported_devices;
 
+	int32_t _device_count_xma;
+	ov::String _device_display_name_xma[MAX_DEVICE_COUNT];
+	ov::String _device_bus_id_xma[MAX_DEVICE_COUNT];
+	
 	AVBufferRef *_device_context_qsv[MAX_DEVICE_COUNT];
+	ov::String _device_display_name_qsv[MAX_DEVICE_COUNT];
 	int32_t _device_count_qsv;
 
 	AVBufferRef *_device_context_nilogan[MAX_DEVICE_COUNT];
+	ov::String _device_display_name_nilogan[MAX_DEVICE_COUNT];
 	int32_t _device_count_nilogan;
 
 	AVBufferRef *_device_context_nv[MAX_DEVICE_COUNT];
+	ov::String _device_display_name_nv[MAX_DEVICE_COUNT];
+	ov::String _device_bus_id_nv[MAX_DEVICE_COUNT];
+	int32_t _device_cuda_id_nv[MAX_DEVICE_COUNT];
 	int32_t _device_count_nv;
 
 	void CodecThread();

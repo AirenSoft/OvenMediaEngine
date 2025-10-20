@@ -81,6 +81,12 @@ public:
 
 	virtual cmn::MediaCodecId GetCodecID() const noexcept = 0;
 
+	virtual cmn::MediaCodecModuleId GetModuleID() const noexcept = 0;
+
+	virtual cmn::MediaType GetMediaType() const noexcept = 0;
+
+	virtual bool IsHWAccel() const noexcept = 0;
+
 	virtual bool Configure(std::shared_ptr<MediaTrack> track) = 0;
 
 	virtual void SendBuffer(std::shared_ptr<const InputType> buf) = 0;
@@ -89,7 +95,18 @@ public:
 	{
 		return _input_buffer.Size();
 	}
-	
+
+	void SetDeviceID(cmn::DeviceId device_id)
+	{
+		_device_id = device_id;
+	}
+
+	cmn::DeviceId GetDeviceID() const
+	{
+		return _device_id;
+	}
+
 protected:
 	ov::ManagedQueue<std::shared_ptr<const InputType>> _input_buffer;
+	cmn::DeviceId _device_id = 0;
 };
