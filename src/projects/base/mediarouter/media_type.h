@@ -458,7 +458,7 @@ namespace cmn
 		{
 			OV_CASE_RETURN(MediaCodecModuleId::DEFAULT, "default");
 			OV_CASE_RETURN(MediaCodecModuleId::OPENH264, "openh264");
-			OV_CASE_RETURN(MediaCodecModuleId::NVENC, "nvenc");
+			OV_CASE_RETURN(MediaCodecModuleId::NVENC, "nv");
 			OV_CASE_RETURN(MediaCodecModuleId::QSV, "qsv");
 			OV_CASE_RETURN(MediaCodecModuleId::NILOGAN, "nilogan");
 			OV_CASE_RETURN(MediaCodecModuleId::XMA, "xma";);
