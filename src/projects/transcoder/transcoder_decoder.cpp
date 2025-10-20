@@ -23,7 +23,7 @@
 #include "codec/decoder/decoder_opus.h"
 #include "codec/decoder/decoder_vp8.h"
 #include "transcoder_gpu.h"
-#include "transcoder_codecs.h"
+#include "transcoder_modules.h"
 #include "transcoder_private.h"
 
 #define MAX_QUEUE_SIZE 500
@@ -337,7 +337,7 @@ bool TranscodeDecoder::Configure(std::shared_ptr<MediaTrack> track)
 		return false;
 	}
 
-	tc::TranscodeCodecs::GetInstance()->Activate(false, GetCodecID(), GetModuleID(), GetDeviceID());
+	tc::TranscodeModules::GetInstance()->OnCreated(false, GetCodecID(), GetModuleID(), GetDeviceID());
 
 	return true;
 }
@@ -355,7 +355,7 @@ void TranscodeDecoder::Stop()
 		logtd(ov::String::FormatString("decoder %s thread has ended", cmn::GetCodecIdString(GetCodecID())).CStr());
 	}
 
-	tc::TranscodeCodecs::GetInstance()->Deactivate(false, GetCodecID(), GetModuleID(), GetDeviceID());	
+	tc::TranscodeModules::GetInstance()->OnDeleted(false, GetCodecID(), GetModuleID(), GetDeviceID());	
 }
 
 void TranscodeDecoder::SendBuffer(std::shared_ptr<const MediaPacket> packet)

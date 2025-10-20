@@ -17,3 +17,4 @@
 #include "./virtual_host.h"
 #include "./dump.h"
 #include "./overlay.h"
+#include "./codec.h"

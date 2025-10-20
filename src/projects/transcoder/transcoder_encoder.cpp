@@ -30,7 +30,7 @@
 #include "codec/encoder/encoder_whisper.h"
 
 #include "transcoder_gpu.h"
-#include "transcoder_codecs.h"
+#include "transcoder_modules.h"
 #include "transcoder_private.h"
 
 #define USE_LEGACY_LIBOPUS false
@@ -377,7 +377,7 @@ bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track, size_
 	// 	_input_buffer.SetSkipMessageEnable(true);
 	// }
 
-	tc::TranscodeCodecs::GetInstance()->Activate(true, GetCodecID(), GetModuleID(), GetDeviceID());
+	tc::TranscodeModules::GetInstance()->OnCreated(true, GetCodecID(), GetModuleID(), GetDeviceID());
 
 	return (_track != nullptr);
 }
@@ -426,7 +426,7 @@ void TranscodeEncoder::Stop()
 		logtd(ov::String::FormatString("encoder %s thread has ended", cmn::GetCodecIdString(GetCodecID())).CStr());
 	}
 
-	tc::TranscodeCodecs::GetInstance()->Deactivate(true, GetCodecID(), GetModuleID(), GetDeviceID());
+	tc::TranscodeModules::GetInstance()->OnDeleted(true, GetCodecID(), GetModuleID(), GetDeviceID());
 }
 
 bool TranscodeEncoder::InitCodecInteral()
