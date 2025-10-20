@@ -168,6 +168,6 @@ public:
  
 protected:
 	std::vector<std::shared_ptr<info::Overlay>> _overlays;
-	size_t _overlay_signature;
+	size_t _overlay_signature; // Default is 0, meaning no overlay.
 	mutable std::shared_mutex _overlay_mutex;
 };

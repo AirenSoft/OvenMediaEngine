@@ -11,22 +11,27 @@
 VideoTrack::VideoTrack()
 	: _framerate(0),
 	  _framerate_conf(0),
+	  _framerate_last_second(0),
 	  _video_timescale(0),
 	  _width(0),
 	  _height(0),
 	  _width_conf(0),
 	  _height_conf(0),
 	  _key_frame_interval(0),
+	  _key_frame_interval_latest(0),
 	  _key_frame_interval_conf(0),
+	  _delta_frame_count_since_last_key_frame(0),
 	  _key_frame_interval_type_conf(cmn::KeyFrameIntervalType::FRAME),
 	  _b_frames(0),
 	  _has_bframe(false),
 	  _colorspace(cmn::VideoPixelFormatId::None),	  
 	  _preset(""),
+	  _profile(""),
 	  _thread_count(0),
 	  _skip_frames_conf(-1), // Default value is -1
 	  _keyframe_decode_only(false),
-	  _lookahead_conf(-1)
+	  _lookahead_conf(-1),
+	  _overlay_signature(0)
 {
 }
 
