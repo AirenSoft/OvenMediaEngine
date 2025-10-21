@@ -61,7 +61,7 @@ namespace pub
 	private:
 		std::shared_ptr<Application> _application;
 		std::shared_ptr<Stream> _stream;
-		ov::String _name;
+		std::optional<ov::String> _name;
 		SessionState _state;
 		ov::String _error_reason;
 	};
