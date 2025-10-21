@@ -66,6 +66,16 @@ namespace pub
 		_final_url = final_url;
 	}
 
+	void Session::SetName(const ov::String &name)
+	{
+		_name = name;
+	}
+
+	const std::optional<ov::String> &Session::GetName() const
+	{
+		return _name;
+	}
+
 	bool Session::Start()
 	{
 		_state = SessionState::Started;

@@ -47,6 +47,7 @@
 #include "./type.h"
 #include "./unique.h"
 #include "./url.h"
+#include "./uuid.h"
 #include "./precise_timer.h"
 #include "./files.h"
 #include "./sequencial_map.h"

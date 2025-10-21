@@ -391,15 +391,16 @@ namespace pub
 
 	bool Stream::RemoveSession(session_id_t id)
 	{
-		std::unique_lock<std::shared_mutex> session_lock(_session_map_mutex);
-		if (_sessions.count(id) <= 0)
 		{
-			logtd("Cannot find session : %u", id);
-			return false;
+			std::lock_guard session_lock(_session_map_mutex);
+			auto session_iterator = _sessions.find(id);
+			if (session_iterator == _sessions.end())
+			{
+				logtd("Cannot find session : %u", id);
+				return false;
+			}
+			_sessions.erase(session_iterator);
 		}
-		_sessions.erase(id);
-
-		session_lock.unlock();
 
 		if(_worker_count > 0)
 		{
