@@ -1439,4 +1439,28 @@ namespace ocst
 
 		return nullptr;
 	}
+
+	std::shared_ptr<pub::Stream> Orchestrator::GetPublisherStream(PublisherType publisher_type, const std::shared_ptr<const info::Stream> &stream_info)
+	{
+		auto publisher = GetPublisherFromType(publisher_type);
+		if (publisher == nullptr)
+		{
+			return nullptr;
+		}
+
+		auto application = publisher->GetApplicationByName(stream_info->GetApplicationInfo().GetVHostAppName());
+		if (application == nullptr)
+		{
+			return nullptr;
+		}
+
+		auto pub_stream = application->GetStream(stream_info->GetName());
+		if (pub_stream == nullptr)
+		{
+			return nullptr;
+		}
+
+		return pub_stream;
+	}
+
 }  // namespace ocst
