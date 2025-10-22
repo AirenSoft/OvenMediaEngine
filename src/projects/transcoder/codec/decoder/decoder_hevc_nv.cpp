@@ -37,6 +37,9 @@ bool DecoderHEVCxNV::InitCodec()
 	if (hw_device_ctx == nullptr)
 	{
 		logte("Could not get hw device context for %s", cmn::GetCodecIdString(GetCodecID()));
+
+		::avcodec_free_context(&_codec_context);
+
 		return false;
 	}
 
@@ -44,6 +47,9 @@ bool DecoderHEVCxNV::InitCodec()
 	if (ffmpeg::compat::SetHwDeviceCtxOfAVCodecContext(_codec_context, hw_device_ctx) == false)
 	{
 		logte("Could not set hw device context for %s", cmn::GetCodecIdString(GetCodecID()));
+
+		::avcodec_free_context(&_codec_context);
+
 		return false;
 	}	
 
@@ -199,6 +205,9 @@ void DecoderHEVCxNV::CodecThread()
 				else if (ret < 0)
 				{
 					logte("Error error occurred while sending a packet for decoding. reason(%s)", ffmpeg::compat::AVErrorToString(ret).CStr());
+
+					Complete(TranscodeResult::DataError, nullptr);
+
 					break;
 				}
 			}

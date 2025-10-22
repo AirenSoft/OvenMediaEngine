@@ -109,6 +109,9 @@ bool EncoderHEVCxNV::InitCodec()
 	if(hw_device_ctx == nullptr)
 	{
 		logte("Could not get hw device context for %s", cmn::GetCodecIdString(GetCodecID()));
+
+		::avcodec_free_context(&_codec_context);
+				
 		return false;
 	}
 
@@ -116,6 +119,9 @@ bool EncoderHEVCxNV::InitCodec()
 	if(ffmpeg::compat::SetHwDeviceCtxOfAVCodecContext(_codec_context, hw_device_ctx) == false)
 	{
 		logte("Could not set hw device context for %s", cmn::GetCodecIdString(GetCodecID()));
+
+		::avcodec_free_context(&_codec_context);
+
 		return false;
 	}
 
@@ -124,6 +130,15 @@ bool EncoderHEVCxNV::InitCodec()
 	if(ffmpeg::compat::SetHWFramesCtxOfAVCodecContext(_codec_context) == false)
 	{
 		logte("Could not set hw frames context for %s", cmn::GetCodecIdString(GetCodecID()));
+
+		if(_codec_context->hw_device_ctx)
+		{
+			::av_buffer_unref(&_codec_context->hw_device_ctx);
+			_codec_context->hw_device_ctx = nullptr;
+		}
+		
+		::avcodec_free_context(&_codec_context);		
+
 		return false;
 	}
 
