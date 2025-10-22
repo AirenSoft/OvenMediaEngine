@@ -26,7 +26,8 @@
 #include "transcoder_modules.h"
 #include "transcoder_private.h"
 
-#define MAX_QUEUE_SIZE 500
+// Default is 300 (about 10 seconds for 30fps)
+#define MAX_QUEUE_SIZE 30 * 10
 #define ALL_GPU_ID -1
 #define DEFAULT_MODULE_NAME "DEFAULT"
 
@@ -313,7 +314,7 @@ bool TranscodeDecoder::Configure(std::shared_ptr<MediaTrack> track)
 	}
 	_track = track;
 
-	auto name = ov::String::FormatString("DEC_%s_t%d", cmn::GetCodecIdString(GetCodecID()), _track->GetId());
+	auto name = ov::String::FormatString("dec_%s_t%d", cmn::GetCodecIdString(GetCodecID()), _track->GetId());
 	auto urn = std::make_shared<info::ManagedQueue::URN>(_stream_info.GetApplicationInfo().GetVHostAppName(), _stream_info.GetName(), "trs", name);
 	_input_buffer.SetUrn(urn);
 	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);

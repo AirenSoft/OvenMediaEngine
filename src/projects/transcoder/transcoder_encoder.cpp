@@ -34,7 +34,7 @@
 #include "transcoder_private.h"
 
 #define USE_LEGACY_LIBOPUS false
-#define MAX_QUEUE_SIZE 5
+#define MAX_QUEUE_SIZE 2
 #define ALL_GPU_ID -1
 #define DEFAULT_MODULE_NAME "DEFAULT"
 
@@ -408,10 +408,12 @@ void TranscodeEncoder::SetCompleteHandler(CompleteHandler complete_handler)
 
 void TranscodeEncoder::Complete(std::shared_ptr<MediaPacket> packet)
 {
-	if (_complete_handler)
+	if (!_complete_handler)
 	{
-		_complete_handler(_encoder_id, std::move(packet));
+		return;
 	}
+
+	_complete_handler(_encoder_id, std::move(packet));
 }
 
 void TranscodeEncoder::Stop()

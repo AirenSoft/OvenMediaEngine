@@ -15,7 +15,7 @@
 #include "../transcoder_private.h"
 #include "../transcoder_stream_internal.h"
 
-#define DEFAULT_QUEUE_SIZE 120
+#define MAX_QUEUE_SIZE 2
 #define FILTER_FLAG_HWFRAME_AWARE (1 << 0)
 
 #define _SKIP_FRAMES_ENABLED 1
@@ -33,9 +33,6 @@ FilterRescaler::FilterRescaler()
 	_buffersink = ::avfilter_get_by_name("buffersink");
 
 	_filter_graph = ::avfilter_graph_alloc();
-
-	// TODO(soulk) : The maximum number of thresholds is 2 seconds (Framerate * 2).
-	_input_buffer.SetThreshold(DEFAULT_QUEUE_SIZE);
 
 	_buffersrc_ctx	= nullptr;
 	_buffersink_ctx = nullptr;
@@ -334,8 +331,8 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	_fps_filter.SetOutputFrameRate(_output_track->GetFrameRateByConfig() > 0 ? _output_track->GetFrameRateByConfig() : _output_track->GetFrameRateByMeasured());
 	_fps_filter.SetSkipFrames(_output_track->GetSkipFramesByConfig() >= 0 ? _output_track->GetSkipFramesByConfig() : 0);
 	
-	// Set the threshold of the input buffer to 2 seconds.
-	_input_buffer.SetThreshold(_input_track->GetFrameRate() * 2);
+	// Set the threshold of the input buffer
+	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
 
 	// Initialize the av filter graph
 	if (InitializeFilterDescription() == false)
