@@ -95,6 +95,13 @@ namespace ov
 			MonitorInstance->GetServerMetrics()->OnQueueUpdated(*this, true);
 		}
 
+		void SetThreshold(size_t threshold)
+		{
+			info::ManagedQueue::SetThreshold(threshold);
+
+			MonitorInstance->GetServerMetrics()->OnQueueUpdated(*this, true);
+		}				
+
 		// Urgent item will be inserted at the front of the queue
 		void Enqueue(const T& item, bool urgent = false, int timeout = Infinite)
 		{
