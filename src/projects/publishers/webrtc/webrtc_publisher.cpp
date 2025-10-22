@@ -446,7 +446,11 @@ bool WebRtcPublisher::OnAddRemoteDescription(const std::shared_ptr<http::svr::ws
 	{
 		session->SetRequestedUrl(requested_url);
 		session->SetFinalUrl(final_url);
-		stream->AddSession(session);
+		if (stream->AddSession(session) == false)
+		{
+			return false;
+		}
+
 		MonitorInstance->OnSessionConnected(*stream, PublisherType::Webrtc);
 
 		auto ice_timeout = application->GetConfig().GetPublishers().GetWebrtcPublisher().GetTimeout();
