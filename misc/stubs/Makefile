@@ -8,13 +8,13 @@ CFLAGS = -Wall -fPIC
 LDFLAGS = -shared
 
 # Source files
-SOURCES = libnvidia-ml_stub.c libcuda_stub.c libxma2api_stub.c libxrm_stub.c libxrt_core_stub.c 
+SOURCES = libnvidia-ml_stub.c libcuda_stub.c libcudart_stub.c libxma2api_stub.c libxrm_stub.c libxrt_core_stub.c 
 
 # Object files
 OBJECTS = $(SOURCES:.c=.o)
 
 # Output libraries
-TARGETS = libnvidia-ml.so.1 libcuda.so.1 libxma2api.so.2 libxrm.so.1 libxrt_core.so.2 
+TARGETS = libnvidia-ml.so.1 libcuda.so.1 libcudart.so.11.0 libcublas.so.11 libxma2api.so.2 libxrm.so.1 libxrt_core.so.2
 
 # Install path prefix (default: /opt/ovenmediaengine)
 PREFIX ?= /opt/ovenmediaengine
@@ -31,6 +31,12 @@ libnvidia-ml.so.1: libnvidia-ml_stub.o
 
 libcuda.so.1: libcuda_stub.o
 	$(CC) $(LDFLAGS) -o $@ $^
+
+libcudart.so.11.0: libcudart_stub.o
+	$(CC) $(LDFLAGS) -Wl,-soname,libcudart.so.11.0 -Wl,--version-script=libcudart.map -o $@ $^
+
+libcublas.so.11: libcublas_stub.o
+	$(CC) $(LDFLAGS) -Wl,-soname,libcublas.so.11 -Wl,--version-script=libcublas.map -o $@ $^
 
 ###############################################
 # Stubs library for xilinx driver
