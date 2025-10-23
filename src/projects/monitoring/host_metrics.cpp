@@ -77,14 +77,14 @@ namespace mon
 		return _applications;
 	}
 
-	std::shared_ptr<ApplicationMetrics> HostMetrics::GetApplicationMetrics(const info::Application &app_info)
+	std::shared_ptr<ApplicationMetrics> HostMetrics::GetApplicationMetrics(info::application_id_t application_id)
 	{
 		std::shared_lock<std::shared_mutex> lock(_map_guard);
-		if (_applications.find(app_info.GetId()) == _applications.end())
+		if (_applications.find(application_id) == _applications.end())
 		{
 			return nullptr;
 		}
 
-		return _applications[app_info.GetId()];
+		return _applications[application_id];
 	}
 }  // namespace mon

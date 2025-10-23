@@ -27,7 +27,11 @@ namespace mon
 		std::shared_ptr<const cfg::Server> GetConfig();
 		std::chrono::system_clock::time_point GetServerStartedTime();
 		std::map<uint32_t, std::shared_ptr<HostMetrics>> GetHostMetricsList();
-		std::shared_ptr<HostMetrics> GetHostMetrics(const info::Host &host_info);
+		std::shared_ptr<HostMetrics> GetHostMetrics(info::host_id_t host_id);
+		std::shared_ptr<HostMetrics> GetHostMetrics(const info::Host &host_info)
+		{
+			return GetHostMetrics(host_info.GetId());
+		}
 
 	protected:
 		std::shared_ptr<const cfg::Server> _server_config = nullptr;

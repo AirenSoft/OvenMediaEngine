@@ -52,7 +52,11 @@ namespace mon
 
 		std::map<uint32_t, std::shared_ptr<ApplicationMetrics>> GetApplicationMetricsList();
 
-		std::shared_ptr<ApplicationMetrics> GetApplicationMetrics(const info::Application &app_info);
+		std::shared_ptr<ApplicationMetrics> GetApplicationMetrics(info::application_id_t application_id);
+		std::shared_ptr<ApplicationMetrics> GetApplicationMetrics(const info::Application &app_info)
+		{
+			return GetApplicationMetrics(app_info.GetId());
+		}
 
 	private:
 		std::shared_mutex _map_guard;

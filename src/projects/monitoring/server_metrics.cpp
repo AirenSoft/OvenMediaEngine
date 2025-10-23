@@ -88,15 +88,15 @@ namespace mon
 		return _hosts;
 	}
 
-	std::shared_ptr<HostMetrics> ServerMetrics::GetHostMetrics(const info::Host &host_info)
+	std::shared_ptr<HostMetrics> ServerMetrics::GetHostMetrics(info::host_id_t host_id)
 	{
 		std::shared_lock<std::shared_mutex> lock(_map_guard);
-		if (_hosts.find(host_info.GetId()) == _hosts.end())
+		if (_hosts.find(host_id) == _hosts.end())
 		{
 			return nullptr;
 		}
 
-		return _hosts[host_info.GetId()];
+		return _hosts[host_id];
 	}
 
 	bool ServerMetrics::OnQueueCreated(const info::ManagedQueue &queue_info)

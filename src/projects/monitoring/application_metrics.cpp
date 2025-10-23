@@ -86,15 +86,15 @@ namespace mon
 		return _streams;
 	}
 
-	std::shared_ptr<StreamMetrics> ApplicationMetrics::GetStreamMetrics(const info::Stream &stream)
+	std::shared_ptr<StreamMetrics> ApplicationMetrics::GetStreamMetrics(info::stream_id_t stream_id)
 	{
 		std::shared_lock<std::shared_mutex> lock(_streams_guard);
-		if (_streams.find(stream.GetId()) == _streams.end())
+		if (_streams.find(stream_id) == _streams.end())
 		{
 			return nullptr;
 		}
 
-		return _streams[stream.GetId()];
+		return _streams[stream_id];
 	}
 
 	bool ApplicationMetrics::OnStreamReserved(ProviderType who, const ov::Url &stream_uri, const ov::String &stream_name)

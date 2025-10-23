@@ -53,7 +53,11 @@ namespace mon
 		bool OnStreamCreated(const info::Stream &stream);
 		bool OnStreamDeleted(const info::Stream &stream);
 		std::map<uint32_t, std::shared_ptr<StreamMetrics>> GetStreamMetricsMap();
-		std::shared_ptr<StreamMetrics> GetStreamMetrics(const info::Stream &stream);
+		std::shared_ptr<StreamMetrics> GetStreamMetrics(info::stream_id_t stream_id);
+		std::shared_ptr<StreamMetrics> GetStreamMetrics(const info::Stream &stream)
+		{
+			return GetStreamMetrics(stream.GetId());
+		}
 
 		bool OnStreamReserved(ProviderType who, const ov::Url &stream_uri, const ov::String &stream_name);
 		bool OnStreamCanceled(const ov::Url &stream_uri);  // Reservation Canceled
