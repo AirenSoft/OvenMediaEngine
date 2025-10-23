@@ -44,7 +44,7 @@ namespace mon
 			}
 
 			auto notification_server_url = ov::Url::Parse(alert.GetUrl());
-			if(notification_server_url == nullptr)
+			if (notification_server_url == nullptr)
 			{
 				logte("Could not parse notification url: %s", alert.GetUrl().CStr());
 				return false;
@@ -55,7 +55,7 @@ namespace mon
 			_rules_updater = std::make_shared<AlertRulesUpdater>(alert);
 			_rules_updater->UpdateIfNeeded();
 
-			_stop_thread_flag = false;
+			_stop_thread_flag	 = false;
 			_event_worker_thread = std::thread(&Alert::EventWorkerThread, this);
 
 			pthread_setname_np(_event_worker_thread.native_handle(), "AL");
@@ -104,8 +104,8 @@ namespace mon
 
 			{
 				// Check Internal queues
-				
-				type = NotificationData::Type::INTERNAL_QUEUE;
+
+				type		 = NotificationData::Type::INTERNAL_QUEUE;
 
 				messages_key = NotificationData::StringFromType(type);
 				new_messages_keys.push_back(messages_key);
@@ -140,7 +140,7 @@ namespace mon
 
 							if (stream_metric->IsInputStream())
 							{
-								type = NotificationData::Type::INGRESS;
+								type		 = NotificationData::Type::INGRESS;
 
 								messages_key = stream_metric->GetUri();
 								new_messages_keys.push_back(messages_key);
@@ -176,17 +176,17 @@ namespace mon
 					continue;
 				}
 
-				auto code = stream_event->_code;
-				auto stream_metric = stream_event->_metric;
-				
+				auto code			   = stream_event->_code;
+				auto stream_metric	   = stream_event->_metric;
+
 				ov::String description = Message::DescriptionFromMessageCode(code);
-				auto message = Message::CreateMessage(code, description);
-	
+				auto message		   = Message::CreateMessage(code, description);
+
 				std::vector<std::shared_ptr<Message>> message_list(1, message);
-	
+
 				auto messages_key = stream_metric->GetUri();
-				auto type = NotificationData::TypeFromMessageCode(code);
-	
+				auto type		  = NotificationData::TypeFromMessageCode(code);
+
 				if (IsAlertNeeded(messages_key, message_list))
 				{
 					SendNotification(type, message_list, stream_metric->GetUri(), stream_metric);
@@ -200,7 +200,7 @@ namespace mon
 			if (code != Message::Code::OK)
 			{
 				ov::String description = Message::DescriptionFromMessageCode(code, config_value, measured_value);
-				auto message = Message::CreateMessage(code, description);
+				auto message		   = Message::CreateMessage(code, description);
 
 				message_list.push_back(message);
 			}
@@ -469,7 +469,7 @@ namespace mon
 					for (size_t i = 0; i < last_verified_message_list.size(); ++i)
 					{
 						auto alerted_message = last_verified_message_list[i];
-						auto new_message = message_list[i];
+						auto new_message	 = message_list[i];
 
 						if (alerted_message->GetCode() != new_message->GetCode())
 						{
@@ -484,7 +484,7 @@ namespace mon
 
 		void Alert::SendNotification(const NotificationData &notificationData)
 		{
-			auto alert = _server_config->GetAlert();
+			auto alert		  = _server_config->GetAlert();
 
 			auto message_body = notificationData.ToJsonString();
 			if (message_body.IsEmpty())
@@ -494,7 +494,7 @@ namespace mon
 			}
 
 			// Notification
-			auto notification_server_url = ov::Url::Parse(alert.GetUrl());
+			auto notification_server_url						= ov::Url::Parse(alert.GetUrl());
 			std::shared_ptr<Notification> notification_response = Notification::Query(notification_server_url, alert.GetTimeoutMsec(), alert.GetSecretKey(), message_body);
 			if (notification_response == nullptr)
 			{

@@ -10,11 +10,11 @@
 
 #include "../queue_metrics.h"
 #include "../stream_metrics.h"
+#include "alert_rules_updater.h"
 #include "base/ovlibrary/ovlibrary.h"
 #include "config/config.h"
 #include "message.h"
 #include "notification_data.h"
-#include "alert_rules_updater.h"
 
 namespace mon
 {
@@ -62,7 +62,7 @@ namespace mon
 			{
 				StreamEvent(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric)
 				{
-					_code = code;
+					_code	= code;
 					_metric = stream_metric;
 				}
 

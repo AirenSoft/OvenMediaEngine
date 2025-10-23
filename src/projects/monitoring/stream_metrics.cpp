@@ -3,6 +3,7 @@
 //
 
 #include "stream_metrics.h"
+
 #include "application_metrics.h"
 #include "host_metrics.h"
 #include "monitoring_private.h"
@@ -15,11 +16,12 @@ namespace mon
 
 		out_str.Append(info::Stream::GetInfoString());
 
-		if(GetSourceType() == StreamSourceType::Ovt || GetSourceType() == StreamSourceType::RtspPull)
+		if (GetSourceType() == StreamSourceType::Ovt || GetSourceType() == StreamSourceType::RtspPull)
 		{
-			out_str.AppendFormat("\n\tElapsed time to connect to origin server : %llu ms\n"
-									"\tElapsed time to subscribe to origin server : %llu ms\n",
-									GetOriginConnectionTimeMSec(), GetOriginSubscribeTimeMSec());
+			out_str.AppendFormat(
+				"\n\tElapsed time to connect to origin server : %llu ms\n"
+				"\tElapsed time to subscribe to origin server : %llu ms\n",
+				GetOriginConnectionTimeMSec(), GetOriginSubscribeTimeMSec());
 		}
 		out_str.Append("\n");
 		out_str.Append(CommonMetrics::GetInfoString());
@@ -36,7 +38,7 @@ namespace mon
 	{
 		_output_stream_metrics.push_back(stream);
 	}
-	
+
 	std::vector<std::shared_ptr<StreamMetrics>> StreamMetrics::GetLinkedOutputStreamMetrics() const
 	{
 		return _output_stream_metrics;
@@ -70,26 +72,26 @@ namespace mon
 
 		// If this stream is child then send event to parent
 		auto origin_stream_info = GetLinkedInputStream();
-		if(origin_stream_info != nullptr)
+		if (origin_stream_info != nullptr)
 		{
 			auto origin_stream_metric = _app_metrics->GetStreamMetrics(*origin_stream_info);
-			if(origin_stream_metric != nullptr)
+			if (origin_stream_metric != nullptr)
 			{
 				origin_stream_metric->IncreaseBytesIn(value);
 			}
 		}
 	}
 
-	void StreamMetrics::IncreaseBytesOut(PublisherType type, uint64_t value) 
+	void StreamMetrics::IncreaseBytesOut(PublisherType type, uint64_t value)
 	{
 		CommonMetrics::IncreaseBytesOut(type, value);
 
 		// If this stream is child then send event to parent
 		auto origin_stream_info = GetLinkedInputStream();
-		if(origin_stream_info != nullptr)
+		if (origin_stream_info != nullptr)
 		{
 			auto origin_stream_metric = _app_metrics->GetStreamMetrics(*origin_stream_info);
-			if(origin_stream_metric != nullptr)
+			if (origin_stream_metric != nullptr)
 			{
 				origin_stream_metric->IncreaseBytesOut(type, value);
 			}
@@ -121,7 +123,7 @@ namespace mon
 
 		_module_usage_count_map[media_track->GetId()] = media_track;
 
-		auto module_id = media_track->GetCodecModuleId();
+		auto module_id								  = media_track->GetCodecModuleId();
 
 		CommonMetrics::IncreaseModuleUsageCount(module_id);
 
@@ -168,41 +170,41 @@ namespace mon
 
 		// If this stream is child then send event to parent
 		auto origin_stream_info = GetLinkedInputStream();
-		if(origin_stream_info != nullptr)
+		if (origin_stream_info != nullptr)
 		{
 			auto origin_stream_metric = _app_metrics->GetStreamMetrics(*origin_stream_info);
-			if(origin_stream_metric != nullptr)
+			if (origin_stream_metric != nullptr)
 			{
 				origin_stream_metric->OnSessionConnected(type);
 			}
 		}
 		else
 		{
-			logti("A new session has started playing %s/%s on the %s publisher. %s(%u)/Stream total(%u)/App total(%u)", 
-					GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr(), 
-					::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
+			logti("A new session has started playing %s/%s on the %s publisher. %s(%u)/Stream total(%u)/App total(%u)",
+				  GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr(),
+				  ::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
 		}
 	}
-	
+
 	void StreamMetrics::OnSessionDisconnected(PublisherType type)
 	{
 		CommonMetrics::OnSessionDisconnected(type);
 
 		// If this stream is child then send event to parent
 		auto origin_stream_info = GetLinkedInputStream();
-		if(origin_stream_info != nullptr)
+		if (origin_stream_info != nullptr)
 		{
 			auto origin_stream_metric = _app_metrics->GetStreamMetrics(*origin_stream_info);
-			if(origin_stream_metric != nullptr)
+			if (origin_stream_metric != nullptr)
 			{
 				origin_stream_metric->OnSessionDisconnected(type);
 			}
 		}
 		else
 		{
-			logti("A session has been stopped playing %s/%s on the %s publisher. Concurrent Viewers[%s(%u)/Stream total(%u)/App total(%u)]", 
-					GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr(), 
-					::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
+			logti("A session has been stopped playing %s/%s on the %s publisher. Concurrent Viewers[%s(%u)/Stream total(%u)/App total(%u)]",
+				  GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr(),
+				  ::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
 		}
 	}
 
@@ -210,27 +212,27 @@ namespace mon
 	{
 		if (number_of_sessions == 0)
 		{
-			return ;
+			return;
 		}
 
 		CommonMetrics::OnSessionsDisconnected(type, number_of_sessions);
 
 		// If this stream is child then send event to parent
 		auto origin_stream_info = GetLinkedInputStream();
-		if(origin_stream_info != nullptr)
+		if (origin_stream_info != nullptr)
 		{
 			auto origin_stream_metric = _app_metrics->GetStreamMetrics(*origin_stream_info);
-			if(origin_stream_metric != nullptr)
+			if (origin_stream_metric != nullptr)
 			{
 				origin_stream_metric->OnSessionsDisconnected(type, number_of_sessions);
 			}
 		}
 		else
 		{
-			logti("%u sessions has been stopped playing %s/%s on the %s publisher. Concurrent Viewers[%s(%u)/Stream total(%u)/App total(%u)]", 
-					number_of_sessions,
-					GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr(), 
-					::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
+			logti("%u sessions has been stopped playing %s/%s on the %s publisher. Concurrent Viewers[%s(%u)/Stream total(%u)/App total(%u)]",
+				  number_of_sessions,
+				  GetApplicationInfo().GetVHostAppName().CStr(), GetName().CStr(),
+				  ::StringFromPublisherType(type).CStr(), ::StringFromPublisherType(type).CStr(), GetConnections(type), GetTotalConnections(), GetApplicationMetrics()->GetTotalConnections());
 		}
 	}
 

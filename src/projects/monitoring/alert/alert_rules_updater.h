@@ -18,7 +18,7 @@ namespace mon
 		{
 		public:
 			AlertRulesUpdater(cfg::alrt::Alert &alert_config);
-			
+
 			std::shared_ptr<const cfg::alrt::rule::Rules> GetRules() const;
 
 			/// @return true if the auth file is updated successfully or no need to update, otherwise false
@@ -28,7 +28,7 @@ namespace mon
 			bool Update();
 
 			const cfg::alrt::Alert _alert_config;
-			bool _is_dynamic_update = false;
+			bool _is_dynamic_update				 = false;
 
 			std::atomic<uint64_t> _last_modified = 0;
 			ov::String _rules_file;

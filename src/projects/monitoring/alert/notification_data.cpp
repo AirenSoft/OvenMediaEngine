@@ -16,16 +16,16 @@ namespace mon
 	{
 		NotificationData::NotificationData(const Type &type, const std::vector<std::shared_ptr<Message>> &message_list, const ov::String source_uri, const std::shared_ptr<StreamMetrics> &stream_metric)
 		{
-			_type = type;
-			_message_list = message_list;
-			_source_uri = source_uri;
+			_type		   = type;
+			_message_list  = message_list;
+			_source_uri	   = source_uri;
 			_stream_metric = stream_metric;
 		}
 
 		NotificationData::NotificationData(const Type &type, const std::vector<std::shared_ptr<Message>> &message_list, const std::map<uint32_t, std::shared_ptr<QueueMetrics>> &queue_metric_list)
 		{
-			_type = type;
-			_message_list = message_list;
+			_type			   = type;
+			_message_list	   = message_list;
 			_queue_metric_list = queue_metric_list;
 		}
 
@@ -45,7 +45,7 @@ namespace mon
 
 				Json::Value jv_message;
 
-				jv_message["code"] = Message::StringFromMessageCode(Message::Code::OK).CStr();
+				jv_message["code"]		  = Message::StringFromMessageCode(Message::Code::OK).CStr();
 				jv_message["description"] = Message::DescriptionFromMessageCode<bool>(Message::Code::OK, true, true).CStr();
 
 				jv_messages.append(jv_message);
@@ -56,7 +56,7 @@ namespace mon
 				{
 					Json::Value jv_message;
 
-					jv_message["code"] = Message::StringFromMessageCode(message->GetCode()).CStr();
+					jv_message["code"]		  = Message::StringFromMessageCode(message->GetCode()).CStr();
 					jv_message["description"] = message->GetDescription().CStr();
 
 					jv_messages.append(jv_message);
@@ -74,8 +74,7 @@ namespace mon
 			if (_stream_metric != nullptr)
 			{
 				Json::Value jv_source_info = ::serdes::JsonFromStream(_stream_metric);
-				jv_root["sourceInfo"] = jv_source_info;
-
+				jv_root["sourceInfo"]	   = jv_source_info;
 			}
 
 			if (_queue_metric_list.size() > 0)

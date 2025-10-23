@@ -3,8 +3,8 @@
 //
 
 #include "monitoring.h"
-#include "monitoring_private.h"
 
+#include "monitoring_private.h"
 
 namespace mon
 {
@@ -81,28 +81,27 @@ namespace mon
 	{
 		_logger.SetLogPath(log_path);
 		_forwarder.SetLogPath(log_path);
-	}	
+	}
 
 	void Monitoring::OnServerStarted(const std::shared_ptr<const cfg::Server> &server_config)
 	{
-		_server_metric = std::make_shared<ServerMetrics>(server_config);
+		_server_metric	 = std::make_shared<ServerMetrics>(server_config);
 		_is_analytics_on = _server_metric->GetConfig()->GetAnalytics().IsParsed();
 
-		_alert = std::make_shared<alrt::Alert>();
+		_alert			 = std::make_shared<alrt::Alert>();
 		_alert->Start(server_config);
 
 		logti("%s(%s) ServerMetric has been started for monitoring - %s",
-			server_config->GetName().CStr(), server_config->GetID().CStr(),
-			ov::Converter::ToISO8601String(_server_metric->GetServerStartedTime()).CStr());
+			  server_config->GetName().CStr(), server_config->GetID().CStr(),
+			  ov::Converter::ToISO8601String(_server_metric->GetServerStartedTime()).CStr());
 
-		if(IsAnalyticsOn())
+		if (IsAnalyticsOn())
 		{
 			auto event = Event(EventType::ServerStarted, _server_metric);
 			_logger.Write(event);
 
 			_timer.Push(
-				[this](void *parameter) -> ov::DelayQueueAction 
-				{
+				[this](void *parameter) -> ov::DelayQueueAction {
 					auto event = Event(EventType::ServerStat, _server_metric);
 					_logger.Write(event);
 					return ov::DelayQueueAction::Repeat;
@@ -117,15 +116,15 @@ namespace mon
 
 	bool Monitoring::OnHostCreated(const info::Host &host_info)
 	{
-		if(_server_metric->OnHostCreated(host_info) == false)
+		if (_server_metric->OnHostCreated(host_info) == false)
 		{
 			return false;
 		}
 
-		if(IsAnalyticsOn())
+		if (IsAnalyticsOn())
 		{
 			auto host_metrics = _server_metric->GetHostMetrics(host_info);
-			auto event = Event(EventType::HostCreated, _server_metric);
+			auto event		  = Event(EventType::HostCreated, _server_metric);
 			event.SetExtraMetric(host_metrics);
 			_logger.Write(event);
 		}
@@ -135,15 +134,15 @@ namespace mon
 
 	bool Monitoring::OnHostDeleted(const info::Host &host_info)
 	{
-		if(_server_metric->OnHostDeleted(host_info) == false)
+		if (_server_metric->OnHostDeleted(host_info) == false)
 		{
 			return false;
 		}
 
-		if(IsAnalyticsOn())
+		if (IsAnalyticsOn())
 		{
 			auto host_metrics = _server_metric->GetHostMetrics(host_info);
-			auto event = Event(EventType::HostDeleted, _server_metric);
+			auto event		  = Event(EventType::HostDeleted, _server_metric);
 			event.SetExtraMetric(host_metrics);
 			_logger.Write(event);
 		}
@@ -159,18 +158,18 @@ namespace mon
 			return false;
 		}
 
-		if(host_metrics->OnApplicationCreated(app_info) == false)
+		if (host_metrics->OnApplicationCreated(app_info) == false)
 		{
 			return false;
 		}
 
 		auto app_metrics = host_metrics->GetApplicationMetrics(app_info);
-		if(app_metrics == nullptr)
+		if (app_metrics == nullptr)
 		{
 			return false;
 		}
 
-		if(IsAnalyticsOn())
+		if (IsAnalyticsOn())
 		{
 			auto event = Event(EventType::AppCreated, _server_metric);
 			event.SetExtraMetric(app_metrics);
@@ -187,17 +186,17 @@ namespace mon
 			return false;
 		}
 		auto app_metrics = host_metrics->GetApplicationMetrics(app_info);
-		if(app_metrics == nullptr)
+		if (app_metrics == nullptr)
 		{
 			return false;
 		}
 
-		if(host_metrics->OnApplicationDeleted(app_info) == false)
+		if (host_metrics->OnApplicationDeleted(app_info) == false)
 		{
 			return false;
 		}
 
-		if(IsAnalyticsOn())
+		if (IsAnalyticsOn())
 		{
 			auto event = Event(EventType::AppDeleted, _server_metric);
 			event.SetExtraMetric(app_metrics);
@@ -214,19 +213,19 @@ namespace mon
 			return false;
 		}
 
-		if(app_metrics->OnStreamCreated(stream) == false)
+		if (app_metrics->OnStreamCreated(stream) == false)
 		{
 			return false;
 		}
 
 		// Writes events only based on the input stream.
 		std::shared_ptr<StreamMetrics> stream_metrics = nullptr;
-		EventType event_type = EventType::StreamCreated;
-		if(stream.IsInputStream())
+		EventType event_type						  = EventType::StreamCreated;
+		if (stream.IsInputStream())
 		{
-			event_type = EventType::StreamCreated;
+			event_type	   = EventType::StreamCreated;
 			stream_metrics = app_metrics->GetStreamMetrics(stream);
-			if(stream_metrics == nullptr)
+			if (stream_metrics == nullptr)
 			{
 				return false;
 			}
@@ -236,11 +235,11 @@ namespace mon
 		// Output stream created
 		else
 		{
-			event_type = EventType::StreamOutputsUpdated;
+			event_type	   = EventType::StreamOutputsUpdated;
 
 			// Get Input Stream
 			stream_metrics = app_metrics->GetStreamMetrics(*stream.GetLinkedInputStream());
-			if(stream_metrics == nullptr)
+			if (stream_metrics == nullptr)
 			{
 				return false;
 			}
@@ -256,7 +255,7 @@ namespace mon
 			_alert->SendStreamMessage(alrt::Message::Code::EGRESS_STREAM_CREATED, output_stream_metric);
 		}
 
-		if(IsAnalyticsOn())
+		if (IsAnalyticsOn())
 		{
 			auto event = Event(event_type, _server_metric);
 			event.SetExtraMetric(stream_metrics);
@@ -277,10 +276,10 @@ namespace mon
 			}
 
 			auto stream_metrics = std::make_shared<StreamMetrics>(app_metrics, stream);
-			if(stream_metrics == nullptr)
+			if (stream_metrics == nullptr)
 			{
-					logte("Cannot create StreamMetrics (%s - %s)", stream.GetUri().CStr(), stream.GetUUID().CStr());
-					return false;
+				logte("Cannot create StreamMetrics (%s - %s)", stream.GetUri().CStr(), stream.GetUUID().CStr());
+				return false;
 			}
 
 			_alert->SendStreamMessage(alrt::Message::Code::INGRESS_STREAM_CREATION_FAILED_DUPLICATE_NAME, stream_metrics);
@@ -339,16 +338,16 @@ namespace mon
 		//TODO(Getroot): If a session connects or disconnects at the moment the block below is executed, a race condition may occur, so it must be protected with a mutex.
 		{
 			// If there are sessions in the stream, the number of visitors to the app is recalculated.
-			// Calculate connections to application only if it hasn't origin stream to prevent double subtract. 
-			if(stream.IsInputStream())
+			// Calculate connections to application only if it hasn't origin stream to prevent double subtract.
+			if (stream.IsInputStream())
 			{
 				stream_metrics = app_metrics->GetStreamMetrics(stream);
-				if(stream_metrics == nullptr)
+				if (stream_metrics == nullptr)
 				{
 					return false;
 				}
 
-				for(uint8_t type = static_cast<uint8_t>(PublisherType::Unknown); type < static_cast<uint8_t>(PublisherType::NumberOfPublishers); type++)
+				for (uint8_t type = static_cast<uint8_t>(PublisherType::Unknown); type < static_cast<uint8_t>(PublisherType::NumberOfPublishers); type++)
 				{
 					OnSessionsDisconnected(*stream_metrics, static_cast<PublisherType>(type), stream_metrics->GetConnections(static_cast<PublisherType>(type)));
 				}
@@ -372,15 +371,15 @@ namespace mon
 				_alert->SendStreamMessage(alrt::Message::Code::EGRESS_STREAM_DELETED, output_stream_metric);
 			}
 
-			if(app_metrics->OnStreamDeleted(stream) == false)
+			if (app_metrics->OnStreamDeleted(stream) == false)
 			{
 				return false;
 			}
 		}
-		
-		if(IsAnalyticsOn())
+
+		if (IsAnalyticsOn())
 		{
-			if(stream_metrics->IsInputStream())
+			if (stream_metrics->IsInputStream())
 			{
 				auto event = Event(EventType::StreamDeleted, _server_metric);
 				event.SetExtraMetric(stream_metrics);
@@ -395,21 +394,21 @@ namespace mon
 	{
 		return true;
 	}
-	
+
 	void Monitoring::IncreaseBytesIn(const info::Stream &stream_info, uint64_t value)
 	{
 		auto host_metric = _server_metric->GetHostMetrics(stream_info.GetApplicationInfo().GetHostInfo());
-		if(host_metric == nullptr)
+		if (host_metric == nullptr)
 		{
 			return;
 		}
 		auto app_metric = host_metric->GetApplicationMetrics(stream_info.GetApplicationInfo());
-		if(app_metric == nullptr)
+		if (app_metric == nullptr)
 		{
 			return;
 		}
 		auto stream_metric = app_metric->GetStreamMetrics(stream_info);
-		if(stream_metric == nullptr)
+		if (stream_metric == nullptr)
 		{
 			return;
 		}
@@ -423,17 +422,17 @@ namespace mon
 	void Monitoring::IncreaseBytesOut(const info::Stream &stream_info, PublisherType type, uint64_t value)
 	{
 		auto host_metric = _server_metric->GetHostMetrics(stream_info.GetApplicationInfo().GetHostInfo());
-		if(host_metric == nullptr)
+		if (host_metric == nullptr)
 		{
 			return;
 		}
 		auto app_metric = host_metric->GetApplicationMetrics(stream_info.GetApplicationInfo());
-		if(app_metric == nullptr)
+		if (app_metric == nullptr)
 		{
 			return;
 		}
 		auto stream_metric = app_metric->GetStreamMetrics(stream_info);
-		if(stream_metric == nullptr)
+		if (stream_metric == nullptr)
 		{
 			return;
 		}
@@ -447,17 +446,17 @@ namespace mon
 	void Monitoring::OnSessionConnected(const info::Stream &stream_info, PublisherType type)
 	{
 		auto host_metric = _server_metric->GetHostMetrics(stream_info.GetApplicationInfo().GetHostInfo());
-		if(host_metric == nullptr)
+		if (host_metric == nullptr)
 		{
 			return;
 		}
 		auto app_metric = host_metric->GetApplicationMetrics(stream_info.GetApplicationInfo());
-		if(app_metric == nullptr)
+		if (app_metric == nullptr)
 		{
 			return;
 		}
 		auto stream_metric = app_metric->GetStreamMetrics(stream_info);
-		if(stream_metric == nullptr)
+		if (stream_metric == nullptr)
 		{
 			return;
 		}
@@ -477,17 +476,17 @@ namespace mon
 		}
 
 		auto host_metric = server_metric->GetHostMetrics(stream_info.GetApplicationInfo().GetHostInfo());
-		if(host_metric == nullptr)
+		if (host_metric == nullptr)
 		{
 			return;
 		}
 		auto app_metric = host_metric->GetApplicationMetrics(stream_info.GetApplicationInfo());
-		if(app_metric == nullptr)
+		if (app_metric == nullptr)
 		{
 			return;
 		}
 		auto stream_metric = app_metric->GetStreamMetrics(stream_info);
-		if(stream_metric == nullptr)
+		if (stream_metric == nullptr)
 		{
 			return;
 		}
@@ -507,17 +506,17 @@ namespace mon
 		}
 
 		auto host_metric = _server_metric->GetHostMetrics(stream_info.GetApplicationInfo().GetHostInfo());
-		if(host_metric == nullptr)
+		if (host_metric == nullptr)
 		{
 			return;
 		}
 		auto app_metric = host_metric->GetApplicationMetrics(stream_info.GetApplicationInfo());
-		if(app_metric == nullptr)
+		if (app_metric == nullptr)
 		{
 			return;
 		}
 		auto stream_metric = app_metric->GetStreamMetrics(stream_info);
-		if(stream_metric == nullptr)
+		if (stream_metric == nullptr)
 		{
 			return;
 		}
