@@ -23,9 +23,11 @@
 #include "codec/decoder/decoder_opus.h"
 #include "codec/decoder/decoder_vp8.h"
 #include "transcoder_gpu.h"
+#include "transcoder_modules.h"
 #include "transcoder_private.h"
 
-#define MAX_QUEUE_SIZE 500
+// Default is 300 (about 10 seconds for 30fps)
+#define MAX_QUEUE_SIZE 30 * 10
 #define ALL_GPU_ID -1
 #define DEFAULT_MODULE_NAME "DEFAULT"
 
@@ -138,7 +140,11 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeDecoder::
 		{                                                  \
 			break;                                         \
 		}                                                  \
+		track->SetCodecModuleId(candidate->GetModuleId()); \
 		track->SetCodecDeviceId(candidate->GetDeviceId()); \
+		decoder->SetDeviceID(candidate->GetDeviceId());    \
+		decoder->SetDecoderId(decoder_id);                 \
+		decoder->SetCompleteHandler(complete_handler);     \
 		if (decoder->Configure(track) == true)             \
 		{                                                  \
 			goto done;                                     \
@@ -240,10 +246,6 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(
 done:
 	if (decoder != nullptr)
 	{
-		track->SetCodecModuleId(cur_candidate->GetModuleId());
-		decoder->SetDecoderId(decoder_id);
-		decoder->SetCompleteHandler(complete_handler);
-
 		logtd("The decoder has been created. track(#%d) codec(%s), module(%s:%d)",
 			  track->GetId(),
 			  cmn::GetCodecIdString(track->GetCodecId()),
@@ -255,11 +257,18 @@ done:
 }
 
 TranscodeDecoder::TranscodeDecoder(info::Stream stream_info)
-	: _stream_info(stream_info)
+	: _decoder_id(-1),
+	  _stream_info(stream_info),
+	  _track(nullptr),
+	  _complete_handler(nullptr),
+	  _change_format(false),
+	  _kill_flag(false),
+	  _codec_context(nullptr),
+	  _parser(nullptr),
+	  _pkt(nullptr),
+	  _frame(nullptr)
 {
-	_codec_context = nullptr;
-	_parser = nullptr;
-	_pkt = ::av_packet_alloc();
+	_pkt   = ::av_packet_alloc();
 	_frame = ::av_frame_alloc();
 }
 
@@ -305,7 +314,7 @@ bool TranscodeDecoder::Configure(std::shared_ptr<MediaTrack> track)
 	}
 	_track = track;
 
-	auto name = ov::String::FormatString("DEC_%s_t%d", cmn::GetCodecIdString(GetCodecID()), _track->GetId());
+	auto name = ov::String::FormatString("dec_%s_t%d", cmn::GetCodecIdString(GetCodecID()), _track->GetId());
 	auto urn = std::make_shared<info::ManagedQueue::URN>(_stream_info.GetApplicationInfo().GetVHostAppName(), _stream_info.GetName(), "trs", name);
 	_input_buffer.SetUrn(urn);
 	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
@@ -329,6 +338,8 @@ bool TranscodeDecoder::Configure(std::shared_ptr<MediaTrack> track)
 		return false;
 	}
 
+	tc::TranscodeModules::GetInstance()->OnCreated(false, GetCodecID(), GetModuleID(), GetDeviceID());
+
 	return true;
 }
 
@@ -344,6 +355,8 @@ void TranscodeDecoder::Stop()
 
 		logtd(ov::String::FormatString("decoder %s thread has ended", cmn::GetCodecIdString(GetCodecID())).CStr());
 	}
+
+	tc::TranscodeModules::GetInstance()->OnDeleted(false, GetCodecID(), GetModuleID(), GetDeviceID());	
 }
 
 void TranscodeDecoder::SendBuffer(std::shared_ptr<const MediaPacket> packet)

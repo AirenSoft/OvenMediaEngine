@@ -23,6 +23,21 @@ public:
 		return cmn::MediaCodecId::Aac;
 	}
 
+	cmn::MediaCodecModuleId GetModuleID() const noexcept
+	{
+		return cmn::MediaCodecModuleId::FDKAAC;
+	}
+
+	cmn::MediaType GetMediaType() const noexcept
+	{
+		return cmn::MediaType::Audio;
+	}
+
+	bool IsHWAccel() const noexcept
+	{
+		return false;
+	}
+
 	cmn::AudioSample::Format GetSupportAudioFormat() const noexcept override
 	{
 		return cmn::AudioSample::Format::S16;

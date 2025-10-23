@@ -2,7 +2,7 @@
 //
 //  OvenMediaEngine
 //
-//  Created by Keukhan Kwon
+//  Created by Keukhan
 //  Copyright (c) 2020 AirenSoft. All rights reserved.
 //
 //==============================================================================
@@ -31,6 +31,8 @@ TranscodeGPU::TranscodeGPU()
 		_device_context_nilogan[i] = nullptr;
 		_device_context_nv[i] = nullptr;
 	}
+	_initialized = false;
+	_supported_devices.clear();
 }
 
 bool TranscodeGPU::Initialize()
@@ -114,13 +116,16 @@ bool TranscodeGPU::Uninitialize()
 		}
 	}
 
+	_supported_devices.clear();
+	_initialized = false;
+
 #ifdef HWACCELS_NVIDIA_ENABLED
 	nvmlShutdown();
 #endif
 	return true;
 }
 
-bool TranscodeGPU::IsSupported(cmn::MediaCodecModuleId id, int32_t gpu_id)
+bool TranscodeGPU::IsSupported(cmn::MediaCodecModuleId id, cmn::DeviceId gpu_id)
 {
 	switch (id)
 	{
@@ -158,7 +163,7 @@ int32_t TranscodeGPU::GetDeviceCount(cmn::MediaCodecModuleId id)
 	return 0;
 }
 
-AVBufferRef* TranscodeGPU::GetDeviceContext(cmn::MediaCodecModuleId id, int32_t gpu_id)
+AVBufferRef* TranscodeGPU::GetDeviceContext(cmn::MediaCodecModuleId id, cmn::DeviceId gpu_id)
 {
 	switch (id)
 	{
@@ -174,6 +179,61 @@ AVBufferRef* TranscodeGPU::GetDeviceContext(cmn::MediaCodecModuleId id, int32_t 
 	}
 
 	return nullptr;
+}
+
+int32_t TranscodeGPU::GetExternalDeviceId(cmn::MediaCodecModuleId id, cmn::DeviceId gpu_id)
+{
+	switch (id)
+	{
+		case cmn::MediaCodecModuleId::NVENC:
+			return GetDeviceIdNV(gpu_id);
+		default:
+			break;
+	}
+
+	return -1;
+}
+
+ov::String TranscodeGPU::GetDeviceDisplayName(cmn::MediaCodecModuleId id, cmn::DeviceId gpu_id)
+{
+	if(gpu_id >= MAX_DEVICE_COUNT) {
+		return "Unknown";
+	}
+
+	switch (id)
+	{
+		case cmn::MediaCodecModuleId::QSV:
+			return _device_display_name_qsv[gpu_id];
+		case cmn::MediaCodecModuleId::NILOGAN:
+			return _device_display_name_nilogan[gpu_id];
+		case cmn::MediaCodecModuleId::NVENC:
+			return _device_display_name_nv[gpu_id];
+		case cmn::MediaCodecModuleId::XMA:
+			return _device_display_name_xma[gpu_id];
+		default:
+			break;
+	}
+
+	return "Unknown";
+}
+
+ov::String TranscodeGPU::GetDeviceBusId(cmn::MediaCodecModuleId id, cmn::DeviceId gpu_id)
+{
+	if(gpu_id >= MAX_DEVICE_COUNT) {
+		return "Unknown";
+	}
+
+	switch (id)
+	{
+		case cmn::MediaCodecModuleId::NVENC:
+			return _device_bus_id_nv[gpu_id];
+		case cmn::MediaCodecModuleId::XMA:
+			return _device_bus_id_xma[gpu_id];
+		default:
+			break;
+	}
+
+	return "Unknown";
 }
 
 int32_t TranscodeGPU::GetDeviceCountQSV()
@@ -251,10 +311,10 @@ bool TranscodeGPU::CheckSupportedNV()
 			CUdevice cu_device;
 			cuDeviceGet(&cu_device, j);
 
-			int32_t cu_pci_bus_is;
-			cuDeviceGetAttribute(&cu_pci_bus_is, CU_DEVICE_ATTRIBUTE_PCI_BUS_ID, cu_device);
+			int32_t cu_pci_bus_id;
+			cuDeviceGetAttribute(&cu_pci_bus_id, CU_DEVICE_ATTRIBUTE_PCI_BUS_ID, cu_device);
 
-			if (cu_pci_bus_is == (int32_t)pci_info.bus)
+			if (cu_pci_bus_id == (int32_t)pci_info.bus)
 			{
 				cuda_index = j;
 				break;
@@ -274,8 +334,14 @@ bool TranscodeGPU::CheckSupportedNV()
 		}
 		else
 		{
+			_device_cuda_id_nv[gpu_id] = cuda_index;
+			_device_display_name_nv[gpu_id] = device_name;
+			_device_bus_id_nv[gpu_id] = pci_info.busId;
 			_device_count_nv++;
-			logti("NVIDIA. DeviceId(%d), Name(%s), BusId(%d), CudaId(%d)", gpu_id, device_name, pci_info.bus, cuda_index);
+
+			_supported_devices.push_back(std::make_pair(cmn::MediaCodecModuleId::NVENC, gpu_id));
+
+			logti("NVIDIA. DeviceId(%d), Name(%s), BusId(%s), CudaId(%d)", gpu_id, device_name, pci_info.busId, cuda_index);
 		}
 	}
 
@@ -327,6 +393,9 @@ bool TranscodeGPU::CheckSupportedXMA()
 		xclbin_nparam[dev_id].device_id = dev_id;
 		xclbin_nparam[dev_id].xclbin_name = XLNX_XCLBIN_PATH;
 		_device_count_xma++;
+		_device_display_name_xma[dev_id] = ov::String::FormatString("Xilinx U30 Device %d", dev_id);
+		_device_bus_id_xma[dev_id] = ov::String::FormatString("0000:00:%02x.0", 0x80 + dev_id);
+		_supported_devices.push_back(std::make_pair(cmn::MediaCodecModuleId::XMA, dev_id));
 
 		logti("XMA: deviceId(%d), xclbin(%s)", xclbin_nparam[dev_id].device_id, xclbin_nparam[dev_id].xclbin_name);
 	}
@@ -365,7 +434,10 @@ bool TranscodeGPU::CheckSupportedQSV()
 
 	[[maybe_unused]]
 	auto constraints = av_hwdevice_get_hwframe_constraints(_device_context_qsv[0], nullptr);
+
 	logtd("constraints. hw.fmt(%d), sw.fmt(%d)", *constraints->valid_hw_formats, *constraints->valid_sw_formats);
+
+	av_hwframe_constraints_free(&constraints);
 
 	return true;
 }
@@ -390,13 +462,17 @@ bool TranscodeGPU::CheckSupportedNILOGAN()
 
 	logtd("constraints. hw.fmt(%d), sw.fmt(%d)", *constraints->valid_hw_formats, *constraints->valid_sw_formats);
 
+	av_hwframe_constraints_free(&constraints);
+
+	_supported_devices.push_back(std::make_pair(cmn::MediaCodecModuleId::NILOGAN, 0));
+
 	return true;
 #else
 	return false;
 #endif
 }
 
-AVBufferRef* TranscodeGPU::GetDeviceContextQSV(int32_t gpu_id)
+AVBufferRef* TranscodeGPU::GetDeviceContextQSV(cmn::DeviceId gpu_id)
 {
 	if (gpu_id >= MAX_DEVICE_COUNT)
 	{
@@ -406,7 +482,7 @@ AVBufferRef* TranscodeGPU::GetDeviceContextQSV(int32_t gpu_id)
 	return _device_context_qsv[gpu_id];
 }
 
-AVBufferRef* TranscodeGPU::GetDeviceContextNILOGAN(int32_t gpu_id)
+AVBufferRef* TranscodeGPU::GetDeviceContextNILOGAN(cmn::DeviceId gpu_id)
 {
 	if (gpu_id >= MAX_DEVICE_COUNT)
 	{
@@ -416,7 +492,7 @@ AVBufferRef* TranscodeGPU::GetDeviceContextNILOGAN(int32_t gpu_id)
 	return _device_context_nilogan[gpu_id];
 }
 
-AVBufferRef* TranscodeGPU::GetDeviceContextNV(int32_t gpu_id)
+AVBufferRef* TranscodeGPU::GetDeviceContextNV(cmn::DeviceId gpu_id)
 {
 	if (gpu_id >= MAX_DEVICE_COUNT)
 	{
@@ -426,7 +502,17 @@ AVBufferRef* TranscodeGPU::GetDeviceContextNV(int32_t gpu_id)
 	return _device_context_nv[gpu_id];
 }
 
-bool TranscodeGPU::IsSupportedQSV(int32_t gpu_id)
+int32_t TranscodeGPU::GetDeviceIdNV(cmn::DeviceId gpu_id)
+{
+	if (gpu_id >= MAX_DEVICE_COUNT)
+	{
+		return -1;
+	}
+
+	return _device_cuda_id_nv[gpu_id];
+}
+
+bool TranscodeGPU::IsSupportedQSV(cmn::DeviceId gpu_id)
 {
 	if (_device_count_qsv == 0 || gpu_id >= _device_count_qsv)
 	{
@@ -436,7 +522,7 @@ bool TranscodeGPU::IsSupportedQSV(int32_t gpu_id)
 	return true;
 }
 
-bool TranscodeGPU::IsSupportedNILOGAN(int32_t gpu_id)
+bool TranscodeGPU::IsSupportedNILOGAN(cmn::DeviceId gpu_id)
 {
 	if (_device_count_nilogan == 0 || gpu_id >= _device_count_nilogan)
 	{
@@ -446,7 +532,7 @@ bool TranscodeGPU::IsSupportedNILOGAN(int32_t gpu_id)
 	return true;
 }
 
-bool TranscodeGPU::IsSupportedNV(int32_t gpu_id)
+bool TranscodeGPU::IsSupportedNV(cmn::DeviceId gpu_id)
 {
 	if (_device_count_nv == 0 || gpu_id >= _device_count_nv)
 	{
@@ -456,7 +542,7 @@ bool TranscodeGPU::IsSupportedNV(int32_t gpu_id)
 	return true;
 }
 
-bool TranscodeGPU::IsSupportedXMA(int32_t gpu_id)
+bool TranscodeGPU::IsSupportedXMA(cmn::DeviceId gpu_id)
 {
 	if (_device_count_xma == 0 || gpu_id >= _device_count_xma)
 	{
@@ -466,7 +552,7 @@ bool TranscodeGPU::IsSupportedXMA(int32_t gpu_id)
 	return true;
 }
 
-uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, int32_t gpu_id)
+uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, cmn::DeviceId gpu_id)
 {
 	switch (id)
 	{
@@ -572,16 +658,22 @@ void TranscodeGPU::CodecThread()
 	modules.push_back(cmn::MediaCodecModuleId::QSV);
 	modules.push_back(cmn::MediaCodecModuleId::NILOGAN);
 
-	for (auto module : modules)
+	while(true)
 	{
-		for (int gpu_id = 0; gpu_id < GetDeviceCount(module); gpu_id++)
+		for (auto module : modules)
 		{
-			logti("[%s:%d] %d%%, %d%%, %d%%",
-				  cmn::GetCodecModuleIdString(module),
-				  gpu_id,
-				  GetUtilization(IPType::DECODER, module, gpu_id),
-				  GetUtilization(IPType::ENCODER, module, gpu_id),
-				  GetUtilization(IPType::SCALER, module, gpu_id));
+			for (int gpu_id = 0; gpu_id < GetDeviceCount(module); gpu_id++)
+			{
+				logti("[%s:%d] dec:%d%%, enc:%d%%, scaler:%d%%",
+					cmn::GetCodecModuleIdString(module),
+					gpu_id,
+					GetUtilization(IPType::DECODER, module, gpu_id),
+					GetUtilization(IPType::ENCODER, module, gpu_id),
+					GetUtilization(IPType::SCALER, module, gpu_id));
+			}
 		}
+		// Every 10 seconds
+		std::this_thread::sleep_for(std::chrono::seconds(4));		
 	}
+	
 }

@@ -23,6 +23,21 @@ public:
 		return cmn::MediaCodecId::Jpeg;
 	}
 
+	cmn::MediaCodecModuleId GetModuleID() const noexcept
+	{
+		return cmn::MediaCodecModuleId::DEFAULT;
+	}
+
+	cmn::MediaType GetMediaType() const noexcept
+	{
+		return cmn::MediaType::Video;
+	}
+
+	bool IsHWAccel() const noexcept
+	{
+		return false;
+	}
+
 	cmn::AudioSample::Format GetSupportAudioFormat() const noexcept override
 	{
 		return cmn::AudioSample::Format::None;

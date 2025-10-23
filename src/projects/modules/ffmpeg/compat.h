@@ -39,6 +39,7 @@ extern "C"
 #include <modules/bitstream/h265/h265_decoder_configuration_record.h>
 #include <modules/bitstream/opus/opus_specific_config.h>
 #include <transcoder/transcoder_context.h>
+#include <transcoder/transcoder_gpu.h>
 
 namespace ffmpeg
 {
@@ -55,6 +56,7 @@ namespace ffmpeg
 		static cmn::AudioChannel::Layout ToAudioChannelLayout(int channel_layout);
 		static AVPixelFormat ToAVPixelFormat(cmn::VideoPixelFormatId pixel_format);
 		static cmn::VideoPixelFormatId ToVideoPixelFormat(int32_t pixel_format);
+		static AVPixelFormat GetAVPixelFormatOfHWDevice(cmn::MediaCodecModuleId module_id, cmn::DeviceId gpu_id, bool is_sw_format = true);
 
 		static std::shared_ptr<MediaTrack> CreateMediaTrack(AVStream* stream)
 		{

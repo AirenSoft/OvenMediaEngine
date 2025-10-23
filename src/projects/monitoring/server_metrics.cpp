@@ -99,10 +99,9 @@ namespace mon
 		return _hosts[host_info.GetId()];
 	}
 
-
 	bool ServerMetrics::OnQueueCreated(const info::ManagedQueue &queue_info)
 	{
-		if(GetQueueMetrics(queue_info) != nullptr)
+		if (GetQueueMetrics(queue_info) != nullptr)
 		{
 			logtw("Dupulicate QueueMetrics(%u/%s) is created", queue_info.GetId(), queue_info.ToString().CStr());
 			return false;
@@ -114,7 +113,7 @@ namespace mon
 			logte("Cannot create QueueMetrics (%u/%s)", queue_info.GetId(), queue_info.ToString().CStr());
 			return false;
 		}
-		
+
 		std::unique_lock<std::shared_mutex> lock(_queue_map_guard);
 		_queues[queue_info.GetId()] = queue_metrics;
 
@@ -133,14 +132,14 @@ namespace mon
 		}
 
 		_queues.erase(it);
-		
+
 		return true;
 	}
 
 	bool ServerMetrics::OnQueueUpdated(const info::ManagedQueue &queue_info, bool with_metadata)
 	{
 		auto queue = GetQueueMetrics(queue_info);
-		if(queue == nullptr)
+		if (queue == nullptr)
 		{
 			logtw("Cannot find QueueMetrics(%u/%s) for updating", queue_info.GetId(), queue_info.ToString().CStr());
 			return false;
@@ -151,7 +150,6 @@ namespace mon
 			queue->UpdateMetadata(queue_info);
 		}
 		queue->UpdateMetrics(queue_info);
-
 
 		/**
 			[Experimental] Delete lazy stream
@@ -176,7 +174,7 @@ namespace mon
 		{
 			if ((queue_info.GetThresholdExceededTimeInUs() > delete_lazy_stream_timeout_conf) && (!queue_info.GetUrn()->GetStreamName().IsEmpty()))
 			{
-				auto vhost_app = queue_info.GetUrn()->GetVHostAppName();
+				auto vhost_app	 = queue_info.GetUrn()->GetVHostAppName();
 				auto stream_name = queue_info.GetUrn()->GetStreamName();
 
 				logtc("The %s queue has been exceeded for %lld ms. stream will be forcibly deleted. VhostApp(%s), Stream(%s)",

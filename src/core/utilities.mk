@@ -217,15 +217,14 @@ $(strip \
 endef
 
 # Check if the library is referenced in the shared object
-# $(call chk_so_references,<SEARCH_PATHS>,<SO_FILENAME>,<LIBRARY_NAME>)
-define chk_so_references
+# $(call chk_dd_exist,<SEARCH_PATHS>,<SO_FILENAME>,<LIBRARY_NAME>)
+define chk_dd_exist
 $(strip \
   $(shell \
     found=0; \
     IFS=':'; \
     for dir in $$(echo $(1)); do \
       full_path="$$dir/$(2)"; \
-	  echo "Checking... $$full_path" >&2; \
       if [ -f "$$full_path" ]; then \
         readelf -d "$$full_path" 2>/dev/null | grep NEEDED | awk -F'[][]' '{print $$2}' | grep -q $(3); \
         if [ $$? -eq 0 ]; then found=1; break; fi; \

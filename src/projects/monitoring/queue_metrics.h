@@ -11,7 +11,7 @@ namespace mon
 	class QueueMetrics
 	{
 	public:
-		QueueMetrics(const info::ManagedQueue& info)
+		QueueMetrics(const info::ManagedQueue &info)
 			: _id(info.GetId()),
 			  _urn(info.GetUrn()),
 			  _type_name(info.GetTypeName()),
@@ -29,69 +29,69 @@ namespace mon
 		{
 		}
 
-		const uint32_t& GetId() const
+		const uint32_t &GetId() const
 		{
 			return _id;
 		}
 
-		const std::shared_ptr<info::ManagedQueue::URN>& GetUrn() const
+		const std::shared_ptr<info::ManagedQueue::URN> &GetUrn() const
 		{
 			return _urn;
 		}
 
-		const ov::String& GetTypeName() const
+		const ov::String &GetTypeName() const
 		{
 			return _type_name;
 		}
 
-		void UpdateMetadata(const info::ManagedQueue& info)
+		void UpdateMetadata(const info::ManagedQueue &info)
 		{
-			_urn = info.GetUrn();
+			_urn	   = info.GetUrn();
 			_type_name = info.GetTypeName();
 			_threshold = info.GetThreshold();
 		}
 
-		void UpdateMetrics(const info::ManagedQueue& info)
+		void UpdateMetrics(const info::ManagedQueue &info)
 		{
-			_peak = info.GetPeak();
-			_size = info.GetSize();
-			_input_message_per_second = info.GetInputMessagePerSecond();
+			_peak					   = info.GetPeak();
+			_size					   = info.GetSize();
+			_input_message_per_second  = info.GetInputMessagePerSecond();
 			_output_message_per_second = info.GetOutputMessagePerSecond();
-			_drop_count = info.GetDropCount();
-			_waiting_time = info.GetWaitingTimeInUs();
+			_drop_count				   = info.GetDropCount();
+			_waiting_time			   = info.GetWaitingTimeInUs();
 		}
 
-		const size_t& GetPeak() const
+		const size_t &GetPeak() const
 		{
 			return _peak;
 		}
 
-		const size_t& GetSize() const
+		const size_t &GetSize() const
 		{
 			return _size;
 		}
 
-		const size_t& GetThreshold() const
+		const size_t &GetThreshold() const
 		{
 			return _threshold;
 		}
 
-		const size_t& GetInputMessagePerSecond() const
+		const size_t &GetInputMessagePerSecond() const
 		{
 			return _input_message_per_second;
 		}
 
-		const size_t& GetOutputMessagePerSecond() const
+		const size_t &GetOutputMessagePerSecond() const
 		{
 			return _output_message_per_second;
 		}
 
-		const size_t& GetDropCount() const
+		const size_t &GetDropCount() const
 		{
 			return _drop_count;
 		}
 
-		const int64_t& GetWaitingTime() const
+		const int64_t &GetWaitingTime() const
 		{
 			return _waiting_time;
 		}

@@ -23,18 +23,18 @@ namespace mon
 			auto rules_file = alert_config.GetRulesFile(&is_configured);
 			if (is_configured)
 			{
-				_rules_file = ov::PathManager::GetNormalizedPath(rules_file);
+				_rules_file		   = ov::PathManager::GetNormalizedPath(rules_file);
 
 				_is_dynamic_update = true;
 
 				// dummy rules to avoid nullptr dereference
-				_rules = std::make_shared<cfg::alrt::rule::Rules>();
+				_rules			   = std::make_shared<cfg::alrt::rule::Rules>();
 			}
 			else
 			{
 				_is_dynamic_update = false;
 
-				_rules = std::make_shared<cfg::alrt::rule::Rules>(alert_config.GetRules());
+				_rules			   = std::make_shared<cfg::alrt::rule::Rules>(alert_config.GetRules());
 			}
 		}
 
@@ -59,7 +59,7 @@ namespace mon
 			}
 
 			struct stat file_stat = {0};
-			auto last_modified = _last_modified.load();
+			auto last_modified	  = _last_modified.load();
 
 			if (ov::PathManager::IsFile(_rules_file) == false)
 			{
@@ -85,7 +85,7 @@ namespace mon
 			if (last_modified != modified)
 			{
 				logtd("The alert rules file has been changed (prev: %zu => new: %zu): %s, updating...",
-			  	last_modified, modified, _rules_file.CStr());
+					  last_modified, modified, _rules_file.CStr());
 
 				_last_modified = modified;
 				return Update();
@@ -107,7 +107,7 @@ namespace mon
 
 			auto document = std::make_shared<pugi::xml_document>();
 
-			auto result = document->load_buffer(content->GetData(), content->GetLength());
+			auto result	  = document->load_buffer(content->GetData(), content->GetLength());
 			if (result == false)
 			{
 				logte("Could not parse XML document from: %s, error: %s", _rules_file.CStr(), result.description());
@@ -135,7 +135,7 @@ namespace mon
 					std::lock_guard lock_guard(_dynamic_rules_mutex);
 					_rules = rules;
 				}
-	
+
 				logti("The alert rules file has been updated: %s", _rules_file.CStr());
 			}
 			catch (const cfg::ConfigError &e)

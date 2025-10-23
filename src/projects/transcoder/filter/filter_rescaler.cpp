@@ -15,7 +15,7 @@
 #include "../transcoder_private.h"
 #include "../transcoder_stream_internal.h"
 
-#define DEFAULT_QUEUE_SIZE 120
+#define MAX_QUEUE_SIZE 2
 #define FILTER_FLAG_HWFRAME_AWARE (1 << 0)
 
 #define _SKIP_FRAMES_ENABLED 1
@@ -34,8 +34,8 @@ FilterRescaler::FilterRescaler()
 
 	_filter_graph = ::avfilter_graph_alloc();
 
-	// TODO(soulk) : The maximum number of thresholds is 2 seconds (Framerate * 2).
-	_input_buffer.SetThreshold(DEFAULT_QUEUE_SIZE);
+	_buffersrc_ctx	= nullptr;
+	_buffersink_ctx = nullptr;
 
 	OV_ASSERT2(_frame != nullptr);
 	OV_ASSERT2(_inputs != nullptr);
@@ -43,6 +43,8 @@ FilterRescaler::FilterRescaler()
 	OV_ASSERT2(_buffersrc != nullptr);
 	OV_ASSERT2(_buffersink != nullptr);
 	OV_ASSERT2(_filter_graph != nullptr);
+	OV_ASSERT2(_buffersrc_ctx == nullptr);
+	OV_ASSERT2(_buffersink_ctx == nullptr);
 
 	// Limit the number of filter threads to 4. I think 4 thread is usually enough for video filtering processing.
 	_filter_graph->nb_threads = 4;
@@ -50,7 +52,7 @@ FilterRescaler::FilterRescaler()
 
 FilterRescaler::~FilterRescaler()
 {
-
+	Stop();
 }
 
 bool FilterRescaler::InitializeSourceFilter()
@@ -119,6 +121,10 @@ bool FilterRescaler::InitializeFilterDescription()
 		// Scaler is performed on the same device as the encoder(output module)
 		ov::String desc = "";
 
+		/**
+		 * Output Module Cases
+		 * - DEFAULT, OPENH264, X264, QSV, LIBVPX, NILOGAN : SW-based module (CPU memory)
+		 */
 		if (output_module_id == cmn::MediaCodecModuleId::DEFAULT ||
 			output_module_id == cmn::MediaCodecModuleId::OPENH264 ||
 			output_module_id == cmn::MediaCodecModuleId::X264 ||
@@ -131,18 +137,15 @@ bool FilterRescaler::InitializeFilterDescription()
 			switch (input_module_id)
 			{
 				case cmn::MediaCodecModuleId::NVENC: {
-					// Use the av_hwframe_transfer_data function to enable copying from GPU memory to CPU memory.
-					_use_hwframe_transfer = true;
-
-					// Change the pixel format of the source filter to the SW pixel format supported by the hardware.
-					auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(input_module_id, input_device_id);
-					if (hw_device_ctx == nullptr)
+					// Copy data to host memory for cross-device compatibility.
+					_src_pixfmt = ffmpeg::compat::GetAVPixelFormatOfHWDevice(input_module_id, input_device_id, true);
+					if (_src_pixfmt == AV_PIX_FMT_NONE)
 					{
-						logte("Could not get hw device context for %s(%d)", cmn::GetCodecModuleIdString(input_module_id), input_device_id);
+						logte("Failed to get pixel format for %s(%d)", cmn::GetCodecModuleIdString(input_module_id), input_device_id);
 						return false;
 					}
-					auto constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx, nullptr);
-					_src_pixfmt = *(constraints->valid_sw_formats);
+					_use_hwframe_transfer = true;
+
 					desc = ov::String::FormatString("");
 				}
 				break;
@@ -161,20 +164,41 @@ bool FilterRescaler::InitializeFilterDescription()
 					desc = ov::String::FormatString("");
 				}
 			}
-			// Scaler description of defulat module
+			// Scaler description of default module
 			desc += ov::String::FormatString("scale=%dx%d:flags=bilinear", _output_track->GetWidth(), _output_track->GetHeight());
 		}
+		/**
+		 * Output Module Cases
+		 * - NVENC : NVENC (CUDA) HW-based module
+		 */		
 		else if (output_module_id == cmn::MediaCodecModuleId::NVENC)
 		{
+			int32_t cuda_id = TranscodeGPU::GetInstance()->GetExternalDeviceId(cmn::MediaCodecModuleId::NVENC, output_device_id);
+			
 			switch (input_module_id)
 			{
-				case cmn::MediaCodecModuleId::NVENC: {	// Zero Copy
-					//TODO: Exception handling required if Device ID is different. Find out if memory copy between GPUs is possible
-					desc = ov::String::FormatString("");
+				case cmn::MediaCodecModuleId::NVENC: {	
+					// Copy data to host memory for cross-device compatibility.
+					if (input_device_id != output_device_id)
+					{
+						_src_pixfmt = ffmpeg::compat::GetAVPixelFormatOfHWDevice(input_module_id, input_device_id, true);
+						if (_src_pixfmt == AV_PIX_FMT_NONE)
+						{
+							logte("Failed to get pixel format for %s(%d)", cmn::GetCodecModuleIdString(input_module_id), input_device_id);
+							return false;
+						}
+						_use_hwframe_transfer = true;
+
+						desc = ov::String::FormatString("hwupload_cuda=device=%d,", cuda_id);
+					}
+					else
+					{
+						desc = ov::String::FormatString("");
+					}
 				}
 				break;
 				case cmn::MediaCodecModuleId::XMA: {
-					desc = ov::String::FormatString("xvbm_convert,hwupload_cuda=device=%d,", output_device_id);
+					desc = ov::String::FormatString("xvbm_convert,hwupload_cuda=device=%d,", cuda_id);
 				}
 				break;
 				default:
@@ -184,11 +208,15 @@ bool FilterRescaler::InitializeFilterDescription()
 				case cmn::MediaCodecModuleId::NILOGAN:	// CPU memory using 'out=sw'
 				case cmn::MediaCodecModuleId::DEFAULT:	// CPU memory
 				{
-					desc = ov::String::FormatString("hwupload_cuda=device=%d,", output_device_id);
+					desc = ov::String::FormatString("hwupload_cuda=device=%d,", cuda_id);
 				}
 			}
-			desc += ov::String::FormatString("scale_cuda=%d:%d", _output_track->GetWidth(), _output_track->GetHeight());
+			desc += ov::String::FormatString("scale_cuda=%d:%d:format=nv12", _output_track->GetWidth(), _output_track->GetHeight());
 		}
+		/**
+		 * Output Module Cases
+		 * - XMA : Xilinx HW-based module
+		 */
 		else if (output_module_id == cmn::MediaCodecModuleId::XMA)
 		{
 			// multiscale_xma only supports resolutions multiple of 4.
@@ -223,19 +251,15 @@ bool FilterRescaler::InitializeFilterDescription()
 				}
 				break;
 				case cmn::MediaCodecModuleId::NVENC: {
-					// Use the av_hwframe_transfer_data function to enable copying from GPU memory to CPU memory.
-					_use_hwframe_transfer = true;
-
-					// Change the pixel format of the source filter to the SW pixel format supported by the hardware.
-					auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(input_module_id, input_device_id);
-					if (hw_device_ctx == nullptr)
+					// Copy data to host memory for cross-device compatibility.
+					_src_pixfmt = ffmpeg::compat::GetAVPixelFormatOfHWDevice(input_module_id, input_device_id, true);
+					if (_src_pixfmt == AV_PIX_FMT_NONE)
 					{
-						logte("Could not get hw device context for %s(%d)", cmn::GetCodecModuleIdString(input_module_id), input_device_id);
+						logte("Failed to get pixel format for %s(%d)", cmn::GetCodecModuleIdString(input_module_id), input_device_id);
 						return false;
 					}
-					auto constraints = av_hwdevice_get_hwframe_constraints(hw_device_ctx, nullptr);
-					_src_pixfmt = *(constraints->valid_sw_formats);
-					// desc = ov::String::FormatString("xvbm_convert,");
+					_use_hwframe_transfer = true;
+
 					desc = ov::String::FormatString("");
 					if (need_crop_for_multiple_of_4)
 					{
@@ -263,6 +287,10 @@ bool FilterRescaler::InitializeFilterDescription()
 			desc += ov::String::FormatString("multiscale_xma=lxlnx_hwdev=%d:outputs=1:out_1_width=%d:out_1_height=%d:out_1_rate=full",
 											 _output_track->GetCodecDeviceId(), _output_track->GetWidth(), _output_track->GetHeight());
 		}
+		/**
+		 * Output Module Cases
+		 * - Unsupported module
+		 */		
 		else
 		{
 			logtw("Unsupported output module id: %d", output_module_id);
@@ -303,8 +331,8 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 	_fps_filter.SetOutputFrameRate(_output_track->GetFrameRateByConfig() > 0 ? _output_track->GetFrameRateByConfig() : _output_track->GetFrameRateByMeasured());
 	_fps_filter.SetSkipFrames(_output_track->GetSkipFramesByConfig() >= 0 ? _output_track->GetSkipFramesByConfig() : 0);
 	
-	// Set the threshold of the input buffer to 2 seconds.
-	_input_buffer.SetThreshold(_input_track->GetFrameRate() * 2);
+	// Set the threshold of the input buffer
+	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
 
 	// Initialize the av filter graph
 	if (InitializeFilterDescription() == false)
@@ -411,7 +439,6 @@ void FilterRescaler::Stop()
 	if (_thread_work.joinable())
 	{
 		_thread_work.join();
-		
 	}
 
 	OV_SAFE_FUNC(_buffersrc_ctx, nullptr, ::avfilter_free, );
@@ -429,12 +456,15 @@ void FilterRescaler::Stop()
 	_fps_filter.Clear();
 
 	SetState(State::STOPPED);
-
-	logtd("rescale filter has ended");
 }
 
 bool FilterRescaler::PushProcess(std::shared_ptr<MediaFrame> media_frame)
 {
+	if (GetState() == State::ERROR)
+	{
+		return false;
+	}
+	
 	// Flush the buffer source filter
 	if (media_frame == nullptr)
 	{
@@ -451,13 +481,12 @@ bool FilterRescaler::PushProcess(std::shared_ptr<MediaFrame> media_frame)
 		return false;
 	}
 
-	AVFrame *alter_av_frame = nullptr;
-
+	AVFrame *transfer_av_frame = nullptr;
+	// GPU Memory -> Host Memory
 	if (_use_hwframe_transfer == true && av_frame->hw_frames_ctx != nullptr)
 	{
-		// GPU Memory -> Host Memory
-		alter_av_frame = ::av_frame_alloc();
-		if (::av_hwframe_transfer_data(alter_av_frame, av_frame, 0) < 0)
+		transfer_av_frame = ::av_frame_alloc();
+		if (::av_hwframe_transfer_data(transfer_av_frame, av_frame, 0) < 0)
 		{
 			logte("Error transferring the data to system memory\n");
 
@@ -466,24 +495,24 @@ bool FilterRescaler::PushProcess(std::shared_ptr<MediaFrame> media_frame)
 			return false;
 		}
 
-		alter_av_frame->pts = av_frame->pts;
+		transfer_av_frame->pts = av_frame->pts;
 	}
 
-	AVFrame *av_frame_for_filter = (alter_av_frame != nullptr) ? alter_av_frame : av_frame;
+	AVFrame *av_frame_for_filter = (transfer_av_frame != nullptr) ? transfer_av_frame : av_frame;
 
 	// Send to filtergraph
 	if (::av_buffersrc_write_frame(_buffersrc_ctx, av_frame_for_filter))
 	{
-		logte("An error occurred while feeding to filtergraph: format: %d, pts: %lld, linesize: %d, queue.size: %d", av_frame->format, av_frame->pts, av_frame->linesize[0], _input_buffer.Size());
+		logte("An error occurred while feeding to filtergraph: format: %d, pts: %lld, queue.size: %d", av_frame->format, av_frame->pts, _input_buffer.Size());
 
 		SetState(State::ERROR);
 
 		return false;
 	}
 
-	if (alter_av_frame != nullptr)
+	if (transfer_av_frame != nullptr)
 	{
-		av_frame_free(&alter_av_frame);
+		av_frame_free(&transfer_av_frame);
 	}
 
 	return true;
@@ -491,6 +520,11 @@ bool FilterRescaler::PushProcess(std::shared_ptr<MediaFrame> media_frame)
 
 bool FilterRescaler::PopProcess(bool is_flush)
 {
+	if (GetState() == State::ERROR)
+	{
+		return false;
+	}
+
 	while (!_kill_flag || is_flush)
 	{
 		// Receive from filtergraph
@@ -518,7 +552,7 @@ bool FilterRescaler::PopProcess(bool is_flush)
 				break;
 			}
 
-			logte("Error receiving filtered frame. error(%d)", ret);
+			logte("Error receiving filtered frame. error(%s)", ffmpeg::compat::AVErrorToString(ret).CStr());
 			SetState(State::ERROR);
 
 			return false;
@@ -653,13 +687,6 @@ void FilterRescaler::WorkerThread()
 			media_frame = nullptr;;
 		}
 
-		// logti("buffer.size(%d), i/omps(%d/%d), threshold(%d), skip(%d/%d), stable(%d ms)",
-		// 	  _input_buffer.GetSize(),
-		// 	  _input_buffer.GetInputMessagePerSecond(), _input_buffer.GetOutputMessagePerSecond(), 
-		// 	  _input_buffer.GetThreshold(),
-		// 	  skip_frames, _output_track->GetSkipFramesByConfig(),
-		// 	  elapsed_stable_time);
-
 		if(media_frame != nullptr)
 		{
 			_fps_filter.Push(media_frame);
@@ -701,38 +728,70 @@ void FilterRescaler::WorkerThread()
 	FLUSH_FILTER_ONCE();
 }
 
+/**
+ * Set the hardware device context and hardware frames context to the filter graph if necessary.
+ * TODO(Keukhan): Improve the filter graph to set a hardware device context or frame context. current approach doesn’t seem to be correct.
+ */
 bool FilterRescaler::SetHWContextToFilterIfNeed()
 {
-	auto hw_device_ctx =  TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NVENC, _output_track->GetCodecDeviceId());
-
-	if (hw_device_ctx != nullptr)
+	auto hw_device_ctx = TranscodeGPU::GetInstance()->GetDeviceContext(cmn::MediaCodecModuleId::NVENC, _output_track->GetCodecDeviceId());
+	if (!hw_device_ctx)
 	{
-		// Assign the hw device context and hw frames context to the filter graph
-		for (uint32_t i = 0; i < _filter_graph->nb_filters; i++)
+		// No hardware device context
+		// This means that the output module is not a hardware module
+		return true;
+	}
+
+	// Check whether the filter graph contains hwupload_cuda or scale_cuda filter
+	bool is_hwupload_cuda = false;
+	bool is_scale_cuda	  = false;
+	for (uint32_t i = 0; i < _filter_graph->nb_filters; i++)
+	{
+		auto filter = _filter_graph->filters[i];
+		if ((filter == nullptr) || (filter->filter->flags_internal & FILTER_FLAG_HWFRAME_AWARE) == 0)
 		{
-			auto filter = _filter_graph->filters[i];
+			continue;
+		}
+		if (strstr(filter->name, "scale_cuda") != nullptr)
+		{
+			is_scale_cuda = true;
+		}
+		else if (strstr(filter->name, "hwupload_cuda") != nullptr)
+		{
+			is_hwupload_cuda = true;
+		}
+	}
 
-			if ((filter->filter->flags_internal & FILTER_FLAG_HWFRAME_AWARE) == 0 || (filter->inputs == nullptr))
+	// Set the hardware device context and hardware frames context to the filter graph
+	for (uint32_t i = 0; i < _filter_graph->nb_filters; i++)
+	{
+		auto filter = _filter_graph->filters[i];
+
+		if ((filter == nullptr) || ((filter->filter->flags_internal & FILTER_FLAG_HWFRAME_AWARE) == 0) || (filter->inputs == nullptr))
+		{
+			continue;
+		}
+
+		bool matched = false;
+		// TODO(Keukhan): scale_npp is deprecated. Remove it in the future.
+		if (strstr(filter->name, "scale_cuda") != nullptr || strstr(filter->name, "hwupload_cuda") != nullptr)
+		{
+			matched = true;
+		}
+
+		if (matched == true)
+		{
+			if (is_hwupload_cuda == true || is_scale_cuda == true)
 			{
-				continue;
-			}
-
-			bool matched = false;
-			if (strstr(filter->name, "scale_cuda") != nullptr || strstr(filter->name, "scale_npp") != nullptr)
-			{
-				matched = true;
-			}
-
-			if (matched == true)
-			{
-				logtd("set hardware device/frames context to filter. name(%s)", filter->name);
-
 				if (ffmpeg::compat::SetHwDeviceCtxOfAVFilterContext(filter, hw_device_ctx) == false)
 				{
 					logte("Could not set hw device context for %s", filter->name);
 					return false;
 				}
+			}
 
+			if (is_hwupload_cuda == false && is_scale_cuda == true)
+			{
 				for (uint32_t j = 0; j < filter->nb_inputs; j++)
 				{
 					auto input = filter->inputs[j];

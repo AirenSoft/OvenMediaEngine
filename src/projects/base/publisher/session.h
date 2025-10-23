@@ -32,6 +32,9 @@ namespace pub
 		std::shared_ptr<ov::Url> GetFinalUrl() const;
 		void SetFinalUrl(const std::shared_ptr<ov::Url> &final_url);
 
+		void SetName(const ov::String &name);
+		const std::optional<ov::String> &GetName() const;
+
 		virtual bool Start();
 		virtual bool Stop();
 
@@ -58,6 +61,7 @@ namespace pub
 	private:
 		std::shared_ptr<Application> _application;
 		std::shared_ptr<Stream> _stream;
+		std::optional<ov::String> _name;
 		SessionState _state;
 		ov::String _error_reason;
 	};

@@ -162,7 +162,8 @@ namespace ocst
 
 		/// Find Provider Stream from StreamInfo
 		std::shared_ptr<pvd::Stream> GetProviderStream(const std::shared_ptr<const info::Stream> &stream_info);
-		
+		/// Find Publisher Stream from StreamInfo
+		std::shared_ptr<pub::Stream> GetPublisherStream(PublisherType publisher_type, const std::shared_ptr<const info::Stream> &stream_info);
 
 		// OriginMapStore
 		// key : <app/stream>

@@ -74,8 +74,15 @@ public:
 		_complete_handler = complete_handler;
 	}
 
-	void SetQueueUrn(std::shared_ptr<info::ManagedQueue::URN> &urn) {
+	// Set URN for the filter buffer queue
+	void SetQueueUrn(std::shared_ptr<info::ManagedQueue::URN> &urn) {	
 		_input_buffer.SetUrn(urn);
+	}
+
+	// Set queue policy
+	void SetQueuePolicy(bool exceed_wait_enable, size_t threshold = 0) {
+		_input_buffer.SetExceedWaitEnable(exceed_wait_enable);
+		_input_buffer.SetThreshold(threshold);
 	}
 
 	void SetState(State state)

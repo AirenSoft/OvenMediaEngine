@@ -30,10 +30,11 @@
 #include "codec/encoder/encoder_whisper.h"
 
 #include "transcoder_gpu.h"
+#include "transcoder_modules.h"
 #include "transcoder_private.h"
 
 #define USE_LEGACY_LIBOPUS false
-#define MAX_QUEUE_SIZE 5
+#define MAX_QUEUE_SIZE 2
 #define ALL_GPU_ID -1
 #define DEFAULT_MODULE_NAME "DEFAULT"
 
@@ -154,20 +155,28 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 	return candidate_modules;
 }
 
-#define CASE_CREATE_CODEC_IFNEED(MODULE_ID, CLS) \
-	case cmn::MediaCodecModuleId::MODULE_ID: \
-		encoder = std::make_shared<CLS>(*info); \
-		if (encoder == nullptr) \
-		{ \
-			break; \
-		} \
+#define CASE_CREATE_CODEC_IFNEED(MODULE_ID, CLS)           \
+	case cmn::MediaCodecModuleId::MODULE_ID:               \
+		encoder = std::make_shared<CLS>(*info);            \
+		if (encoder == nullptr)                            \
+		{                                                  \
+			break;                                         \
+		}                                                  \
+		track->SetCodecModuleId(candidate->GetModuleId()); \
 		track->SetCodecDeviceId(candidate->GetDeviceId()); \
-		if (encoder->Configure(track) == true) \
-		{ \
-			goto done; \
-		} \
-		if (encoder != nullptr) { encoder->Stop(); encoder = nullptr; } \
-		break; \
+		encoder->SetDeviceID(candidate->GetDeviceId());    \
+		encoder->SetEncoderId(encoder_id);                 \
+		encoder->SetCompleteHandler(complete_handler);     \
+		if (encoder->Configure(track) == true)             \
+		{                                                  \
+			goto done;                                     \
+		}                                                  \
+		if (encoder != nullptr) {                          \
+			encoder->Stop();                               \
+			encoder = nullptr;                             \
+		}                                                  \
+		break;
+
 
 std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 	int32_t encoder_id,
@@ -297,11 +306,6 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 done:
 	if (encoder)
 	{
-		track->SetCodecModuleId(cur_candidate->GetModuleId());
-		
-		encoder->SetEncoderId(encoder_id);
-		encoder->SetCompleteHandler(complete_handler);
-
 		logti("The encoder has been created. track(#%d), codec(%s), module(%s:%d)",
 			track->GetId(),
 			cmn::GetCodecIdString(track->GetCodecId()),
@@ -330,8 +334,6 @@ TranscodeEncoder::TranscodeEncoder(info::Stream stream_info)
 
 TranscodeEncoder::~TranscodeEncoder()
 {
-	Stop();
-
 	DeinitCodec();
 
 	_input_buffer.Clear();
@@ -375,6 +377,8 @@ bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track, size_
 	// 	_input_buffer.SetSkipMessageEnable(true);
 	// }
 
+	tc::TranscodeModules::GetInstance()->OnCreated(true, GetCodecID(), GetModuleID(), GetDeviceID());
+
 	return (_track != nullptr);
 }
 
@@ -404,10 +408,12 @@ void TranscodeEncoder::SetCompleteHandler(CompleteHandler complete_handler)
 
 void TranscodeEncoder::Complete(std::shared_ptr<MediaPacket> packet)
 {
-	if (_complete_handler)
+	if (!_complete_handler)
 	{
-		_complete_handler(_encoder_id, std::move(packet));
+		return;
 	}
+
+	_complete_handler(_encoder_id, std::move(packet));
 }
 
 void TranscodeEncoder::Stop()
@@ -421,6 +427,8 @@ void TranscodeEncoder::Stop()
 		_codec_thread.join();
 		logtd(ov::String::FormatString("encoder %s thread has ended", cmn::GetCodecIdString(GetCodecID())).CStr());
 	}
+
+	tc::TranscodeModules::GetInstance()->OnDeleted(true, GetCodecID(), GetModuleID(), GetDeviceID());
 }
 
 bool TranscodeEncoder::InitCodecInteral()

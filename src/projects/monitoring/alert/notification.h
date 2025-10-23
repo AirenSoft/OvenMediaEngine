@@ -45,11 +45,11 @@ namespace mon
 			ov::String GetMessageBody();
 			void SetStatus(StatusCode code, ov::String reason);
 
-			uint64_t _elapsed_msec = 0;
+			uint64_t _elapsed_msec							  = 0;
 
 			// Request
 			std::shared_ptr<ov::Url> _notification_server_url = nullptr;
-			uint64_t _timeout_msec = 0;
+			uint64_t _timeout_msec							  = 0;
 			ov::String _secret_key;
 			ov::String _message_body;
 

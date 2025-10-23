@@ -38,7 +38,6 @@ public:
 
 protected:
 	int32_t _decoder_id = -1;
-	int32_t _gpu_id = -1;
 
 	info::Stream _stream_info;
 	std::shared_ptr<MediaTrack> _track;

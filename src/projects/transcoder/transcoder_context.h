@@ -201,6 +201,27 @@ public:
 		}
 	}
 
+	void SetCodecDeviceId(cmn::DeviceId id)
+	{
+		_codec_device_id = id;
+	}
+
+	cmn::DeviceId GetCodecDeviceId() const
+	{
+		return _codec_device_id;
+	}
+
+	void SetCodecModuleId(cmn::MediaCodecModuleId id)
+	{
+		_codec_module_id = id;
+	}
+
+	cmn::MediaCodecModuleId GetCodecModuleId() const
+	{
+		return _codec_module_id;
+	}
+
+
 	// This function should only be called before filtering 
 	std::shared_ptr<MediaFrame> CloneFrame(bool deep_copy = false)
 	{
@@ -285,6 +306,9 @@ private:
 	int32_t _track_id = 0;
 	int64_t _pts = 0LL;
 	int64_t _duration = 0LL;
+
+	cmn::MediaCodecModuleId _codec_module_id = cmn::MediaCodecModuleId::None;
+	cmn::DeviceId _codec_device_id = 0;
 
 	// Video 
 	int32_t _width = 0;

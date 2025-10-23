@@ -8,8 +8,8 @@
 //==============================================================================
 #pragma once
 
-#include <variant>
 #include <functional>
+#include <variant>
 
 #include "./enable_shared_from_this.h"
 #include "./json_object.h"
@@ -19,7 +19,7 @@ namespace ov
 {
 	class JsonBuilder;
 
-	using JsonBuilderModifier = std::function<JsonBuilder *(JsonBuilder *builder)>;
+	using JsonBuilderModifier = std::function<std::shared_ptr<JsonBuilder>(std::shared_ptr<JsonBuilder> builder)>;
 
 	// According to the specification, JSON works regardless of order, but when visualizing it as a JSON format
 	// such as outputting logs, the order may be important, so we provide a JsonBuilder class that guarantees the order.
@@ -75,7 +75,8 @@ namespace ov
 		~JsonBuilder() = default;
 
 		// Create a new JsonBuilder object
-		static std::shared_ptr<JsonBuilder> Builder(JsonBuilderModifier modifier = nullptr);
+		static std::shared_ptr<JsonBuilder> Builder();
+		static std::shared_ptr<JsonBuilder> Builder(JsonBuilderModifier modifier);
 
 		// These APIs can be used when the JSON value currently being created is an object
 		std::shared_ptr<JsonBuilder> PushBack(const char *key, ::Json::Value value);
@@ -91,11 +92,11 @@ namespace ov
 		ov::String Stringify() const;
 
 		// To JSON object/array
-		::Json::Value ToJsonValue() const;
+		::Json::Value Build() const;
 
 	protected:
-		void PushBackInternal(const char *key, JsonValueType item);
-		void PushBackInternal(JsonValueType item);
+		std::shared_ptr<JsonBuilder> PushBackInternal(const char *key, JsonValueType item);
+		std::shared_ptr<JsonBuilder> PushBackInternal(JsonValueType item);
 
 		ov::String &Stringify(ov::String &output) const;
 		ov::String &StringifyObject(ov::String &output) const;

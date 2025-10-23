@@ -13,8 +13,6 @@
 
 #include "../transcoder_private.h"
 
-#define MAX_QUEUE_SIZE 300
-
 FilterResampler::FilterResampler()
 {
 	_frame = ::av_frame_alloc();
@@ -27,7 +25,8 @@ FilterResampler::FilterResampler()
 
 	_filter_graph = ::avfilter_graph_alloc();
 
-	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
+	_buffersrc_ctx	= nullptr;
+	_buffersink_ctx = nullptr;
 
 	OV_ASSERT2(_frame != nullptr);
 	OV_ASSERT2(_inputs != nullptr);
@@ -35,6 +34,8 @@ FilterResampler::FilterResampler()
 	OV_ASSERT2(_buffersrc != nullptr);
 	OV_ASSERT2(_buffersink != nullptr);
 	OV_ASSERT2(_filter_graph != nullptr);
+	OV_ASSERT2(_buffersrc_ctx == nullptr);
+	OV_ASSERT2(_buffersink_ctx == nullptr);
 
 	// Limit the number of filter threads to 1. I think 1 thread is usually enough for audio filtering processing.
 	_filter_graph->nb_threads = 1;
@@ -294,7 +295,7 @@ void FilterResampler::WorkerThread()
 			}
 			else if (ret < 0)
 			{
-				logte("Error receiving filtered frame. error(%d)", ret);
+				logte("Error receiving filtered frame. error(%s)", ffmpeg::compat::AVErrorToString(ret).CStr());
 
 				SetState(State::ERROR);
 

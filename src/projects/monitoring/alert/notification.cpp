@@ -17,13 +17,13 @@ namespace mon
 	{
 		std::shared_ptr<Notification> Notification::Query(const std::shared_ptr<ov::Url> &notification_server_url, uint32_t timeout_msec, const ov::String secret_key, const ov::String message_body)
 		{
-			auto notification = std::make_shared<Notification>();
+			auto notification					   = std::make_shared<Notification>();
 
 			notification->_notification_server_url = notification_server_url;
-			notification->_timeout_msec = timeout_msec;
-			notification->_secret_key = secret_key;
-			notification->_message_body = message_body;
-			notification->_status_code = StatusCode::OK;
+			notification->_timeout_msec			   = timeout_msec;
+			notification->_secret_key			   = secret_key;
+			notification->_message_body			   = message_body;
+			notification->_status_code			   = StatusCode::OK;
 
 			notification->Run();
 
@@ -47,7 +47,7 @@ namespace mon
 
 		void Notification::SetStatus(StatusCode code, ov::String reason)
 		{
-			_status_code = code;
+			_status_code  = code;
 			_error_reason = reason;
 		}
 
@@ -75,7 +75,7 @@ namespace mon
 
 			auto signature_sha1_base64 = ov::Base64::Encode(md_sha1, true);
 
-			auto client = std::make_shared<http::clnt::HttpClient>();
+			auto client				   = std::make_shared<http::clnt::HttpClient>();
 			client->SetMethod(http::Method::Post);
 			client->SetBlockingMode(ov::BlockingMode::Blocking);
 			client->SetConnectionTimeout(_timeout_msec);
