@@ -47,7 +47,7 @@ check_xilinx_driver() {
 
 check_nvidia_driver() {
     LIB_PATH=""
-    LIB_FILES=("libnvidia-ml.so.1" "libcuda.so.1" "libnppicc.so.10" "libnppig.so.10" "libnppicc.so.11" "libnppig.so.11" "libnppicc.so.12" "libnppig.so.12")
+    LIB_FILES=("libnvidia-ml.so.1" "libcuda.so.1" "libnppicc.so.10" "libnppig.so.10" "libcudart.so.10.0" "libcublas.so.10" "libnppicc.so.11" "libnppig.so.11" "libcudart.so.11.0" "libcublas.so.11" "libnppicc.so.12" "libnppig.so.12" "libcudart.so.12.0" "libcublas.so.12")
 
     if [ "${OSNAME}" == "Ubuntu" ]; then
         LIB_PATH=/lib/x86_64-linux-gnu
@@ -78,5 +78,3 @@ echo "LD_PRELOAD: $LD_PRELOAD"
 
 # Run as daemon 
 exec /usr/bin/OvenMediaEngine "$@"
-
-
