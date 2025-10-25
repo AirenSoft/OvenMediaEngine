@@ -116,6 +116,15 @@ public:
 		}
 
 		auto challenge = GetValue();
+
+		// Find the start of a potential second WWW-Authenticate header. This is the 'YUAN missing comma' workaround.
+		size_t second_header_pos = challenge.IndexOf("WWW-Authenticate:");
+		if (second_header_pos != -1)
+		{
+			// Only process up to the start of the second header
+			challenge = challenge.Substring(0, second_header_pos).Trim();
+		}
+
 		// Find first white space in the value
 		auto index = challenge.IndexOf(' ');
 		if(index == -1)
@@ -129,18 +138,24 @@ public:
 		ov::String scheme_string = challenge.Substring(0, index).Trim();
 		_scheme = GetScheme(scheme_string);
 
-		// Get auth-param
+		// Get auth-param (only up to the next WWW-Authenticate header if present)
 		ov::String auth_param = challenge.Substring(index + 1).Trim();
 
 		// Parsing auth-param
 		auto auth_param_list = auth_param.Split(",");
 		for(auto &param : auth_param_list)
 		{
+			// If we encounter a new WWW-Authenticate header in the parameters, stop processing
+			if (param.Trim().HasPrefix("WWW-Authenticate:"))
+			{
+				break;
+			}
+
 			auto param_list = param.Split("=");
 			if(param_list.size() != 2)
 			{
-				// auth-param is invalid
-				return false;
+				// auth-param is invalid, but continue with the next parameter
+				continue;
 			}
 
 			ov::String key = param_list[0].Trim();
