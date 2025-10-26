@@ -39,7 +39,7 @@
 #define DEFAULT_MODULE_NAME "DEFAULT"
 
 
-std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::GetCandidates(bool hwaccels_enable, ov::String hwaccles_modules, std::shared_ptr<MediaTrack> track)
+std::shared_ptr<std::vector<std::shared_ptr<info::CodecCandidate>>> TranscodeEncoder::GetCandidates(bool hwaccels_enable, ov::String hwaccles_modules, std::shared_ptr<MediaTrack> track)
 {
 	logtd("Track(%d) Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s), Encode.Modules(%s)",
 		  track->GetId(),
@@ -49,12 +49,12 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 		  track->GetCodecModules().CStr());
 
 	ov::String configuration = ""; 
-	std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidate_modules = std::make_shared<std::vector<std::shared_ptr<CodecCandidate>>>();
+	std::shared_ptr<std::vector<std::shared_ptr<info::CodecCandidate>>> candidate_modules = std::make_shared<std::vector<std::shared_ptr<info::CodecCandidate>>>();
 
 	// If the track is not video, the default module is the only candidate.
 	if (cmn::IsVideoCodec(track->GetCodecId()) == false)
 	{
-		candidate_modules->push_back(std::make_shared<CodecCandidate>(track->GetCodecId(), cmn::MediaCodecModuleId::DEFAULT, 0));
+		candidate_modules->push_back(std::make_shared<info::CodecCandidate>(track->GetCodecId(), cmn::MediaCodecModuleId::DEFAULT, 0));
 		return candidate_modules;
 	}
 
@@ -129,13 +129,13 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 			{
 				if ((gpu_id == ALL_GPU_ID || gpu_id == device_id) && TranscodeGPU::GetInstance()->IsSupported(module_id, device_id) == true)
 				{
-					candidate_modules->push_back(std::make_shared<CodecCandidate>(track->GetCodecId(), module_id, device_id));
+					candidate_modules->push_back(std::make_shared<info::CodecCandidate>(track->GetCodecId(), module_id, device_id));
 				}
 			}
 		}
 		else
 		{
-			candidate_modules->push_back(std::make_shared<CodecCandidate>(track->GetCodecId(), module_id, 0));
+			candidate_modules->push_back(std::make_shared<info::CodecCandidate>(track->GetCodecId(), module_id, 0));
 		}
 	}
 
@@ -162,11 +162,11 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeEncoder::
 		{                                                  \
 			break;                                         \
 		}                                                  \
-		track->SetCodecModuleId(candidate->GetModuleId()); \
-		track->SetCodecDeviceId(candidate->GetDeviceId()); \
 		encoder->SetDeviceID(candidate->GetDeviceId());    \
 		encoder->SetEncoderId(encoder_id);                 \
 		encoder->SetCompleteHandler(complete_handler);     \
+		track->SetCodecModuleId(encoder->GetModuleID());   \
+		track->SetCodecDeviceId(encoder->GetDeviceID());   \
 		if (encoder->Configure(track) == true)             \
 		{                                                  \
 			goto done;                                     \
@@ -182,11 +182,11 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 	int32_t encoder_id,
 	std::shared_ptr<info::Stream> info,
 	std::shared_ptr<MediaTrack> track,
-	std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidates,
+	std::shared_ptr<std::vector<std::shared_ptr<info::CodecCandidate>>> candidates,
 	CompleteHandler complete_handler)
 {
 	std::shared_ptr<TranscodeEncoder> encoder = nullptr;
-	std::shared_ptr<CodecCandidate> cur_candidate = nullptr;
+	std::shared_ptr<info::CodecCandidate> cur_candidate = nullptr;
 
 	for (auto &candidate : *candidates)
 	{
@@ -306,7 +306,7 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 done:
 	if (encoder)
 	{
-		logti("The encoder has been created. track(#%d), codec(%s), module(%s:%d)",
+		logtd("The encoder has been created. track(#%d), codec(%s), module(%s:%d)",
 			track->GetId(),
 			cmn::GetCodecIdString(track->GetCodecId()),
 			cmn::GetCodecModuleIdString(track->GetCodecModuleId()),
@@ -579,7 +579,7 @@ void TranscodeEncoder::CodecThread()
 		_force_keyframe_by_time_interval = 0;
 		_accumulate_frame_duration		 = -1;
 
-		logti("Force keyframe by time interval is disabled.");
+		logtd("Force keyframe by time interval is disabled.");
 	}
 
 	[[maybe_unused]] 

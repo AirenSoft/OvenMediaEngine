@@ -397,7 +397,7 @@ bool TranscodeGPU::CheckSupportedXMA()
 		_device_bus_id_xma[dev_id] = ov::String::FormatString("0000:00:%02x.0", 0x80 + dev_id);
 		_supported_devices.push_back(std::make_pair(cmn::MediaCodecModuleId::XMA, dev_id));
 
-		logti("XMA: deviceId(%d), xclbin(%s)", xclbin_nparam[dev_id].device_id, xclbin_nparam[dev_id].xclbin_name);
+		logti("XMA: deviceId(%d), Name(%s), BusId(%s), xclbin(%s)", xclbin_nparam[dev_id].device_id, _device_display_name_xma[dev_id].CStr(), _device_bus_id_xma[dev_id].CStr(), xclbin_nparam[dev_id].xclbin_name);
 	}
 
 	// Initialize all devices

@@ -9,6 +9,7 @@
 #pragma once
 
 #include "base/info/stream.h"
+#include "base/info/codec.h"
 #include "codec/codec_base.h"
 
 class TranscodeDecoder : public TranscodeBase<MediaPacket, MediaFrame>
@@ -16,8 +17,8 @@ class TranscodeDecoder : public TranscodeBase<MediaPacket, MediaFrame>
 public:
 	typedef std::function<void(TranscodeResult, int32_t, std::shared_ptr<MediaFrame>)> CompleteHandler;
 
-	static std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> GetCandidates(bool hwaccels_enable, ov::String hwaccles_moduels, std::shared_ptr<MediaTrack> track);
-	static std::shared_ptr<TranscodeDecoder> Create(int32_t decoder_id, std::shared_ptr<info::Stream> info, std::shared_ptr<MediaTrack> track, std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidates, CompleteHandler complete_handler);
+	static std::shared_ptr<std::vector<std::shared_ptr<info::CodecCandidate>>> GetCandidates(bool hwaccels_enable, ov::String hwaccles_moduels, std::shared_ptr<MediaTrack> track);
+	static std::shared_ptr<TranscodeDecoder> Create(int32_t decoder_id, std::shared_ptr<info::Stream> info, std::shared_ptr<MediaTrack> track, std::shared_ptr<std::vector<std::shared_ptr<info::CodecCandidate>>> candidates, CompleteHandler complete_handler);
 
 	TranscodeDecoder(info::Stream stream_info);
 	~TranscodeDecoder() override;

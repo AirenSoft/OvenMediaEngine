@@ -23,43 +23,43 @@ namespace tc
 		// --------------------------------------------------------------------------
 		Register(info::CodecModule("FFmpeg Video Codecs", cmn::MediaType::Video, cmn::MediaCodecModuleId::DEFAULT, 0, "-",
 						   {cmn::MediaCodecId::H264, cmn::MediaCodecId::H265, cmn::MediaCodecId::Vp8},
-						   true, false, false));
+						   true, true, false, false));
 
 		Register(info::CodecModule("Open Source H.264 Codec", cmn::MediaType::Video, cmn::MediaCodecModuleId::OPENH264, 0, "-",
 						   {cmn::MediaCodecId::H264},
-						   false, true, false));
+						   true, false, true, false));
 
 #ifdef THIRDP_LIBX264_ENABLED
 		Register(info::CodecModule("x264 H.264 Codec", cmn::MediaType::Video, cmn::MediaCodecModuleId::X264, 0, "-",
 						   {cmn::MediaCodecId::H264},
-						   false, true, false));
+						   false, false, true, false));
 #endif
 
 		Register(info::CodecModule("WebM VP8/VP9 Codec SDK", cmn::MediaType::Video, cmn::MediaCodecModuleId::LIBVPX, 0, "-",
 						   {cmn::MediaCodecId::Vp8},
-						   false, true, false));
+						   true, false, true, false));
 
 		// --------------------------------------------------------------------------
 		// Audio Codecs
 		// --------------------------------------------------------------------------
 		Register(info::CodecModule("FFmpeg Audio Codecs", cmn::MediaType::Audio, cmn::MediaCodecModuleId::DEFAULT, 0, "-",
 						   {cmn::MediaCodecId::Aac, cmn::MediaCodecId::Opus},
-						   true, false, false));
+						   true, true, false, false));
 
 		Register(info::CodecModule("Fraunhofer FDK AAC", cmn::MediaType::Audio, cmn::MediaCodecModuleId::FDKAAC, 0, "-",
 						   {cmn::MediaCodecId::Aac},
-						   false, true, false));
+						   true, false, true, false));
 
 		Register(info::CodecModule("Opus Interactive Audio Codec", cmn::MediaType::Audio, cmn::MediaCodecModuleId::LIBOPUS, 0, "-",
 						   {cmn::MediaCodecId::Opus},
-						   false, true, false));
+						   true, false, true, false));
 
 		// --------------------------------------------------------------------------
 		// Image Codecs
 		// --------------------------------------------------------------------------
 		Register(info::CodecModule("FFmpeg Image Codec", cmn::MediaType::Video, cmn::MediaCodecModuleId::DEFAULT, 0, "-",
 						   {cmn::MediaCodecId::Jpeg, cmn::MediaCodecId::Png, cmn::MediaCodecId::Webp},
-						   false, true, false));
+						   true, false, true, false));
 
 		// --------------------------------------------------------------------------
 		// Video Codecs - Hardware Accelerated
@@ -74,11 +74,11 @@ namespace tc
 
 				Register(info::CodecModule(device_name, cmn::MediaType::Video, module_id, i, bus_id,
 								   {cmn::MediaCodecId::H264, cmn::MediaCodecId::H265},
-								   true, true, true));
+								   false, true, true, true));
 
 				Register(info::CodecModule(device_name, cmn::MediaType::Audio, module_id, i, bus_id,
 								   {cmn::MediaCodecId::Whisper},
-								   false, true, true));
+								   false, false, true, true));
 			}
 		}
 #endif
@@ -93,7 +93,7 @@ namespace tc
 
 				Register(info::CodecModule(device_name, cmn::MediaType::Video, module_id, i, bus_id,
 								   {cmn::MediaCodecId::H264, cmn::MediaCodecId::H265},
-								   true, true, true));
+								   false, true, true, true));
 			}
 		}
 #endif
