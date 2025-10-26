@@ -560,6 +560,10 @@ size_t TranscoderStream::CreateOutputStreams()
 		{
 			logte("%s Could not create output stream. name:%s", _log_prefix.CStr(), profile.GetName().CStr());
 
+			// [Alert]
+			auto stream_metric = StreamMetrics(*_input_stream);
+			MonitorInstance->GetAlert()->SendStreamMessage(mon::alrt::Message::Code::INGRESS_OUTPUT_STREAM_CREATION_FAILED_BY_OUTPUT_PROFILE, stream_metric, profile);
+
 			continue;
 		}
 
@@ -630,6 +634,10 @@ size_t TranscoderStream::CreateOutputStreams()
 			if (output_stream == nullptr)
 			{
 				logte("%s Could not create output stream for transcription. name:%s", _log_prefix.CStr(), cfg_new_output_profile.GetName().CStr());
+
+				// [Alert]
+				auto stream_metric = StreamMetrics(*_input_stream);
+				MonitorInstance->GetAlert()->SendStreamMessage(mon::alrt::Message::Code::INGRESS_OUTPUT_STREAM_CREATION_FAILED_BY_OUTPUT_PROFILE, stream_metric, cfg_new_output_profile);
 			}
 			else
 			{
@@ -1084,6 +1092,14 @@ bool TranscoderStream::CreateDecoders()
 				  _log_prefix.CStr(), input_track->GetId(), decoder_id, cmn::GetCodecIdString(input_track->GetCodecId()),
 				  cmn::GetCodecModuleIdString(input_track->GetCodecModuleId()), input_track->GetCodecDeviceId());
 
+			// [Alert]
+			auto stream_metric = StreamMetrics(*_input_stream);
+			std::vector<std::shared_ptr<info::CodecModule>> codec_modules;
+			auto codec_module = tc::TranscodeModules::GetInstance()->GetModule(false, input_track->GetCodecId(), input_track->GetCodecModuleId(), input_track->GetCodecDeviceId());
+			if (codec_module != nullptr)
+				codec_modules.push_back(codec_module);
+			MonitorInstance->GetAlert()->SendStreamMessage(mon::alrt::Message::Code::INGRESS_OUTPUT_STREAM_CREATION_FAILED_BY_DECODER, stream_metric, codec_modules);
+
 			return false;
 		}
 
@@ -1195,6 +1211,14 @@ bool TranscoderStream::CreateEncoders(std::shared_ptr<MediaFrame> buffer)
 			{
 				logte("%s Could not create encoder. Encoder(%d) <Codec:%s,Module:%s:%d>", _log_prefix.CStr(),
 					  encoder_id, cmn::GetCodecIdString(output_track->GetCodecId()), cmn::GetCodecModuleIdString(output_track->GetCodecModuleId()), output_track->GetCodecDeviceId());
+
+				// [Alert]
+				auto stream_metric = StreamMetrics(*_input_stream);
+				std::vector<std::shared_ptr<info::CodecModule>> codec_modules;
+				auto codec_module = tc::TranscodeModules::GetInstance()->GetModule(true, output_track->GetCodecId(), output_track->GetCodecModuleId(), output_track->GetCodecDeviceId());
+				if (codec_module != nullptr)
+					codec_modules.push_back(codec_module);
+				MonitorInstance->GetAlert()->SendStreamMessage(mon::alrt::Message::Code::INGRESS_OUTPUT_STREAM_CREATION_FAILED_BY_ENCODER, stream_metric, codec_modules);
 
 				return false;
 			}
@@ -1359,6 +1383,17 @@ bool TranscoderStream::CreateFilters(std::shared_ptr<MediaFrame> buffer)
 			logte("%s Failed to create filter. Filter(%d), Decoder(%d) <Codec:%s, Module:%s:%d>, Encoder(%d) <Codec:%s, Module:%s:%d>", _log_prefix.CStr(), filter_id,
 				  decoder_id, cmn::GetCodecIdString(output_track->GetCodecId()), cmn::GetCodecModuleIdString(output_track->GetCodecModuleId()), output_track->GetCodecDeviceId(),
 				  encoder_id, cmn::GetCodecIdString(output_track->GetCodecId()), cmn::GetCodecModuleIdString(output_track->GetCodecModuleId()), output_track->GetCodecDeviceId());
+
+			// [Alert]
+			 auto stream_metric = StreamMetrics(*_input_stream);
+			std::vector<std::shared_ptr<info::CodecModule>> codec_modules;
+			auto decoder_module = tc::TranscodeModules::GetInstance()->GetModule(false, input_track->GetCodecId(), input_track->GetCodecModuleId(), input_track->GetCodecDeviceId());
+			auto encoder_module = tc::TranscodeModules::GetInstance()->GetModule(true, output_track->GetCodecId(), output_track->GetCodecModuleId(), output_track->GetCodecDeviceId());
+			if (decoder_module != nullptr)
+				codec_modules.push_back(decoder_module);
+			if (encoder_module != nullptr)
+				codec_modules.push_back(encoder_module);
+			MonitorInstance->GetAlert()->SendStreamMessage(mon::alrt::Message::Code::INGRESS_OUTPUT_STREAM_CREATION_FAILED_BY_FILTER, stream_metric, codec_modules);
 
 			return false;
 		}

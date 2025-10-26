@@ -52,6 +52,7 @@ LOCAL_STATIC_LIBRARIES := \
 	config \
 	ovlibrary \
 	monitoring \
+	json_serdes \
 	jsoncpp \
 	dump \
 	srt \

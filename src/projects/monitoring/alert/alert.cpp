@@ -178,6 +178,8 @@ namespace mon
 
 				auto code			   = stream_event->_code;
 				auto stream_metric	   = stream_event->_metric;
+				auto profile_metric	   = stream_event->_profile;
+				auto codec_modules	   = stream_event->_codec_modules;
 
 				ov::String description = Message::DescriptionFromMessageCode(code);
 				auto message		   = Message::CreateMessage(code, description);
@@ -189,7 +191,18 @@ namespace mon
 
 				if (IsAlertNeeded(messages_key, message_list))
 				{
-					SendNotification(type, message_list, stream_metric->GetUri(), stream_metric);
+					NotificationData data(type, message_list, stream_metric->GetUri(), stream_metric);
+					
+					if(profile_metric != nullptr)
+					{
+						data.SetOutputProfile(profile_metric);
+					}
+					if(!codec_modules.empty())
+					{
+						data.SetCodecModules(codec_modules);
+					}
+
+					SendNotification(data);
 				}
 			}
 		}
@@ -204,6 +217,44 @@ namespace mon
 
 				message_list.push_back(message);
 			}
+		}
+
+		void Alert::SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric, const cfg::vhost::app::oprf::OutputProfile &profile)
+		{
+			if (_stop_thread_flag)
+			{
+				return;
+			}
+
+			auto rules = _rules_updater->GetRules();
+
+			if (!VerifyStreamEventRule(*rules, code))
+			{
+				return;
+			}
+
+			auto profile_ptr = std::make_shared<cfg::vhost::app::oprf::OutputProfile>(profile);
+
+			_stream_event_queue.Enqueue(std::make_shared<StreamEvent>(code, stream_metric, profile_ptr));
+			_queue_event.Notify();
+		}
+
+		void Alert::SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric, const std::vector<std::shared_ptr<info::CodecModule>> &codec_modules)
+		{
+			if (_stop_thread_flag)
+			{
+				return;
+			}
+
+			auto rules = _rules_updater->GetRules();
+
+			if (!VerifyStreamEventRule(*rules, code))
+			{
+				return;
+			}
+
+			_stream_event_queue.Enqueue(std::make_shared<StreamEvent>(code, stream_metric, codec_modules));
+			_queue_event.Notify();
 		}
 
 		void Alert::SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric)

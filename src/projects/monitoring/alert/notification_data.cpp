@@ -91,6 +91,25 @@ namespace mon
 				jv_root["internalQueues"] = jv_queues;
 			}
 
+			if (_output_profile != nullptr)
+			{
+				Json::Value jv_output_profile = ::serdes::JsonFromOutputProfile(*_output_profile);
+				jv_root["outputProfile"] = jv_output_profile;
+			}
+
+			if (_codec_modules.size() > 0)
+			{
+				Json::Value jv_codec_modules;
+
+				for (const auto &codec_module : _codec_modules)
+				{
+					Json::Value jv_codec_module = ::serdes::JsonFromCodecModule(codec_module);
+					jv_codec_modules.append(jv_codec_module);
+				}
+
+				jv_root["codecModules"] = jv_codec_modules;
+			}
+
 			return ov::Converter::ToString(jv_root);
 		}
 	}  // namespace alrt
