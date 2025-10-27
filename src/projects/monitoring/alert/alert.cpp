@@ -171,32 +171,59 @@ namespace mon
 				_queue_event.Wait();
 
 				auto stream_event = PopStreamEvent();
-				if (stream_event == nullptr || stream_event->_metric == nullptr)
+				if (stream_event == nullptr)
 				{
 					continue;
 				}
 
-				auto code			   = stream_event->_code;
-				auto stream_metric	   = stream_event->_metric;
-				auto output_profile	   = stream_event->_output_profile;
-				auto codec_modules	   = stream_event->_codec_modules;
+				auto code				= stream_event->_code;
+				auto stream_metric		= stream_event->_metric;
+				auto parent_source_info	= stream_event->_parent_source_info;
+				auto output_profile		= stream_event->_output_profile;
+				auto codec_modules		= stream_event->_codec_modules;
 
-				ov::String description = Message::DescriptionFromMessageCode(code);
-				auto message		   = Message::CreateMessage(code, description);
+				ov::String description	= Message::DescriptionFromMessageCode(code);
+				auto message			= Message::CreateMessage(code, description);
 
 				std::vector<std::shared_ptr<Message>> message_list(1, message);
 
-				auto messages_key = stream_metric->GetUri();
-				auto type		  = NotificationData::TypeFromMessageCode(code);
+				ov::String messages_key;
+				if (stream_metric)
+				{
+					messages_key = stream_metric->GetUri();
+				}
+				else if (parent_source_info)
+				{
+					messages_key = parent_source_info->GetUri();
+				}
+				else
+				{
+					logtw("Invalid stream event with null stream metric and parent source info. code: %s", Message::StringFromMessageCode(code).CStr());
+					continue;
+				}
+
+				auto type = NotificationData::TypeFromMessageCode(code);
 
 				if (IsAlertNeeded(messages_key, message_list))
 				{
-					NotificationData data(type, message_list, stream_metric->GetUri(), stream_metric);
-					
+					NotificationData data(type, message_list);
+
+					if (stream_metric != nullptr)
+					{
+						data.SetStreamMetric(stream_metric);
+						data.SetSourceUri(stream_metric->GetUri());
+					}
+
+					if(parent_source_info != nullptr)
+					{
+						data.SetParentSourceInfo(parent_source_info);
+					}
+
 					if(output_profile != nullptr)
 					{
 						data.SetOutputProfile(output_profile);
 					}
+
 					if(!codec_modules.empty())
 					{
 						data.SetCodecModules(codec_modules);
@@ -219,7 +246,7 @@ namespace mon
 			}
 		}
 
-		void Alert::SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric, const std::shared_ptr<cfg::vhost::app::oprf::OutputProfile> &output_profile, const std::vector<std::shared_ptr<info::CodecModule>> &codec_modules)
+		void Alert::SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric, const std::shared_ptr<StreamMetrics> &parent_source_info, const std::shared_ptr<cfg::vhost::app::oprf::OutputProfile> &output_profile, const std::vector<std::shared_ptr<info::CodecModule>> &codec_modules)
 		{
 			if (_stop_thread_flag)
 			{
@@ -233,7 +260,7 @@ namespace mon
 				return;
 			}
 
-			_stream_event_queue.Enqueue(std::make_shared<StreamEvent>(code, stream_metric, output_profile, codec_modules));
+			_stream_event_queue.Enqueue(std::make_shared<StreamEvent>(code, stream_metric, parent_source_info, output_profile, codec_modules));
 			_queue_event.Notify();
 		}
 

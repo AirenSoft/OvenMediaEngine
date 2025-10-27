@@ -29,6 +29,12 @@ namespace mon
 			_queue_metric_list = queue_metric_list;
 		}
 
+		NotificationData::NotificationData(const Type &type, const std::vector<std::shared_ptr<Message>> &message_list)
+		{
+			_type		   = type;
+			_message_list  = message_list;
+		}
+
 		ov::String NotificationData::ToJsonString() const
 		{
 			// Make request message
@@ -89,6 +95,17 @@ namespace mon
 				}
 
 				jv_root["internalQueues"] = jv_queues;
+			}
+
+			if( _parent_source_info != nullptr)
+			{
+				Json::Value jv_parent_source_info = ::serdes::JsonFromStream(_parent_source_info);
+				jv_root["parentSourceInfo"]	   = jv_parent_source_info;
+
+				if(!_parent_source_info->GetUri().IsEmpty())
+				{
+					jv_root["parentSourceUri"] = _parent_source_info->GetUri().CStr();
+				}
 			}
 
 			if (_output_profile != nullptr)

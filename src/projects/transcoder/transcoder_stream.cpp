@@ -18,10 +18,10 @@
 #include "transcoder_private.h"
 #include "transcoder_modules.h"
 
-#define MAX_QUEUE_SIZE 100
-#define FILLER_ENABLED true
-#define MAX_FILLER_FRAMES 100
 #define UNUSED_VARIABLE(var) (void)var;
+#define MAX_FILLER_FRAMES 100
+#define FILLER_ENABLED true
+#define NOTIFICATION_ENABLED true
 
 // max initial media packet buffer size, for OOM protection
 #define MAX_INITIAL_MEDIA_PACKET_BUFFER_SIZE 10000
@@ -560,15 +560,18 @@ size_t TranscoderStream::CreateOutputStreams()
 		{
 			logte("%s Could not create output stream. name:%s", _log_prefix.CStr(), profile.GetName().CStr());
 
-			// [Alert]
-			auto stream_metric	= StreamMetrics(*_input_stream);
-			auto output_profile = std::make_shared<cfg::vhost::app::oprf::OutputProfile>(profile);
+#if NOTIFICATION_ENABLED
 			std::vector<std::shared_ptr<info::CodecModule>> codec_modules;
-			MonitorInstance->GetAlert()->SendStreamMessage(mon::alrt::Message::Code::INGRESS_OUTPUT_STREAM_CREATION_FAILED_BY_OUTPUT_PROFILE,
-														   stream_metric,
-														   output_profile,
-														   codec_modules);
+			auto parent_stream_info = StreamMetrics(*_input_stream);
+			auto output_profile		= std::make_shared<cfg::vhost::app::oprf::OutputProfile>(profile);
 
+			MonitorInstance->GetAlert()->SendStreamMessage(
+				mon::alrt::Message::Code::EGRESS_STREAM_CREATION_FAILED_BY_OUTPUT_PROFILE,
+				nullptr,
+				parent_stream_info,
+				output_profile,
+				codec_modules);
+#endif
 			continue;
 		}
 
@@ -640,14 +643,18 @@ size_t TranscoderStream::CreateOutputStreams()
 			{
 				logte("%s Could not create output stream for transcription. name:%s", _log_prefix.CStr(), cfg_new_output_profile.GetName().CStr());
 
-				// [Alert]
-				auto stream_metric	= StreamMetrics(*_input_stream);
-				auto output_profile = std::make_shared<cfg::vhost::app::oprf::OutputProfile>(cfg_new_output_profile);
+#if NOTIFICATION_ENABLED
 				std::vector<std::shared_ptr<info::CodecModule>> codec_modules;
-				MonitorInstance->GetAlert()->SendStreamMessage(mon::alrt::Message::Code::INGRESS_OUTPUT_STREAM_CREATION_FAILED_BY_OUTPUT_PROFILE,
-															   stream_metric,
-															   output_profile,
-															   codec_modules);
+				auto parent_stream_info = StreamMetrics(*_input_stream);
+				auto output_profile		= std::make_shared<cfg::vhost::app::oprf::OutputProfile>(cfg_new_output_profile);
+
+				MonitorInstance->GetAlert()->SendStreamMessage(
+					mon::alrt::Message::Code::EGRESS_STREAM_CREATION_FAILED_BY_OUTPUT_PROFILE,
+					nullptr,
+					parent_stream_info,
+					output_profile,
+					codec_modules);
+#endif
 			}
 			else
 			{
@@ -677,6 +684,7 @@ std::shared_ptr<info::Stream> TranscoderStream::CreateOutputStream(const cfg::vh
 	// It helps modules to recognize origin stream from provider
 	output_stream->LinkInputStream(_input_stream);
 	output_stream->SetMediaSource(_input_stream->GetUUID());
+	output_stream->SetOutputProfileName(cfg_output_profile.GetName());
 
 	// Create a output stream name.
 	auto name = cfg_output_profile.GetOutputStreamName();
@@ -1102,16 +1110,22 @@ bool TranscoderStream::CreateDecoders()
 				  _log_prefix.CStr(), input_track->GetId(), decoder_id, cmn::GetCodecIdString(input_track->GetCodecId()),
 				  cmn::GetCodecModuleIdString(input_track->GetCodecModuleId()), input_track->GetCodecDeviceId());
 
-			// [Alert]
-			auto stream_metric = StreamMetrics(*_input_stream);
+#if NOTIFICATION_ENABLED
 			std::vector<std::shared_ptr<info::CodecModule>> codec_modules;
-			auto codec_module = tc::TranscodeModules::GetInstance()->GetModule(false, input_track->GetCodecId(), input_track->GetCodecModuleId(), input_track->GetCodecDeviceId());
+			auto parent_stream_info = StreamMetrics(*_input_stream);
+			auto codec_module		= tc::TranscodeModules::GetInstance()->GetModule(false, input_track->GetCodecId(), input_track->GetCodecModuleId(), input_track->GetCodecDeviceId());
 			if (codec_module != nullptr)
+			{
 				codec_modules.push_back(codec_module);
-			MonitorInstance->GetAlert()->SendStreamMessage(mon::alrt::Message::Code::INGRESS_OUTPUT_STREAM_CREATION_FAILED_BY_DECODER,
-														   stream_metric,
-														   nullptr,
-														   codec_modules);
+			}
+
+			MonitorInstance->GetAlert()->SendStreamMessage(
+				mon::alrt::Message::Code::EGRESS_STREAM_CREATION_FAILED_BY_DECODER,
+				nullptr,
+				parent_stream_info,
+				nullptr,
+				codec_modules);
+#endif
 
 			return false;
 		}
@@ -1225,18 +1239,26 @@ bool TranscoderStream::CreateEncoders(std::shared_ptr<MediaFrame> buffer)
 				logte("%s Could not create encoder. Encoder(%d) <Codec:%s,Module:%s:%d>", _log_prefix.CStr(),
 					  encoder_id, cmn::GetCodecIdString(output_track->GetCodecId()), cmn::GetCodecModuleIdString(output_track->GetCodecModuleId()), output_track->GetCodecDeviceId());
 
-				// [Alert]
-				auto stream_metric = StreamMetrics(*_input_stream);
+#if NOTIFICATION_ENABLED
 				std::vector<std::shared_ptr<info::CodecModule>> codec_modules;
-				auto codec_module = tc::TranscodeModules::GetInstance()->GetModule(true, output_track->GetCodecId(), output_track->GetCodecModuleId(), output_track->GetCodecDeviceId());
+				auto parent_stream_info = StreamMetrics(*_input_stream);
+				auto stream_metric		= StreamMetrics(*output_stream);
+
+				auto codec_module		= tc::TranscodeModules::GetInstance()->GetModule(true, output_track->GetCodecId(), output_track->GetCodecModuleId(), output_track->GetCodecDeviceId());
 				if (codec_module != nullptr)
+				{
 					codec_modules.push_back(codec_module);
+				}
 				auto output_profile_ptr = GetOutputProfileByName(output_stream->GetOutputProfileName());
 				auto output_profile		= (output_profile_ptr) ? std::make_shared<cfg::vhost::app::oprf::OutputProfile>(*output_profile_ptr) : nullptr;
-				MonitorInstance->GetAlert()->SendStreamMessage(mon::alrt::Message::Code::INGRESS_OUTPUT_STREAM_CREATION_FAILED_BY_ENCODER,
-															   stream_metric,
-															   output_profile,
-															   codec_modules);
+
+				MonitorInstance->GetAlert()->SendStreamMessage(
+					mon::alrt::Message::Code::EGRESS_STREAM_CREATION_FAILED_BY_ENCODER,
+					stream_metric,
+					parent_stream_info,
+					output_profile,
+					codec_modules);
+#endif
 				return false;
 			}
 
@@ -1401,21 +1423,30 @@ bool TranscoderStream::CreateFilters(std::shared_ptr<MediaFrame> buffer)
 				  decoder_id, cmn::GetCodecIdString(output_track->GetCodecId()), cmn::GetCodecModuleIdString(output_track->GetCodecModuleId()), output_track->GetCodecDeviceId(),
 				  encoder_id, cmn::GetCodecIdString(output_track->GetCodecId()), cmn::GetCodecModuleIdString(output_track->GetCodecModuleId()), output_track->GetCodecDeviceId());
 
-			// [Alert]
-			auto stream_metric = StreamMetrics(*_input_stream);
+#if NOTIFICATION_ENABLED
 			std::vector<std::shared_ptr<info::CodecModule>> codec_modules;
-			auto decoder_module = tc::TranscodeModules::GetInstance()->GetModule(false, input_track->GetCodecId(), input_track->GetCodecModuleId(), input_track->GetCodecDeviceId());
-			auto encoder_module = tc::TranscodeModules::GetInstance()->GetModule(true, output_track->GetCodecId(), output_track->GetCodecModuleId(), output_track->GetCodecDeviceId());
+			auto parent_stream_info = StreamMetrics(*_input_stream);
+			auto stream_metric		= StreamMetrics(*GetOutputStreamByTrackId(output_track->GetId()));
+			auto decoder_module		= tc::TranscodeModules::GetInstance()->GetModule(false, input_track->GetCodecId(), input_track->GetCodecModuleId(), input_track->GetCodecDeviceId());
 			if (decoder_module != nullptr)
+			{
 				codec_modules.push_back(decoder_module);
+			}
+			auto encoder_module = tc::TranscodeModules::GetInstance()->GetModule(true, output_track->GetCodecId(), output_track->GetCodecModuleId(), output_track->GetCodecDeviceId());
 			if (encoder_module != nullptr)
+			{
 				codec_modules.push_back(encoder_module);
+			}
 			auto output_profile_ptr = GetOutputProfileByName(GetOutputStreamByTrackId(output_track->GetId())->GetOutputProfileName());
 			auto output_profile		= (output_profile_ptr) ? std::make_shared<cfg::vhost::app::oprf::OutputProfile>(*output_profile_ptr) : nullptr;
-			MonitorInstance->GetAlert()->SendStreamMessage(mon::alrt::Message::Code::INGRESS_OUTPUT_STREAM_CREATION_FAILED_BY_FILTER,
-														   stream_metric,
-														   output_profile,
-														   codec_modules);
+
+			MonitorInstance->GetAlert()->SendStreamMessage(
+				mon::alrt::Message::Code::EGRESS_STREAM_CREATION_FAILED_BY_FILTER,
+				stream_metric,
+				parent_stream_info,
+				output_profile,
+				codec_modules);
+#endif
 			return false;
 		}
 		else {
