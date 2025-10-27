@@ -374,7 +374,11 @@ void TranscodeDecoder::Complete(TranscodeResult result, std::shared_ptr<MediaFra
 	// Invoke callback function when encoding/decoding is completed.
 	if (_complete_handler)
 	{
-		frame->SetTrackId(_decoder_id);
+		if (frame != nullptr)
+		{
+			frame->SetTrackId(_decoder_id);
+		}
+		
 		_complete_handler(result, _decoder_id, std::move(frame));
 	}
 }
