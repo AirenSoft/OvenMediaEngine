@@ -178,7 +178,7 @@ namespace mon
 
 				auto code			   = stream_event->_code;
 				auto stream_metric	   = stream_event->_metric;
-				auto profile_metric	   = stream_event->_profile;
+				auto output_profile	   = stream_event->_output_profile;
 				auto codec_modules	   = stream_event->_codec_modules;
 
 				ov::String description = Message::DescriptionFromMessageCode(code);
@@ -193,9 +193,9 @@ namespace mon
 				{
 					NotificationData data(type, message_list, stream_metric->GetUri(), stream_metric);
 					
-					if(profile_metric != nullptr)
+					if(output_profile != nullptr)
 					{
-						data.SetOutputProfile(profile_metric);
+						data.SetOutputProfile(output_profile);
 					}
 					if(!codec_modules.empty())
 					{
@@ -219,7 +219,7 @@ namespace mon
 			}
 		}
 
-		void Alert::SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric, const cfg::vhost::app::oprf::OutputProfile &profile)
+		void Alert::SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric, const std::shared_ptr<cfg::vhost::app::oprf::OutputProfile> &output_profile, const std::vector<std::shared_ptr<info::CodecModule>> &codec_modules)
 		{
 			if (_stop_thread_flag)
 			{
@@ -233,27 +233,7 @@ namespace mon
 				return;
 			}
 
-			auto profile_ptr = std::make_shared<cfg::vhost::app::oprf::OutputProfile>(profile);
-
-			_stream_event_queue.Enqueue(std::make_shared<StreamEvent>(code, stream_metric, profile_ptr));
-			_queue_event.Notify();
-		}
-
-		void Alert::SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric, const std::vector<std::shared_ptr<info::CodecModule>> &codec_modules)
-		{
-			if (_stop_thread_flag)
-			{
-				return;
-			}
-
-			auto rules = _rules_updater->GetRules();
-
-			if (!VerifyStreamEventRule(*rules, code))
-			{
-				return;
-			}
-
-			_stream_event_queue.Enqueue(std::make_shared<StreamEvent>(code, stream_metric, codec_modules));
+			_stream_event_queue.Enqueue(std::make_shared<StreamEvent>(code, stream_metric, output_profile, codec_modules));
 			_queue_event.Notify();
 		}
 
@@ -545,8 +525,12 @@ namespace mon
 			}
 
 			// Notification
-			auto notification_server_url						= ov::Url::Parse(alert.GetUrl());
+			auto notification_server_url = ov::Url::Parse(alert.GetUrl());
+#ifdef OME_ENTERPRISE
+			std::shared_ptr<Notification> notification_response = Notification::Query(notification_server_url, alert.GetTimeoutMsec(), alert.GetSecretKey(), alert.GetHashAlgorithm(), message_body);
+#else	// OME_ENTERPRISE
 			std::shared_ptr<Notification> notification_response = Notification::Query(notification_server_url, alert.GetTimeoutMsec(), alert.GetSecretKey(), message_body);
+#endif	// OME_ENTERPRISE
 			if (notification_response == nullptr)
 			{
 				// Probably this doesn't happen

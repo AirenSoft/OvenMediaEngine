@@ -162,6 +162,24 @@ private:
 	{
 		return _output_profiles_cfg;
 	}
+
+	const cfg::vhost::app::oprf::OutputProfile *GetOutputProfileByName(const ov::String &name)
+	{
+		if(GetOutputProfilesCfg() == nullptr)
+		{
+			return nullptr;
+		}
+		
+		for (const auto &profile : GetOutputProfilesCfg()->GetOutputProfileList())
+		{
+			if (profile.GetName() == name)
+			{
+				return &profile;
+			}
+		}
+		return nullptr;
+	}
+
 	const cfg::vhost::app::oprf::OutputProfiles *_output_profiles_cfg;
 	// Output profile set from webhook
 	cfg::vhost::app::oprf::OutputProfiles _remote_output_profiles;
