@@ -31,13 +31,13 @@
 #define ALL_GPU_ID -1
 #define DEFAULT_MODULE_NAME "DEFAULT"
 
-std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeDecoder::GetCandidates(bool hwaccels_enable, ov::String hwaccles_modules, std::shared_ptr<MediaTrack> track)
+std::shared_ptr<std::vector<std::shared_ptr<info::CodecCandidate>>> TranscodeDecoder::GetCandidates(bool hwaccels_enable, ov::String hwaccles_modules, std::shared_ptr<MediaTrack> track)
 {
 	logtd("Codec(%s), HWAccels.Enable(%s), HWAccels.Modules(%s)",
 		  cmn::GetCodecIdString(track->GetCodecId()), hwaccels_enable ? "true" : "false", hwaccles_modules.CStr());
 
 	ov::String configuration = "";
-	std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidate_modules = std::make_shared<std::vector<std::shared_ptr<CodecCandidate>>>();
+	std::shared_ptr<std::vector<std::shared_ptr<info::CodecCandidate>>> candidate_modules = std::make_shared<std::vector<std::shared_ptr<info::CodecCandidate>>>();
 
 	if (hwaccels_enable == true)
 	{
@@ -51,7 +51,7 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeDecoder::
 	// If the track is not video, the default module is the only candidate.
 	if (cmn::IsVideoCodec(track->GetCodecId()) == false)
 	{
-		candidate_modules->push_back(std::make_shared<CodecCandidate>(track->GetCodecId(), cmn::MediaCodecModuleId::DEFAULT, 0));
+		candidate_modules->push_back(std::make_shared<info::CodecCandidate>(track->GetCodecId(), cmn::MediaCodecModuleId::DEFAULT, 0));
 		return candidate_modules;
 	}
 
@@ -106,7 +106,7 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeDecoder::
 			{
 				if ((gpu_id == ALL_GPU_ID || gpu_id == device_id) && TranscodeGPU::GetInstance()->IsSupported(module_id, device_id) == true)
 				{
-					candidate_modules->push_back(std::make_shared<CodecCandidate>(track->GetCodecId(), module_id, device_id));
+					candidate_modules->push_back(std::make_shared<info::CodecCandidate>(track->GetCodecId(), module_id, device_id));
 				}
 			}
 		}
@@ -114,7 +114,7 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeDecoder::
 		//
 		if (module_id == cmn::MediaCodecModuleId::DEFAULT)
 		{
-			candidate_modules->push_back(std::make_shared<CodecCandidate>(track->GetCodecId(), module_id, 0));
+			candidate_modules->push_back(std::make_shared<info::CodecCandidate>(track->GetCodecId(), module_id, 0));
 		}
 	}
 
@@ -140,11 +140,11 @@ std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> TranscodeDecoder::
 		{                                                  \
 			break;                                         \
 		}                                                  \
-		track->SetCodecModuleId(candidate->GetModuleId()); \
-		track->SetCodecDeviceId(candidate->GetDeviceId()); \
 		decoder->SetDeviceID(candidate->GetDeviceId());    \
 		decoder->SetDecoderId(decoder_id);                 \
 		decoder->SetCompleteHandler(complete_handler);     \
+		track->SetCodecModuleId(decoder->GetModuleID());   \
+		track->SetCodecDeviceId(decoder->GetDeviceID());   \
 		if (decoder->Configure(track) == true)             \
 		{                                                  \
 			goto done;                                     \
@@ -160,11 +160,11 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(
 	int32_t decoder_id,
 	std::shared_ptr<info::Stream> info,
 	std::shared_ptr<MediaTrack> track,
-	std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidates,
+	std::shared_ptr<std::vector<std::shared_ptr<info::CodecCandidate>>> candidates,
 	CompleteHandler complete_handler)
 {
 	std::shared_ptr<TranscodeDecoder> decoder = nullptr;
-	std::shared_ptr<CodecCandidate> cur_candidate = nullptr;
+	std::shared_ptr<info::CodecCandidate> cur_candidate = nullptr;
 
 	for (auto &candidate : *candidates)
 	{
@@ -374,7 +374,11 @@ void TranscodeDecoder::Complete(TranscodeResult result, std::shared_ptr<MediaFra
 	// Invoke callback function when encoding/decoding is completed.
 	if (_complete_handler)
 	{
-		frame->SetTrackId(_decoder_id);
+		if (frame != nullptr)
+		{
+			frame->SetTrackId(_decoder_id);
+		}
+		
 		_complete_handler(result, _decoder_id, std::move(frame));
 	}
 }

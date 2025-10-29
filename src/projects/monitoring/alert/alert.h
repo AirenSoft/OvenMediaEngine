@@ -28,6 +28,7 @@ namespace mon
 			bool Start(const std::shared_ptr<const cfg::Server> &server_config);
 			bool Stop();
 
+			void SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric, const std::shared_ptr<StreamMetrics> &parent_source_info,  const std::shared_ptr<cfg::vhost::app::oprf::OutputProfile> &output_profile, const std::vector<std::shared_ptr<info::CodecModule>> &codec_modules);
 			void SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric);
 
 		private:
@@ -60,6 +61,15 @@ namespace mon
 
 			struct StreamEvent
 			{
+				StreamEvent(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric, const std::shared_ptr<StreamMetrics> &parent_source_info, const std::shared_ptr<cfg::vhost::app::oprf::OutputProfile> &output_profile, const std::vector<std::shared_ptr<info::CodecModule>> &codec_modules)
+				{
+					_code = code;
+					_metric = stream_metric;
+					_parent_source_info = parent_source_info;
+					_output_profile = output_profile;
+					_codec_modules = codec_modules;
+				}
+
 				StreamEvent(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric)
 				{
 					_code	= code;
@@ -68,6 +78,9 @@ namespace mon
 
 				Message::Code _code;
 				std::shared_ptr<StreamMetrics> _metric;
+				std::shared_ptr<StreamMetrics> _parent_source_info = nullptr;
+				std::shared_ptr<cfg::vhost::app::oprf::OutputProfile> _output_profile = nullptr;
+				std::vector<std::shared_ptr<info::CodecModule>> _codec_modules;
 			};
 
 			ov::Semaphore _queue_event;

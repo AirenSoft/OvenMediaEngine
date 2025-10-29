@@ -13,6 +13,8 @@
 #ifdef HWACCELS_XMA_ENABLED
 #include "xma.h"
 #include "xrm.h"
+#include "xrt.h"
+#include "xrt/xrt_kernel.h"
 #define MAX_XLNX_DEVS 128
 #define XLNX_XCLBIN_PATH (char*)"/opt/xilinx/xcdr/xclbins/transcode.xclbin"
 #define MAX_XLNX_DEVICES_PER_CMD 2
@@ -362,6 +364,7 @@ bool TranscodeGPU::CheckSupportedNV()
 bool TranscodeGPU::CheckSupportedXMA()
 {
 #ifdef HWACCELS_XMA_ENABLED
+	// Check XMA Daemon running
 	xrmContext* xrm_ctx = (xrmContext*)xrmCreateContext(XRM_API_VERSION_1);
 	if (xrm_ctx == NULL)
 	{
@@ -381,23 +384,37 @@ bool TranscodeGPU::CheckSupportedXMA()
 		return false;
 	}
 
+	// Enumerate Xilinx devices
 	int32_t dev_id = 0;
 	bool dev_list[MAX_XLNX_DEVS];
 	XmaXclbinParameter xclbin_nparam[MAX_XLNX_DEVS];
 	memset(dev_list, false, MAX_XLNX_DEVS * sizeof(bool));
 
-	_device_count_xma = 0;
+	_device_count_xma = xma_num_devices();
 
-	for (dev_id = 0; dev_id < xma_num_devices(); dev_id++)
+	for (dev_id = 0; dev_id < _device_count_xma; dev_id++)
 	{
 		xclbin_nparam[dev_id].device_id = dev_id;
 		xclbin_nparam[dev_id].xclbin_name = XLNX_XCLBIN_PATH;
-		_device_count_xma++;
-		_device_display_name_xma[dev_id] = ov::String::FormatString("Xilinx U30 Device %d", dev_id);
-		_device_bus_id_xma[dev_id] = ov::String::FormatString("0000:00:%02x.0", 0x80 + dev_id);
+
+		// Get device info
+		xclDeviceHandle handle = xclOpen(dev_id, nullptr, XCL_INFO);
+		if (!handle)
+		{
+			logte("Failed to open device %d", dev_id);
+			continue;
+		}
+
+		xclDeviceInfo2 info;
+		xclGetDeviceInfo2(handle, &info);
+		int32_t pci_slot = static_cast<int32_t>(info.mPciSlot);
+		_device_bus_id_xma[dev_id] = ov::String::FormatString("%02x:%02x.%d", (pci_slot >> 8) & 0xFF, pci_slot & 0xFF, dev_id);
+		_device_display_name_xma[dev_id] = ov::String::FormatString("Xilinx Corporation Device %x", info.mDeviceId);		
+		xclClose(handle);
+		
 		_supported_devices.push_back(std::make_pair(cmn::MediaCodecModuleId::XMA, dev_id));
 
-		logti("XMA: deviceId(%d), xclbin(%s)", xclbin_nparam[dev_id].device_id, xclbin_nparam[dev_id].xclbin_name);
+		logti("XMA: deviceId(%d), Name(%s), BusId(%s), xclbin(%s)", xclbin_nparam[dev_id].device_id, _device_display_name_xma[dev_id].CStr(), _device_bus_id_xma[dev_id].CStr(), xclbin_nparam[dev_id].xclbin_name);
 	}
 
 	// Initialize all devices

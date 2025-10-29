@@ -262,6 +262,7 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(
 
 	if (cmn::IsVideoCodec(output_track->GetCodecId()) == false)
 	{
+		logtw("%s codec is not supported video codec", profile.GetCodec().CStr());
 		return nullptr;
 	}
 
@@ -351,7 +352,7 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 
 	if (cmn::IsAudioCodec(output_track->GetCodecId()) == false)
 	{
-		logtw("Encoding codec set is not a audio codec");
+		logtw("%s codec is not supported audio codec", profile.GetCodec().CStr());
 		return nullptr;
 	}
 
@@ -426,6 +427,7 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 
 	if (cmn::IsImageCodec(output_track->GetCodecId()) == false)
 	{
+		logtw("%s codec is not supported image codec", profile.GetCodec().CStr());
 		return nullptr;
 	}
 

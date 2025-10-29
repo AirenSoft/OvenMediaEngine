@@ -43,6 +43,7 @@ namespace info
 		_name = stream._name;
 		_source_type = stream._source_type;
 		_source_url = stream._source_url;
+		_output_profile_name = stream._output_profile_name;
 		_created_time = stream._created_time;
 		_published_time = stream._published_time;
 		_app_info = stream._app_info;
@@ -144,6 +145,16 @@ namespace info
 		_source_url = url;
 	}
 
+	void Stream::SetOutputProfileName(ov::String name)
+	{
+		_output_profile_name = std::move(name);
+	}
+	
+	ov::String Stream::GetOutputProfileName() const
+	{
+		return _output_profile_name;
+	}
+	
 	bool Stream::IsInputStream() const
 	{
 		return IsOutputStream() == false;

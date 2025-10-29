@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+
 #include "base/common_types.h"
 #include "base/ovlibrary/enable_shared_from_this.h"
 
@@ -17,10 +18,14 @@ namespace info
 		explicit Session(const info::Stream &stream, session_id_t session_id);
 		Session(const info::Stream &stream, const Session &T);
 		Session(Session &&T) = default;
-		~Session() override = default;
+		~Session() override	 = default;
 
 		session_id_t GetId() const;
 		ov::String GetUUID() const;
+
+		void SetName(const ov::String &name);
+		const std::optional<ov::String> &GetName() const;
+
 		const std::chrono::system_clock::time_point &GetCreatedTime() const;
 		uint64_t GetSentBytes();
 
@@ -30,12 +35,13 @@ namespace info
 		}
 
 	protected:
-		uint64_t								_sent_bytes = 0;
-		uint64_t								_received_bytes = 0;
+		uint64_t _sent_bytes	 = 0;
+		uint64_t _received_bytes = 0;
 
 	private:
-		session_id_t 							_id;
-		std::chrono::system_clock::time_point 	_created_time;
-		std::shared_ptr<info::Stream>			_stream_info;
+		session_id_t _id;
+		std::optional<ov::String> _name;
+		std::chrono::system_clock::time_point _created_time;
+		std::shared_ptr<info::Stream> _stream_info;
 	};
 }  // namespace info

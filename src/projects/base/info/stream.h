@@ -43,6 +43,9 @@ namespace info
 		ov::String GetMediaSource() const;
 		void SetMediaSource(ov::String url);
 
+		void SetOutputProfileName(ov::String name);
+		ov::String GetOutputProfileName() const;
+
 		bool IsInputStream() const;
 		bool IsOutputStream() const;
 
@@ -154,7 +157,8 @@ namespace info
 		uint32_t _msid = 0;
 		ov::String _name;
 		ov::String _source_url;
-
+		ov::String _output_profile_name;
+		
 		// Key : MediaTrack ID
 		std::map<int32_t, std::shared_ptr<MediaTrack>> _tracks; // For fast access by ID
 		std::vector<std::shared_ptr<MediaTrack>> _audio_tracks; // For fast access by order

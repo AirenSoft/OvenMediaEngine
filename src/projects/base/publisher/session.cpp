@@ -10,16 +10,16 @@ namespace pub
 		: info::Session(*std::static_pointer_cast<info::Stream>(stream))
 	{
 		_application = application;
-		_stream = stream;
-		_state = SessionState::Ready;
+		_stream		 = stream;
+		_state		 = SessionState::Ready;
 	}
 
 	Session::Session(const info::Session &info, const std::shared_ptr<Application> &application, const std::shared_ptr<Stream> &stream)
 		: info::Session(*std::static_pointer_cast<info::Stream>(stream), info)
 	{
 		_application = application;
-		_stream = stream;
-		_state = SessionState::Ready;
+		_stream		 = stream;
+		_state		 = SessionState::Ready;
 	}
 
 	Session::~Session()
@@ -66,16 +66,6 @@ namespace pub
 		_final_url = final_url;
 	}
 
-	void Session::SetName(const ov::String &name)
-	{
-		_name = name;
-	}
-
-	const std::optional<ov::String> &Session::GetName() const
-	{
-		return _name;
-	}
-
 	bool Session::Start()
 	{
 		_state = SessionState::Started;
@@ -101,10 +91,10 @@ namespace pub
 
 	void Session::Terminate(ov::String reason)
 	{
-		_state = SessionState::Error;
+		_state		  = SessionState::Error;
 		_error_reason = reason;
 
-		auto stream = GetStream();
+		auto stream	  = GetStream();
 		if (stream != nullptr)
 		{
 			stream->RemoveSession(GetId());

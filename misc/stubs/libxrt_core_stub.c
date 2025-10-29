@@ -11,6 +11,14 @@ typedef void* XmaXclbinParameter;
 typedef void* xclDeviceHandle;
 typedef void* xclBufferHandle;
 struct xclBOProperties { int stub; };
+struct xclDeviceInfo2 {
+	int mDeviceId;
+	int mVendorId;
+	int mSubsystemId;
+	unsigned short mPciSlot;
+	char mName[64];
+	unsigned int mDriverVersion;
+};
 enum xclVerbosityLevel { stub };
 
 bool xrmIsDaemonRunning(xrmContext context)
@@ -56,6 +64,16 @@ xclDeviceHandle xclOpen(unsigned int deviceIndex, const char* unused1, enum xclV
 {
 	return nullptr;
 }
+
+void xclClose(xclDeviceHandle handle) 
+{
+	
+}
+
+int xclGetDeviceInfo2(xclDeviceHandle handle, struct xclDeviceInfo2 *info) {
+	return 0;
+}
+
 
 int32_t xrmDestroyContext(xrmContext context)
 {

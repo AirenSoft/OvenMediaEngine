@@ -9,14 +9,15 @@
 #pragma once
 
 #include "base/info/stream.h"
+#include "base/info/codec.h"
 #include "codec/codec_base.h"
 
 class TranscodeEncoder : public TranscodeBase<MediaFrame, MediaPacket>
 {
 public:
 	typedef std::function<void(int32_t, std::shared_ptr<MediaPacket>)> CompleteHandler;
-	static std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> GetCandidates(bool hwaccels_enable, ov::String hwaccles_modules, std::shared_ptr<MediaTrack> track);
-	static std::shared_ptr<TranscodeEncoder> Create(int32_t encoder_id, std::shared_ptr<info::Stream> info, std::shared_ptr<MediaTrack> output_track, std::shared_ptr<std::vector<std::shared_ptr<CodecCandidate>>> candidates, CompleteHandler complete_handler);
+	static std::shared_ptr<std::vector<std::shared_ptr<info::CodecCandidate>>> GetCandidates(bool hwaccels_enable, ov::String hwaccles_modules, std::shared_ptr<MediaTrack> track);
+	static std::shared_ptr<TranscodeEncoder> Create(int32_t encoder_id, std::shared_ptr<info::Stream> info, std::shared_ptr<MediaTrack> output_track, std::shared_ptr<std::vector<std::shared_ptr<info::CodecCandidate>>> candidates, CompleteHandler complete_handler);
 
 public:
 	TranscodeEncoder(info::Stream stream_info);

@@ -21,6 +21,7 @@ namespace serdes
 		serdes::SetString(response, "module", cmn::GetCodecModuleIdString(module->GetModuleId()), Optional::False);
 		serdes::SetInt(response, "id", module->GetDeviceId());
 		serdes::SetString(response, "busId", module->GetBusId(), Optional::False);
+		serdes::SetBool(response, "isDefault", module->isDefault());
 		serdes::SetBool(response, "isEncoder", module->isEncoder());
 		serdes::SetBool(response, "isDecoder", module->isDecoder());
 		serdes::SetBool(response, "isHwAccel", module->isHwAccel());

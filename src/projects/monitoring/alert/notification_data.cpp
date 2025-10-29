@@ -29,6 +29,12 @@ namespace mon
 			_queue_metric_list = queue_metric_list;
 		}
 
+		NotificationData::NotificationData(const Type &type, const std::vector<std::shared_ptr<Message>> &message_list)
+		{
+			_type		   = type;
+			_message_list  = message_list;
+		}
+
 		ov::String NotificationData::ToJsonString() const
 		{
 			// Make request message
@@ -89,6 +95,36 @@ namespace mon
 				}
 
 				jv_root["internalQueues"] = jv_queues;
+			}
+
+			if( _parent_source_info != nullptr)
+			{
+				Json::Value jv_parent_source_info = ::serdes::JsonFromStream(_parent_source_info);
+				jv_root["parentSourceInfo"]	   = jv_parent_source_info;
+
+				if(!_parent_source_info->GetUri().IsEmpty())
+				{
+					jv_root["parentSourceUri"] = _parent_source_info->GetUri().CStr();
+				}
+			}
+
+			if (_output_profile != nullptr)
+			{
+				Json::Value jv_output_profile = ::serdes::JsonFromOutputProfile(*_output_profile);
+				jv_root["outputProfile"] = jv_output_profile;
+			}
+
+			if (_codec_modules.size() > 0)
+			{
+				Json::Value jv_codec_modules;
+
+				for (const auto &codec_module : _codec_modules)
+				{
+					Json::Value jv_codec_module = ::serdes::JsonFromCodecModule(codec_module);
+					jv_codec_modules.append(jv_codec_module);
+				}
+
+				jv_root["codecModules"] = jv_codec_modules;
 			}
 
 			return ov::Converter::ToString(jv_root);

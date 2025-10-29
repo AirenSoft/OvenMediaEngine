@@ -112,9 +112,28 @@ private:
 		ERROR,
 	};
 
+	const char *GetStateString(State state)
+	{
+		switch (state)
+		{
+			case State::CREATED:
+				return "CREATED";
+			case State::PREPARING:
+				return "PREPARING";
+			case State::STARTED:
+				return "STARTED";
+			case State::STOPPED:
+				return "STOPPED";
+			case State::ERROR:
+				return "ERROR";
+		}
+		return "UNKNOWN";
+	}
+
 	// Set the stream state
 	void SetState(State state)
 	{
+		logd("Transcoder", "%s stream state changed: %s -> %s", _log_prefix.CStr(), GetStateString(_state), GetStateString(state));
 		_state = state;
 	}
 
@@ -143,6 +162,24 @@ private:
 	{
 		return _output_profiles_cfg;
 	}
+
+	const cfg::vhost::app::oprf::OutputProfile *GetOutputProfileByName(const ov::String &name)
+	{
+		if(GetOutputProfilesCfg() == nullptr)
+		{
+			return nullptr;
+		}
+		
+		for (const auto &profile : GetOutputProfilesCfg()->GetOutputProfileList())
+		{
+			if (profile.GetName() == name)
+			{
+				return &profile;
+			}
+		}
+		return nullptr;
+	}
+
 	const cfg::vhost::app::oprf::OutputProfiles *_output_profiles_cfg;
 	// Output profile set from webhook
 	cfg::vhost::app::oprf::OutputProfiles _remote_output_profiles;
@@ -221,14 +258,14 @@ private:
 					  std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track);
 	ov::String GetInfoStringComposite();
 
-	size_t CreateDecoders();
+	bool CreateDecoders();
 	bool CreateDecoder(MediaTrackId decoder_id, std::shared_ptr<info::Stream> input_stream, std::shared_ptr<MediaTrack> input_track);
 	std::shared_ptr<TranscodeDecoder> GetDecoder(MediaTrackId decoder_id);
 	void SetDecoder(MediaTrackId decoder_id, std::shared_ptr<TranscodeDecoder> decoder);
 	void RemoveDecoders();
 
 
-	size_t CreateFilters(std::shared_ptr<MediaFrame> buffer);
+	bool CreateFilters(std::shared_ptr<MediaFrame> buffer);
 	bool CreateFilter(MediaTrackId filter_id, std::shared_ptr<MediaTrack> input_track, std::shared_ptr<MediaTrack> output_track);
 	std::shared_ptr<TranscodeFilter> GetFilter(MediaTrackId filter_id);
 	void SetFilter(MediaTrackId filter_id, std::shared_ptr<TranscodeFilter> filter);
@@ -236,7 +273,7 @@ private:
 
 	std::shared_ptr<MediaTrack> GetInputTrackOfFilter(MediaTrackId decoder_id);
 
-	size_t CreateEncoders(std::shared_ptr<MediaFrame> buffer);
+	bool CreateEncoders(std::shared_ptr<MediaFrame> buffer);
 	bool CreateEncoder(MediaTrackId encoder_id, std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track);
 	std::optional<std::pair<std::shared_ptr<TranscodeFilter>, std::shared_ptr<TranscodeEncoder>>> GetEncoderSet(MediaTrackId encoder_id);
 	std::shared_ptr<TranscodeFilter> GetPostFilter(MediaTrackId encoder_id);
