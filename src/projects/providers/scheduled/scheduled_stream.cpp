@@ -967,7 +967,14 @@ namespace pvd
                 }
                 else
                 {
-                    logtw("Scheduled Channel : %s/%s: Failed to pop packet until %d ms. Try to play next item", GetApplicationName(), GetName().CStr(), _channel_info._error_tolerance_duration_ms);
+					if (stream_tap->GetState() == MediaRouterStreamTap::State::Tapped)
+					{
+                    	logtw("Scheduled Channel : %s/%s: Failed to pop packet until %d ms. Try to play next item", GetApplicationName(), GetName().CStr(), _channel_info._error_tolerance_duration_ms);
+					}
+					else
+					{
+						logtw("Scheduled Channel : %s/%s: Stream tap state is %d. Try to play next item", GetApplicationName(), GetName().CStr(), static_cast<int>(stream_tap->GetState()));
+					}
                     result = PlaybackResult::ERROR;
                     break;
                 }
