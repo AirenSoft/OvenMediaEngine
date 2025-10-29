@@ -181,7 +181,7 @@ namespace pvd
 
         _failback_check_clock.Stop();
 
-        if (_current_item->file == true)
+        if (_current_item->_file == true)
         {
             return CheckFileItemAvailable(_current_item);
         }
@@ -201,40 +201,40 @@ namespace pvd
 		}
 
 		int64_t total_duration_ms = 0;
-		for (auto &item : program->items)
+		for (auto &item : program->_items)
 		{
 			if (item == nullptr)
 			{
-				logtw("Scheduled Channel %s/%s: Item is null in program %s", GetApplicationName(), GetName().CStr(), program->name.CStr());
+				logtw("Scheduled Channel %s/%s: Item is null in program %s", GetApplicationName(), GetName().CStr(), program->_name.CStr());
 				continue;
 			}
 
-			if (item->duration_ms > 0)
+			if (item->_duration_ms > 0)
 			{
-				logti("Scheduled Channel %s/%s: Item %s duration is already set to %lld ms", GetApplicationName(), GetName().CStr(), item->url.CStr(), item->duration_ms);
+				// logti("Scheduled Channel %s/%s: Item %s duration is already set to %lld ms", GetApplicationName(), GetName().CStr(), item->url.CStr(), item->duration_ms);
 				// already set
-				total_duration_ms += item->duration_ms;
+				total_duration_ms += item->_duration_ms;
 				continue;
 			}
 
-			if (item->file == true)
+			if (item->_file == true)
 			{
-				item->duration_ms = GetFileItemDurationMS(item) - item->start_time_ms_conf;
-				total_duration_ms += item->duration_ms;
+				item->_duration_ms = GetFileItemDurationMS(item) - item->_start_time_ms_conf;
+				total_duration_ms += item->_duration_ms;
 			}
 			else
 			{
 				// Live with no duration means it will be played until the end of the program
-				item->duration_ms = -1;
-				program->unlimited_duration = true;
+				item->_duration_ms = -1;
+				program->_unlimited_duration = true;
 			}
 
-			logti("Scheduled Channel %s/%s: Item %s duration set to %lld ms", GetApplicationName(), GetName().CStr(), item->url.CStr(), item->duration_ms);
+			logti("Scheduled Channel %s/%s: Item %s duration set to %lld ms", GetApplicationName(), GetName().CStr(), item->_url.CStr(), item->_duration_ms);
 		}
 
-		program->total_item_duration_ms = total_duration_ms;
+		program->_total_item_duration_ms = total_duration_ms;
 
-		logti("Total item duration ms : %lld ms", program->total_item_duration_ms);
+		logti("Total item duration ms : %lld ms", program->_total_item_duration_ms);
 
 		return true;
 	}
@@ -274,7 +274,7 @@ namespace pvd
 				SetDurationToAllItems(_current_program);
 			}
 
-            logti("Scheduled Channel %s/%s: Start %s program", GetApplicationName(), GetName().CStr(), _current_program->name.CStr());
+            logti("Scheduled Channel %s/%s: Start %s program", GetApplicationName(), GetName().CStr(), _current_program->_name.CStr());
 
             // Items
 			bool first_item = true;
@@ -317,7 +317,7 @@ namespace pvd
                     auto result = PlayItem(_current_item);
                     if (result == PlaybackResult::ERROR)
                     {
-                        if (_current_item->fallback_on_err == true)
+                        if (_current_item->_fallback_on_err == true)
                         {
                             if (PlayFallbackOrWait() == PlaybackResult::FAILBACK)
                             {
@@ -353,7 +353,7 @@ namespace pvd
                 break;
             }
 
-            if (_fallback_program == nullptr || _fallback_program->items.empty() == true)
+            if (_fallback_program == nullptr || _fallback_program->_items.empty() == true)
             {
                 if (CheckCurrentItemAvailable() == true)
                 {
@@ -411,7 +411,7 @@ namespace pvd
             return PlaybackResult::ERROR;
         }
 
-        if (item->file == true)
+        if (item->_file == true)
         {
             return PlayFile(item, fallback_item);
         }
@@ -421,16 +421,23 @@ namespace pvd
 
     ScheduledStream::PlaybackResult ScheduledStream::PlayFile(const std::shared_ptr<Schedule::Item> &item, bool fallback_item)
     {
-        logti("Scheduled Channel : %s/%s: Play file %s", GetApplicationName(), GetName().CStr(), item->file_path.CStr());
+        logti("Scheduled Channel : %s/%s: Play file %s", GetApplicationName(), GetName().CStr(), item->_file_path.CStr());
 
         ScheduledStream::PlaybackResult result = PlaybackResult::PLAY_NEXT_ITEM;
 
-        auto context = PrepareFilePlayback(item);
-        if (context == nullptr)
+		auto context = item->LoadContext();
+		if (context == nullptr)
+		{
+			logte("Scheduled Channel : %s/%s: Format context is null. Try to play next item", GetApplicationName(), GetName().CStr());
+			return PlaybackResult::ERROR;
+		}
+
+		if (PrepareFilePlayback(item) == false)
         {
             logte("Scheduled Channel : %s/%s: Failed to prepare file playback. Try to play next item", GetApplicationName(), GetName().CStr());
             return PlaybackResult::ERROR;
         }
+
 
         if (_realtime_clock.IsStart() == false)
         {
@@ -467,7 +474,7 @@ namespace pvd
                 }
             }
 
-            int32_t ret = ::av_read_frame(context, &packet);
+            int32_t ret = ::av_read_frame(context.get(), &packet);
             if (ret == AVERROR(EAGAIN))
             {
                 logtw("Scheduled Channel : %s/%s: Failed to read frame. Error (%d, %s)", GetApplicationName(), GetName().CStr(), ret, "EAGAIN");
@@ -618,9 +625,9 @@ namespace pvd
             lock.unlock();
 
              // Get current play time
-            if (item->duration_ms >= 0)
+            if (item->_duration_ms >= 0)
             {
-                if (single_file_duration_ms >= item->duration_ms)
+                if (single_file_duration_ms >= item->_duration_ms)
                 {
                     end_of_track_map[track_id] = true;
                 }
@@ -639,7 +646,7 @@ namespace pvd
                 if (all_tracks_ended == true)
                 {
                     // End of item
-                    logti("Scheduled Channel : %s/%s: End of item (Current Pos : %.0f ms Duration : %lld ms). Try to play next item", GetApplicationName(), GetName().CStr(), single_file_duration_ms, item->duration_ms);
+                    logti("Scheduled Channel : %s/%s: End of item (Current Pos : %.0f ms Duration : %lld ms). Try to play next item", GetApplicationName(), GetName().CStr(), single_file_duration_ms, item->_duration_ms);
                     result = PlaybackResult::PLAY_NEXT_ITEM;
                     break;
                 }
@@ -655,7 +662,7 @@ namespace pvd
         }
 
         _current_item_position_ms = 0;
-        ::avformat_close_input(&context);
+
         logti("Scheduled Channel : %s/%s: Playback stopped", GetApplicationName(), GetName().CStr());
 
         return result;
@@ -663,51 +670,27 @@ namespace pvd
 
     bool ScheduledStream::CheckFileItemAvailable(const std::shared_ptr<Schedule::Item> &item)
     {
-        // check file exists
-        struct stat statbuf;
-        if (stat(item->file_path.CStr(), &statbuf) != 0)
-        {
-            logte("%s/%s: Failed to find %s item. error (%d, %s)", GetApplicationName(), GetName().CStr(), item->file_path.CStr(), errno, strerror(errno));
-            return false;
-        }
+        if (item == nullptr || item->_file == false || item->_file_path.IsEmpty())
+		{
+			return false;
+		}
 
-        AVFormatContext *format_context = nullptr;
+		if (item->LoadContext() == nullptr)
+		{
+			return false;
+		}
 
-        int err = 0;
-        err = ::avformat_open_input(&format_context, item->file_path.CStr(), nullptr, nullptr);
-        if (err < 0)
-        {
-            char errbuf[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+        bool video_track_needed = _channel_info._video_track;
+        bool audio_track_needed = _channel_info._audio_track;
 
-            ::av_strerror(err, errbuf, sizeof(errbuf));
-
-            logte("%s/%s: Failed to open %s item. error (%d, %s)", GetApplicationName(), GetName().CStr(), item->file_path.CStr(), err, errbuf);
-            return false;
-        }
-
-        err = ::avformat_find_stream_info(format_context, nullptr);
-        if (err < 0)
-        {
-            char errbuf[AV_ERROR_MAX_STRING_SIZE] = { 0 };
-
-            ::av_strerror(err, errbuf, sizeof(errbuf));
-
-            logte("%s/%s: Failed to find stream info. Error (%d, %s)", GetApplicationName(), GetName().CStr(), item->file_path.CStr(), err, errbuf);
-            ::avformat_close_input(&format_context);
-            return false;
-        }
-
-        bool video_track_needed = _channel_info.video_track;
-        bool audio_track_needed = _channel_info.audio_track;
-
-        for (uint32_t track_id = 0; track_id < format_context->nb_streams; track_id++)
+        for (uint32_t track_id = 0; track_id < item->LoadContext()->nb_streams; track_id++)
         {
             if (video_track_needed == false && audio_track_needed == false)
             {
                 break;
             }
 
-            auto stream = format_context->streams[track_id];
+            auto stream = item->LoadContext()->streams[track_id];
             if (stream == nullptr)
             {
                 continue;
@@ -733,97 +716,54 @@ namespace pvd
         {
             logte("%s/%s: Failed to find %s track(s) from file %s", GetApplicationName(), GetName().CStr(), 
                 video_track_needed&& audio_track_needed == true ? "video and audio" :
-                video_track_needed == true ? "video" : "audio", item->file_path.CStr());
-            ::avformat_close_input(&format_context);
+                video_track_needed == true ? "video" : "audio", item->_file_path.CStr());
             return false;
         }
-
-        ::avformat_close_input(&format_context);
 
         return true;
     }
 
 	int64_t ScheduledStream::GetFileItemDurationMS(const std::shared_ptr<Schedule::Item> &item) const
 	{
-		if (item == nullptr || item->file == false || item->file_path.IsEmpty())
+		if (item == nullptr || item->_file == false || item->_file_path.IsEmpty())
 		{
 			return 0;
 		}
 
-		AVFormatContext *format_context = nullptr;
-
-		int err = ::avformat_open_input(&format_context, item->file_path.CStr(), nullptr, nullptr);
-		if (err < 0)
+		auto format_context = item->LoadContext();
+		if (format_context == nullptr)
 		{
-			char errbuf[AV_ERROR_MAX_STRING_SIZE] = { 0 };
-
-			::av_strerror(err, errbuf, sizeof(errbuf));
-
-			logte("%s/%s: Failed to open %s item. error (%d, %s)", GetApplicationName(), GetName().CStr(), item->file_path.CStr(), err, errbuf);
-			return 0;
-		}
-
-		err = ::avformat_find_stream_info(format_context, nullptr);
-		if (err < 0)
-		{
-			char errbuf[AV_ERROR_MAX_STRING_SIZE] = { 0 };
-
-			::av_strerror(err, errbuf, sizeof(errbuf));
-
-			logte("%s/%s: Failed to find stream info. Error (%d, %s)", GetApplicationName(), GetName().CStr(), item->file_path.CStr(), err, errbuf);
-			::avformat_close_input(&format_context);
+			logte("%s/%s: Failed to load format context for file %s", GetApplicationName(), GetName().CStr(), item->_file_path.CStr());
 			return 0;
 		}
 
 		int64_t duration_ms = format_context->duration / AV_TIME_BASE * 1000;
 
-		::avformat_close_input(&format_context);
-
 		return duration_ms;
 	}
 
-    AVFormatContext *ScheduledStream::PrepareFilePlayback(const std::shared_ptr<Schedule::Item> &item)
+    bool ScheduledStream::PrepareFilePlayback(const std::shared_ptr<Schedule::Item> &item)
     {
-        AVFormatContext *format_context = nullptr;
+		if (item == nullptr || item->LoadContext() == nullptr)
+		{
+			logte("%s/%s: Format context is null for file %s", GetApplicationName(), GetName().CStr(), item->_file_path.CStr());
+			return false;
+		}
 
-        int err = 0;
-        err = ::avformat_open_input(&format_context, item->file_path.CStr(), nullptr, nullptr);
-        if (err < 0)
-        {
-            char errbuf[AV_ERROR_MAX_STRING_SIZE] = { 0 };
-
-            ::av_strerror(err, errbuf, sizeof(errbuf));
-
-            logte("%s/%s: Failed to open %s item. error (%d, %s)", GetApplicationName(), GetName().CStr(), item->file_path.CStr(), err, errbuf);
-            return nullptr;
-        }
-
-        err = ::avformat_find_stream_info(format_context, nullptr);
-        if (err < 0)
-        {
-            char errbuf[AV_ERROR_MAX_STRING_SIZE] = { 0 };
-
-            ::av_strerror(err, errbuf, sizeof(errbuf));
-
-            logte("%s/%s: Failed to find stream info. Error (%d, %s)", GetApplicationName(), GetName().CStr(), item->file_path.CStr(), err, errbuf);
-            ::avformat_close_input(&format_context);
-            return nullptr;
-        }
-
-        bool video_track_needed = _channel_info.video_track;
-        bool audio_track_needed = _channel_info.audio_track;
+        bool video_track_needed = _channel_info._video_track;
+        bool audio_track_needed = _channel_info._audio_track;
 
 		uint32_t audio_index = 0;
         int64_t total_duration_ms = 0;
         _origin_id_track_id_map.clear();
-        for (uint32_t track_id = 0; track_id < format_context->nb_streams; track_id++)
+        for (uint32_t track_id = 0; track_id < item->LoadContext()->nb_streams; track_id++)
         {
             if (video_track_needed == false && audio_track_needed == false)
             {
                 break;
             }
 
-            auto stream = format_context->streams[track_id];
+            auto stream = item->LoadContext()->streams[track_id];
             if (stream == nullptr)
             {
                 continue;
@@ -887,7 +827,7 @@ namespace pvd
                     total_duration_ms = std::min(total_duration_ms, (int64_t)(stream->duration * 1000 * ::av_q2d(stream->time_base)));
                 }
 				
-				if (audio_index + 1 > _channel_info.audio_map.size())
+				if (audio_index + 1 > _channel_info._audio_map.size())
 				{
                 	audio_track_needed = false;
 				}
@@ -902,9 +842,8 @@ namespace pvd
         {
             logte("%s/%s: Failed to find %s track(s) from file %s", GetApplicationName(), GetName().CStr(), 
                 video_track_needed && audio_track_needed == true ? "video and audio" :
-                video_track_needed == true ? "video" : "audio", item->file_path.CStr());
-            ::avformat_close_input(&format_context);
-            return nullptr;
+                video_track_needed == true ? "video" : "audio", item->_file_path.CStr());
+            return false;
         }
 
         // If there is no data track, add a dummy data track
@@ -919,42 +858,42 @@ namespace pvd
 			UpdateTrack(data_track);
 		}
 
-        if (item->duration_ms == 0)
+        if (item->_duration_ms == 0)
         {
-            item->duration_ms = total_duration_ms;
+            item->_duration_ms = total_duration_ms;
         }
 
         // Seek to start position
-        if (item->start_time_ms > 0)
+        if (item->_start_time_ms >= 0)
         {
 			// if stream_index is -1, in AV_TIME_BASE units
 			// #define AV_TIME_BASE 1000000
-            int64_t seek_target = item->start_time_ms * 1000; // Convert to microseconds
+            int64_t seek_target = item->_start_time_ms * 1000; // Convert to microseconds
             int64_t seek_min = 0;
             int64_t seek_max = total_duration_ms * 1000;
 
-            int seek_ret = ::avformat_seek_file(format_context, -1, seek_min, seek_target, seek_max, 0);
+            int seek_ret = ::avformat_seek_file(item->LoadContext().get(), -1, seek_min, seek_target, seek_max, 0);
             if (seek_ret < 0)
             {
-                logte("%s/%s: Failed to seek to start position %d, err:%d", GetApplicationName(), GetName().CStr(), item->start_time_ms, seek_ret);
+                logte("%s/%s: Failed to seek to start position %d, err:%d", GetApplicationName(), GetName().CStr(), item->_start_time_ms, seek_ret);
             }
         }
 
 		logti("Scheduled Channel : %s/%s: File %s prepared. Start time %lld ms, Duration %lld ms",
-			GetApplicationName(), GetName().CStr(), item->file_path.CStr(), item->start_time_ms, item->duration_ms);
+			GetApplicationName(), GetName().CStr(), item->_file_path.CStr(), item->_start_time_ms, item->_duration_ms);
 
         if (UpdateStream() == false)
         {
             logte("%s/%s: Failed to update stream", GetApplicationName(), GetName().CStr());
-            return nullptr;
+            return false;
         }
 
-        return format_context;
+        return true;
     }
 
     ScheduledStream::PlaybackResult ScheduledStream::PlayStream(const std::shared_ptr<Schedule::Item> &item, bool fallback_item)
     {
-        logti("Scheduled Channel : %s/%s: Play stream %s", GetApplicationName(), GetName().CStr(), item->url.CStr());
+        logti("Scheduled Channel : %s/%s: Play stream %s", GetApplicationName(), GetName().CStr(), item->_url.CStr());
 
         ScheduledStream::PlaybackResult result = PlaybackResult::PLAY_NEXT_ITEM;
 
@@ -999,7 +938,7 @@ namespace pvd
                 }
             }
 			
-            auto media_packet = stream_tap->Pop(_channel_info.error_tolerance_duration_ms);
+            auto media_packet = stream_tap->Pop(_channel_info._error_tolerance_duration_ms);
             if (media_packet == nullptr)
             {
                 if (CheckCurrentProgramChanged() == true)
@@ -1009,7 +948,7 @@ namespace pvd
                 }
                 else
                 {
-                    logtw("Scheduled Channel : %s/%s: Failed to pop packet until %d ms. Try to play next item", GetApplicationName(), GetName().CStr(), _channel_info.error_tolerance_duration_ms);
+                    logtw("Scheduled Channel : %s/%s: Failed to pop packet until %d ms. Try to play next item", GetApplicationName(), GetName().CStr(), _channel_info._error_tolerance_duration_ms);
                     result = PlaybackResult::ERROR;
                     break;
                 }
@@ -1117,9 +1056,9 @@ namespace pvd
             lock.unlock();
 
             // Get current play time
-            if (item->duration_ms >= 0)
+            if (item->_duration_ms >= 0)
             {
-                if (single_file_dts_ms > item->duration_ms)
+                if (single_file_dts_ms > item->_duration_ms)
                 {
                     end_of_track_map[track_id] = true;
                 }
@@ -1138,7 +1077,7 @@ namespace pvd
                 if (all_tracks_ended == true)
                 {
                     // End of item
-                    logti("Scheduled Channel : %s/%s: End of item (Current Pos : %.0f ms Duration : %lld ms). Try to play next item", GetApplicationName(), GetName().CStr(), single_file_dts_ms, item->duration_ms);
+                    logti("Scheduled Channel : %s/%s: End of item (Current Pos : %.0f ms Duration : %lld ms). Try to play next item", GetApplicationName(), GetName().CStr(), single_file_dts_ms, item->_duration_ms);
                     result = PlaybackResult::PLAY_NEXT_ITEM;
                     break;
                 }
@@ -1156,17 +1095,17 @@ namespace pvd
 
     bool ScheduledStream::CheckStreamItemAvailable(const std::shared_ptr<Schedule::Item> &item)
     {
-        auto stream_url = ov::Url::Parse(item->url);
+        auto stream_url = ov::Url::Parse(item->_url);
         if (stream_url == nullptr)
         {
-            logte("Scheduled Channel : %s/%s: Failed to parse stream url %s", GetApplicationName(), GetName().CStr(), item->url.CStr());
+            logte("Scheduled Channel : %s/%s: Failed to parse stream url %s", GetApplicationName(), GetName().CStr(), item->_url.CStr());
             return false;
         }
 
         auto vhost_app_name = info::VHostAppName(stream_url->Host(), stream_url->App());
         if (ocst::Orchestrator::GetInstance()->CheckIfStreamExist(vhost_app_name, stream_url->Stream()) == false)
         {
-            logte("Scheduled Channel : %s/%s: Failed to find stream %s", GetApplicationName(), GetName().CStr(), item->url.CStr());
+            logte("Scheduled Channel : %s/%s: Failed to find stream %s", GetApplicationName(), GetName().CStr(), item->_url.CStr());
             return false;
         }
 
@@ -1175,18 +1114,18 @@ namespace pvd
         auto result = ocst::Orchestrator::GetInstance()->MirrorStream(stream_tap, vhost_app_name, stream_url->Stream(), MediaRouterInterface::MirrorPosition::Inbound);
         if (result != CommonErrorCode::SUCCESS)
         {
-            logte("Scheduled Channel : %s/%s: Failed to mirror stream %s (err : %d)", GetApplicationName(), GetName().CStr(), item->url.CStr(), static_cast<int>(result));
+            logte("Scheduled Channel : %s/%s: Failed to mirror stream %s (err : %d)", GetApplicationName(), GetName().CStr(), item->_url.CStr(), static_cast<int>(result));
             return false;
         }
 
         if (stream_tap->GetStreamInfo() == nullptr)
         {
-            logte("Scheduled Channel : %s/%s: Failed to get stream info from stream tap %s", GetApplicationName(), GetName().CStr(), item->url.CStr());
+            logte("Scheduled Channel : %s/%s: Failed to get stream info from stream tap %s", GetApplicationName(), GetName().CStr(), item->_url.CStr());
             return false;
         }
 
-        bool video_track_needed = _channel_info.video_track;
-        bool audio_track_needed = _channel_info.audio_track;
+        bool video_track_needed = _channel_info._video_track;
+        bool audio_track_needed = _channel_info._audio_track;
         for (const auto &[track_id, track] : stream_tap->GetStreamInfo()->GetTracks())
         {
             if (video_track_needed == false && audio_track_needed == false)
@@ -1214,7 +1153,7 @@ namespace pvd
         {
             logte("%s/%s: Failed to find %s track(s) from stream %s", GetApplicationName(), GetName().CStr(),
                 video_track_needed&& audio_track_needed == true ? "video and audio" :
-                video_track_needed == true ? "video" : "audio", item->url.CStr());
+                video_track_needed == true ? "video" : "audio", item->_url.CStr());
 
             ocst::Orchestrator::GetInstance()->UnmirrorStream(stream_tap);
             
@@ -1231,10 +1170,10 @@ namespace pvd
 		// 첫번째 재생인 경우에만 keyframe부터 나가야되니까 그때 적용할까?
 		// stream_tap->SetNeedPastData(true);
 
-        auto stream_url = ov::Url::Parse(item->url);
+        auto stream_url = ov::Url::Parse(item->_url);
         if (stream_url == nullptr)
         {
-            logte("Scheduled Channel : %s/%s: Failed to parse stream url %s", GetApplicationName(), GetName().CStr(), item->url.CStr());
+            logte("Scheduled Channel : %s/%s: Failed to parse stream url %s", GetApplicationName(), GetName().CStr(), item->_url.CStr());
             return nullptr;
         }
 
@@ -1243,20 +1182,20 @@ namespace pvd
         auto result = ocst::Orchestrator::GetInstance()->MirrorStream(stream_tap, vhost_app_name, stream_url->Stream(), MediaRouterInterface::MirrorPosition::Inbound);
         if (result != CommonErrorCode::SUCCESS)
         {
-            logte("Scheduled Channel : %s/%s: Failed to mirror stream %s (err : %d)", GetApplicationName(), GetName().CStr(), item->url.CStr(), static_cast<int>(result));
+            logte("Scheduled Channel : %s/%s: Failed to mirror stream %s (err : %d)", GetApplicationName(), GetName().CStr(), item->_url.CStr(), static_cast<int>(result));
             return nullptr;
         }
 
         if (stream_tap->GetStreamInfo() == nullptr)
         {
-            logte("Scheduled Channel : %s/%s: Failed to get stream info from stream tap %s", GetApplicationName(), GetName().CStr(), item->url.CStr());
+            logte("Scheduled Channel : %s/%s: Failed to get stream info from stream tap %s", GetApplicationName(), GetName().CStr(), item->_url.CStr());
             ocst::Orchestrator::GetInstance()->UnmirrorStream(stream_tap);
             return nullptr;
         }
 
         _origin_id_track_id_map.clear();
-        bool video_track_needed = _channel_info.video_track;
-        bool audio_track_needed = _channel_info.audio_track;
+        bool video_track_needed = _channel_info._video_track;
+        bool audio_track_needed = _channel_info._audio_track;
 		uint32_t audio_index = 0;
         for (const auto &[track_id, track] : stream_tap->GetStreamInfo()->GetTracks())
         {
@@ -1305,7 +1244,7 @@ namespace pvd
                 _origin_id_track_id_map.emplace(track_id, audio_track_id);
                 UpdateTrack(new_track);
 				
-				if (audio_index + 1 > _channel_info.audio_map.size())
+				if (audio_index + 1 > _channel_info._audio_map.size())
 				{
                 	audio_track_needed = false;
 				}
@@ -1320,7 +1259,7 @@ namespace pvd
         {
             logte("%s/%s: Failed to find %s track(s) from stream %s", GetApplicationName(), GetName().CStr(),
                 video_track_needed&& audio_track_needed == true ? "video and audio" :
-                video_track_needed == true ? "video" : "audio", item->url.CStr());
+                video_track_needed == true ? "video" : "audio", item->_url.CStr());
             ocst::Orchestrator::GetInstance()->UnmirrorStream(stream_tap);
             return nullptr;
         }

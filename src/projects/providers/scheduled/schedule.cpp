@@ -13,20 +13,91 @@
 
 namespace pvd
 {
+	std::shared_ptr<AVFormatContext> Schedule::Item::LoadContext()
+	{
+		if (_file == false || _file_path.IsEmpty())
+		{
+			logti("LoadContext: Not a file item: %s", _file_path.CStr());
+			return nullptr;
+		}
+
+		if (_format_context != nullptr)
+		{
+			struct stat current_stat;
+			if (stat(_file_path.CStr(), &current_stat) == 0)
+			{
+				// Check if the file has been modified
+				if (current_stat.st_mtime == _last_loaded_stat.st_mtime &&
+					current_stat.st_size == _last_loaded_stat.st_size)
+				{
+					// Not modified
+					return _format_context;
+				}
+				else
+				{
+					// Modified, close previous context
+					_format_context = nullptr;
+					logti("LoadContext: File modified, reloading: %s", _file_path.CStr());
+				}
+			}
+		}
+
+		int err = 0;
+		AVFormatContext *ctx = nullptr;
+		err = ::avformat_open_input(&ctx, _file_path.CStr(), nullptr, nullptr);
+		if (err < 0)
+		{
+			char errbuf[AV_ERROR_MAX_STRING_SIZE] = {0};
+			::av_strerror(err, errbuf, sizeof(errbuf));
+			_format_context = nullptr;
+			logte("LoadContext: Failed to open file %s. error (%d, %s)", _file_path.CStr(), err,  errbuf);
+			return nullptr;
+		}
+
+		ov::String file_path_copy = _file_path;
+		_format_context.reset(ctx, [file_path_copy](AVFormatContext *ctx) {
+			if (ctx)
+			{
+				logti("LoadContext: Closing format context : %s", file_path_copy.CStr());
+				::avformat_close_input(&ctx);
+			}
+		});
+
+		err = ::avformat_find_stream_info(_format_context.get(), nullptr);
+		if (err < 0)
+		{
+			char errbuf[AV_ERROR_MAX_STRING_SIZE] = {0};
+			::av_strerror(err, errbuf, sizeof(errbuf));
+			_format_context = nullptr;
+			logte("LoadContext: Failed to find stream info for file %s. error (%d, %s)", _file_path.CStr(), err,  errbuf);
+			return nullptr;
+		}
+
+		// Record last modified time
+		if (stat(_file_path.CStr(), &_last_loaded_stat) != 0)
+		{
+			_format_context = nullptr;
+			logte("LoadContext: Failed to get file stat for file %s.", _file_path.CStr());
+			return nullptr;
+		}
+
+		return _format_context;
+	}
+
 	std::shared_ptr<Schedule::Item> Schedule::Program::GetFirstItem()
 	{
 		// Search for the first item by now() - scheduled_time
-		if (items.empty() || (unlimited_duration == false && total_item_duration_ms <= 0))
+		if (_items.empty() || (_unlimited_duration == false && _total_item_duration_ms <= 0))
 		{
 			logte("GetFirstItem: No items or total item duration is zero");
 			return nullptr;
 		}
 
 		auto now = std::chrono::system_clock::now();
-		auto time_elapsed_ms_from_scheduled = std::chrono::duration_cast<std::chrono::milliseconds>(now - scheduled_time).count();
+		auto time_elapsed_ms_from_scheduled = std::chrono::duration_cast<std::chrono::milliseconds>(now - _scheduled_time).count();
 		int64_t position_ms = time_elapsed_ms_from_scheduled;
 
-		if (unlimited_duration == false)
+		if (_unlimited_duration == false)
 		{
 			// if position is less than 1 second, it is considered as processing time difference and not seeked
 			if (position_ms < 1000)
@@ -35,36 +106,36 @@ namespace pvd
 			}
 			else
 			{
-				position_ms = time_elapsed_ms_from_scheduled % total_item_duration_ms;
+				position_ms = time_elapsed_ms_from_scheduled % _total_item_duration_ms;
 			}
 		} 
 
 
 		logti("GetFirstItem: Now: %lld ms, Scheduled: %lld ms, Elapsed: %lld ms, Position: %lld ms", 
 			std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count(),
-			std::chrono::duration_cast<std::chrono::milliseconds>(scheduled_time.time_since_epoch()).count(),
+			std::chrono::duration_cast<std::chrono::milliseconds>(_scheduled_time.time_since_epoch()).count(),
 			time_elapsed_ms_from_scheduled, position_ms);
 
 		int64_t current_position = 0;
-		for (const auto &item : items)
+		for (const auto &item : _items)
 		{
-			current_item_index ++;
+			_current_item_index ++;
 
-			if (item->duration_ms <= 0 ||  // it means unlimited duration like live stream with no duration set
-				(current_position <= position_ms && position_ms < current_position + item->duration_ms))
+			if (item->_duration_ms <= 0 ||  // it means unlimited duration like live stream with no duration set
+				(current_position <= position_ms && position_ms < current_position + item->_duration_ms))
 			{
 				// Copy item and set start_time_ms
 				auto first_item = std::make_shared<Item>(*item);
-				first_item->start_time_ms = first_item->start_time_ms_conf + (position_ms - current_position);
-				first_item->duration_ms = item->duration_ms - (position_ms - current_position);
+				first_item->_start_time_ms = first_item->_start_time_ms_conf + (position_ms - current_position);
+				first_item->_duration_ms = item->_duration_ms - (position_ms - current_position);
 
 				logti("Item : %s - GetFirstItem: Found item at position: %lld ms, Item start time: %lld ms, Item duration: %lld ms", 
-					item->url.CStr(), position_ms, first_item->start_time_ms, first_item->duration_ms);
+					item->_url.CStr(), position_ms, first_item->_start_time_ms, first_item->_duration_ms);
 
 				return first_item;
 			}
 
-			current_position += item->duration_ms;
+			current_position += item->_duration_ms;
 		}
 
 		return nullptr;
@@ -72,33 +143,33 @@ namespace pvd
 
 	std::shared_ptr<Schedule::Item> Schedule::Program::GetNextItem()
 	{
-		if (items.empty())
+		if (_items.empty())
 		{
 			return nullptr;
 		}
 
-		if (size_t(current_item_index) >= items.size())
+		if (size_t(_current_item_index) >= _items.size())
 		{
-			if (repeat)
+			if (_repeat)
 			{
-				current_item_index = 0;
+				_current_item_index = 0;
 			}
 			else
 			{
-				off_air = true;
+				_off_air = true;
 				return nullptr;
 			}
 		}
 
-		auto item = items[current_item_index];
-		current_item_index++;
+		auto item = _items[_current_item_index];
+		_current_item_index++;
 
 		return item;
 	}
 
 	bool Schedule::Program::IsOffAir() const
 	{
-		return off_air;
+		return _off_air;
 	}
 
 
@@ -284,7 +355,7 @@ namespace pvd
 					characteristics = characteristics_object.asString().c_str();
 				}
 
-				_stream.audio_map.push_back({static_cast<int>(i), public_name, language, characteristics});
+				_stream._audio_map.push_back({static_cast<int>(i), public_name, language, characteristics});
 			}
 		}
 
@@ -292,7 +363,7 @@ namespace pvd
 		auto error_tolerance_duration_ms_object = stream_object["errorToleranceDurationMs"];
 		if (error_tolerance_duration_ms_object.isNull() == false || error_tolerance_duration_ms_object.isInt() == true)
 		{
-			_stream.error_tolerance_duration_ms = error_tolerance_duration_ms_object.asInt();
+			_stream._error_tolerance_duration_ms = error_tolerance_duration_ms_object.asInt();
 		}
 
 		return true;
@@ -319,7 +390,7 @@ namespace pvd
 			return false;
 		}
 
-		if (ReadItemObjects(fallback_program_object, fallback_program->items) == false)
+		if (ReadItemObjects(fallback_program_object, fallback_program->_items) == false)
 		{
 			return false;
 		}
@@ -404,13 +475,13 @@ namespace pvd
 			}
 
 			// If the program has already passed, it is ignored.
-			if (program->end_time < std::chrono::system_clock::now())
+			if (program->_end_time < std::chrono::system_clock::now())
 			{
-				logti("The program has already passed, it is ignored. name: %s, scheduled: %s", program->name.CStr(), program->scheduled.CStr());
+				logti("The program has already passed, it is ignored. name: %s, scheduled: %s", program->_name.CStr(), program->_scheduled.CStr());
 				continue;
 			}
 
-			if (ReadItemObjects(program_object, program->items) == false)
+			if (ReadItemObjects(program_object, program->_items) == false)
 			{
 				return false;
 			}
@@ -515,10 +586,10 @@ namespace pvd
 			return false;
 		}
 
-		if (_stream.name != _file_name_without_ext)
+		if (_stream._name != _file_name_without_ext)
 		{
-			logtw("Use the file name (%s) as the stream name. It is recommended that <Stream><Name>%s be set the same as the file name.", _file_name_without_ext.CStr(), _stream.name.CStr());
-			_stream.name = _file_name_without_ext;
+			logtw("Use the file name (%s) as the stream name. It is recommended that <Stream><Name>%s be set the same as the file name.", _file_name_without_ext.CStr(), _stream._name.CStr());
+			_stream._name = _file_name_without_ext;
 		}
 
 		if (ReadFallbackProgramNode(schedule_node) == false)
@@ -615,7 +686,7 @@ namespace pvd
 				characteristics = characteristics_node.text().as_string();
 			}
 
-			_stream.audio_map.push_back({static_cast<int>(index), public_name, language, characteristics});
+			_stream._audio_map.push_back({static_cast<int>(index), public_name, language, characteristics});
 			index ++;
 		}
 
@@ -623,7 +694,7 @@ namespace pvd
 		auto error_tolerance_duration_ms_node = stream_node.child("ErrorToleranceDurationMs");
 		if (error_tolerance_duration_ms_node)
 		{
-			_stream.error_tolerance_duration_ms = error_tolerance_duration_ms_node.text().as_llong();
+			_stream._error_tolerance_duration_ms = error_tolerance_duration_ms_node.text().as_llong();
 		}
 
 		return true;
@@ -644,7 +715,7 @@ namespace pvd
 			return false;
 		}
 		
-		if (ReadItemNodes(fallback_program_node, fallback_program->items) == false)
+		if (ReadItemNodes(fallback_program_node, fallback_program->_items) == false)
 		{
 			return false;
 		}
@@ -709,7 +780,7 @@ namespace pvd
 				return false;
 			}
 
-			if (ReadItemNodes(program_node, program->items) == false)
+			if (ReadItemNodes(program_node, program->_items) == false)
 			{
 				return false;
 			}
@@ -772,10 +843,10 @@ namespace pvd
 	{
 		Schedule::Stream stream;
 		
-		stream.name = name;
-		stream.bypass_transcoder = bypass_transcoder;
-		stream.video_track = video_track;
-		stream.audio_track = audio_track;
+		stream._name = name;
+		stream._bypass_transcoder = bypass_transcoder;
+		stream._video_track = video_track;
+		stream._audio_track = audio_track;
 
 		return stream;
 	}
@@ -783,12 +854,12 @@ namespace pvd
 	std::shared_ptr<Schedule::Program> Schedule::MakeFallbackProgram() const
 	{
 		auto program = std::make_shared<Schedule::Program>();
-		program->name = "fallback";
-		program->scheduled = "1970-01-01T00:00:00Z";
-		program->scheduled_time = std::chrono::system_clock::time_point::min();
-		program->duration_ms = -1;
-		program->end_time = std::chrono::system_clock::time_point::max();
-		program->repeat = true;
+		program->_name = "fallback";
+		program->_scheduled = "1970-01-01T00:00:00Z";
+		program->_scheduled_time = std::chrono::system_clock::time_point::min();
+		program->_duration_ms = -1;
+		program->_end_time = std::chrono::system_clock::time_point::max();
+		program->_repeat = true;
 
 		return program;
 	}
@@ -797,13 +868,13 @@ namespace pvd
 	{
 		auto program = std::make_shared<Schedule::Program>();
 
-		program->name = name;
-		program->scheduled = scheduled_time;
-		program->repeat = repeat;
+		program->_name = name;
+		program->_scheduled = scheduled_time;
+		program->_repeat = repeat;
 
 		try 
 		{
-			program->scheduled_time = ov::Converter::FromISO8601(program->scheduled);
+			program->_scheduled_time = ov::Converter::FromISO8601(program->_scheduled);
 		}
 		catch (std::exception &e)
 		{
@@ -815,7 +886,7 @@ namespace pvd
 		{
 			try
 			{
-				program->end_time = ov::Converter::FromISO8601(next_scheduled_time);
+				program->_end_time = ov::Converter::FromISO8601(next_scheduled_time);
 			}
 			catch (std::exception &e)
 			{
@@ -823,12 +894,12 @@ namespace pvd
 				return nullptr;
 			}
 
-			program->duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(program->end_time - program->scheduled_time).count();
+			program->_duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(program->_end_time - program->_scheduled_time).count();
 		}
 		else
 		{
-			program->duration_ms = -1; // -1 means unknown duration
-			program->end_time = std::chrono::system_clock::time_point::max();
+			program->_duration_ms = -1; // -1 means unknown duration
+			program->_end_time = std::chrono::system_clock::time_point::max();
 		}
 
 		return program;
@@ -838,24 +909,24 @@ namespace pvd
 	{
 		auto item = std::make_shared<Schedule::Item>();
 
-		item->url = url;
-		item->start_time_ms_conf = start_time_ms_conf;
-		item->start_time_ms = start_time_ms_conf; // start_time_ms can be changed later
-		item->duration_ms_conf = duration_ms_conf;
-		item->duration_ms = duration_ms_conf; // duration_ms can be changed later
-		item->fallback_on_err = fallback_on_err;
+		item->_url = url;
+		item->_start_time_ms_conf = start_time_ms_conf;
+		item->_start_time_ms = start_time_ms_conf; // start_time_ms can be changed later
+		item->_duration_ms_conf = duration_ms_conf;
+		item->_duration_ms = duration_ms_conf; // duration_ms can be changed later
+		item->_fallback_on_err = fallback_on_err;
 
 		// file_path
 		if (url.LowerCaseString().HasPrefix("file://"))
 		{
-			item->file_path = url.Substring(7);
-			item->file_path = _media_root_dir + item->file_path;
-			item->file = true;
+			item->_file_path = url.Substring(7);
+			item->_file_path = _media_root_dir + item->_file_path;
+			item->_file = true;
 		}
 		else if (url.LowerCaseString().HasPrefix("stream://"))
 		{
-			item->file_path = url.Substring(9);
-			item->file = false;
+			item->_file_path = url.Substring(9);
+			item->_file = false;
 		}
 		else
 		{
@@ -864,11 +935,24 @@ namespace pvd
 		}
 
 		// minimum duration is 1000ms
-		if (item->duration_ms_conf >= 0 && item->duration_ms_conf <= 1000)
+		if (item->_duration_ms_conf >= 0 && item->_duration_ms_conf <= 1000)
 		{
-			logtw("Item duration is too short, duration must be greater than 1000ms. url: %s, duration: %lld, it will be changed to 1000ms", item->url.CStr(), item->duration_ms_conf);
-			item->duration_ms_conf = 1000;
-			item->duration_ms = 1000;
+			logtw("Item duration is too short, duration must be greater than 1000ms. url: %s, duration: %lld, it will be changed to 1000ms", item->_url.CStr(), item->_duration_ms_conf);
+			item->_duration_ms_conf = 1000;
+			item->_duration_ms = 1000;
+		}
+
+		// Preload file information if it is a file
+		if (item->_file == true)
+		{
+			// Pre load file information
+			ov::StopWatch sw;
+			sw.Start();
+			if (item->LoadContext() == nullptr)
+			{
+				logte("Failed to preload file information. url: %s", item->_file_path.CStr());
+			}
+			logti("Preload file successful. url: %s, time taken: %lld ms", item->_file_path.CStr(), sw.Elapsed());
 		}
 
 		return item;
@@ -897,7 +981,7 @@ namespace pvd
 		// Find program which between scheduled time and finished time
 		for (auto program : _programs)
 		{
-			if (program->scheduled_time <= now && now < program->end_time)
+			if (program->_scheduled_time <= now && now < program->_end_time)
 			{
 				if (program->IsOffAir() == true)
 				{
@@ -908,7 +992,7 @@ namespace pvd
 			}
 
 			// scheduled time is future, there is no current program yet
-			if (program->scheduled_time > now)
+			if (program->_scheduled_time > now)
 			{
 				break;
 			}
@@ -925,7 +1009,7 @@ namespace pvd
 		// Find program which between scheduled time and finished time
 		for (auto program : _programs)
 		{
-			if (program->scheduled_time > now)
+			if (program->_scheduled_time > now)
 			{
 				return program;
 			}
@@ -951,14 +1035,14 @@ namespace pvd
 
 		// Stream
 		auto stream_node = schedule_node.append_child("Stream");
-		stream_node.append_child("Name").text().set(_stream.name.CStr());
-		stream_node.append_child("BypassTranscoder").text().set(_stream.bypass_transcoder);
-		stream_node.append_child("VideoTrack").text().set(_stream.video_track);
-		stream_node.append_child("AudioTrack").text().set(_stream.audio_track);
+		stream_node.append_child("Name").text().set(_stream._name.CStr());
+		stream_node.append_child("BypassTranscoder").text().set(_stream._bypass_transcoder);
+		stream_node.append_child("VideoTrack").text().set(_stream._video_track);
+		stream_node.append_child("AudioTrack").text().set(_stream._audio_track);
 		
 		// AudioMap
 		stream_node.append_child("AudioMap");
-		for (const auto &audio_map_item : _stream.audio_map)
+		for (const auto &audio_map_item : _stream._audio_map)
 		{
 			auto audio_map_item_node = stream_node.child("AudioMap").append_child("Item");
 			audio_map_item_node.append_child("Name").text().set(audio_map_item.GetName().CStr());
@@ -967,14 +1051,14 @@ namespace pvd
 		}
 
 		// ErrorToleranceDurationMs
-		stream_node.append_child("ErrorToleranceDurationMs").text().set(_stream.error_tolerance_duration_ms);
+		stream_node.append_child("ErrorToleranceDurationMs").text().set(_stream._error_tolerance_duration_ms);
 
 		// FallbackProgram
 		if (_fallback_program != nullptr)
 		{
 			auto fallback_program_node = schedule_node.append_child("FallbackProgram");
 
-			if (WriteItemNodes(_fallback_program->items, fallback_program_node) == false)
+			if (WriteItemNodes(_fallback_program->_items, fallback_program_node) == false)
 			{
 				return CommonErrorCode::ERROR;
 			}
@@ -984,11 +1068,11 @@ namespace pvd
 		for (auto program : _programs)
 		{
 			auto program_node = schedule_node.append_child("Program");
-			program_node.append_attribute("name").set_value(program->name.CStr());
-			program_node.append_attribute("scheduled").set_value(program->scheduled.CStr());
-			program_node.append_attribute("repeat").set_value(program->repeat);
+			program_node.append_attribute("name").set_value(program->_name.CStr());
+			program_node.append_attribute("scheduled").set_value(program->_scheduled.CStr());
+			program_node.append_attribute("repeat").set_value(program->_repeat);
 
-			if (WriteItemNodes(program->items, program_node) == false)
+			if (WriteItemNodes(program->_items, program_node) == false)
 			{
 				return CommonErrorCode::ERROR;
 			}
@@ -1009,9 +1093,9 @@ namespace pvd
 		for (const auto &item : items)
 		{
 			auto item_node = item_parent_node.append_child("Item");
-			item_node.append_attribute("url").set_value(item->url.CStr());
-			item_node.append_attribute("start").set_value(item->start_time_ms_conf);
-			item_node.append_attribute("duration").set_value(item->duration_ms_conf);
+			item_node.append_attribute("url").set_value(item->_url.CStr());
+			item_node.append_attribute("start").set_value(item->_start_time_ms_conf);
+			item_node.append_attribute("duration").set_value(item->_duration_ms_conf);
 		}
 
 		return true;
@@ -1020,13 +1104,13 @@ namespace pvd
 	CommonErrorCode Schedule::ToJsonObject(Json::Value &root_object) const
 	{
 		Json::Value stream_object;
-		stream_object["name"] = _stream.name.CStr();
-		stream_object["bypassTranscoder"] = _stream.bypass_transcoder;
-		stream_object["videoTrack"] = _stream.video_track;
-		stream_object["audioTrack"] = _stream.audio_track;
+		stream_object["name"] = _stream._name.CStr();
+		stream_object["bypassTranscoder"] = _stream._bypass_transcoder;
+		stream_object["videoTrack"] = _stream._video_track;
+		stream_object["audioTrack"] = _stream._audio_track;
 		// audio map
 		Json::Value audio_map_object;
-		for (const auto &audio_map_item : _stream.audio_map)
+		for (const auto &audio_map_item : _stream._audio_map)
 		{
 			Json::Value audio_map_item_object;
 			audio_map_item_object["name"] = audio_map_item.GetName().CStr();
@@ -1037,20 +1121,20 @@ namespace pvd
 		stream_object["audioMap"] = audio_map_object;
 
 		// error_tolerance_duration_ms
-		stream_object["errorToleranceDurationMs"] = _stream.error_tolerance_duration_ms;
+		stream_object["errorToleranceDurationMs"] = _stream._error_tolerance_duration_ms;
 
 		root_object["stream"] = stream_object;
 
 		if (_fallback_program != nullptr)
 		{
 			Json::Value fallback_program_object;
-			fallback_program_object["name"] = _fallback_program->name.CStr();
-			fallback_program_object["scheduled"] = _fallback_program->scheduled.CStr();
-			fallback_program_object["repeat"] = _fallback_program->repeat;
+			fallback_program_object["name"] = _fallback_program->_name.CStr();
+			fallback_program_object["scheduled"] = _fallback_program->_scheduled.CStr();
+			fallback_program_object["repeat"] = _fallback_program->_repeat;
 
 			// items
 			Json::Value items_object;
-			if (WriteItemObjects(_fallback_program->items, items_object) == false)
+			if (WriteItemObjects(_fallback_program->_items, items_object) == false)
 			{
 				return CommonErrorCode::ERROR;
 			}
@@ -1063,12 +1147,12 @@ namespace pvd
 		for (auto program : _programs)
 		{
 			Json::Value program_object;
-			program_object["name"] = program->name.CStr();
-			program_object["scheduled"] = program->scheduled.CStr();
-			program_object["repeat"] = program->repeat;
+			program_object["name"] = program->_name.CStr();
+			program_object["scheduled"] = program->_scheduled.CStr();
+			program_object["repeat"] = program->_repeat;
 
 			Json::Value items_object;
-			if (WriteItemObjects(program->items, items_object) == false)
+			if (WriteItemObjects(program->_items, items_object) == false)
 			{
 				return CommonErrorCode::ERROR;
 			}
@@ -1087,9 +1171,9 @@ namespace pvd
 		{
 			Json::Value item_object;
 
-			item_object["url"] = item->url.CStr();
-			item_object["start"] = item->start_time_ms_conf;
-			item_object["duration"] = item->duration_ms_conf;
+			item_object["url"] = item->_url.CStr();
+			item_object["start"] = item->_start_time_ms_conf;
+			item_object["duration"] = item->_duration_ms_conf;
 
 			item_parent_object.append(item_object);
 		}

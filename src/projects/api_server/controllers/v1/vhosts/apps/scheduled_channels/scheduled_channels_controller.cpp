@@ -81,7 +81,7 @@ namespace api
 			}
 
 			// Check if stream is already exists
-			auto stream_name = schedule->GetStream().name;
+			auto stream_name = schedule->GetStream()._name;
 
 			auto stream		 = GetStream(app, stream_name, nullptr);
 			if (stream != nullptr)
@@ -89,7 +89,7 @@ namespace api
 				throw http::HttpError(http::StatusCode::Conflict, "Stream '%s' already exists", stream_name.CStr());
 			}
 
-			auto schedule_file_path = ov::String::FormatString("%s/%s.%s", schedule_files_dir.CStr(), schedule->GetStream().name.CStr(), pvd::ScheduleFileExtension);
+			auto schedule_file_path = ov::String::FormatString("%s/%s.%s", schedule_files_dir.CStr(), schedule->GetStream()._name.CStr(), pvd::ScheduleFileExtension);
 
 			auto error_code			= schedule->SaveToXMLFile(schedule_file_path);
 			if (error_code != CommonErrorCode::SUCCESS)
@@ -160,12 +160,12 @@ namespace api
 				throw http::HttpError(http::StatusCode::BadRequest, "Could not patch the schedule");
 			}
 
-			if (stream->GetName() != new_schedule->GetStream().name)
+			if (stream->GetName() != new_schedule->GetStream()._name)
 			{
-				throw http::HttpError(http::StatusCode::BadRequest, "Stream name %s is not matched with the request body %s", stream->GetName().CStr(), new_schedule->GetStream().name.CStr());
+				throw http::HttpError(http::StatusCode::BadRequest, "Stream name %s is not matched with the request body %s", stream->GetName().CStr(), new_schedule->GetStream()._name.CStr());
 			}
 
-			auto schedule_file_path = ov::String::FormatString("%s/%s.%s", schedule_files_dir.CStr(), new_schedule->GetStream().name.CStr(), pvd::ScheduleFileExtension);
+			auto schedule_file_path = ov::String::FormatString("%s/%s.%s", schedule_files_dir.CStr(), new_schedule->GetStream()._name.CStr(), pvd::ScheduleFileExtension);
 
 			auto error_code			= new_schedule->SaveToXMLFile(schedule_file_path);
 			if (error_code != CommonErrorCode::SUCCESS)
@@ -217,20 +217,20 @@ namespace api
 			{
 				if (curr_program != nullptr)
 				{
-					curr_program_json["name"]	   = curr_program->name.CStr();
-					curr_program_json["scheduled"] = ov::Converter::ToISO8601String(curr_program->scheduled_time).CStr();
-					curr_program_json["end"]	   = ov::Converter::ToISO8601String(curr_program->end_time).CStr();
-					curr_program_json["duration"]  = curr_program->duration_ms;
-					curr_program_json["repeat"]	   = curr_program->repeat;
+					curr_program_json["name"]	   = curr_program->_name.CStr();
+					curr_program_json["scheduled"] = ov::Converter::ToISO8601String(curr_program->_scheduled_time).CStr();
+					curr_program_json["end"]	   = ov::Converter::ToISO8601String(curr_program->_end_time).CStr();
+					curr_program_json["duration"]  = curr_program->_duration_ms;
+					curr_program_json["repeat"]	   = curr_program->_repeat;
 
 					if (curr_item != nullptr)
 					{
 						curr_program_json["state"] = "onair";
 
 						Json::Value item_json;
-						item_json["url"]				 = curr_item->url.CStr();
-						item_json["duration"]			 = curr_item->duration_ms_conf;
-						item_json["start"]				 = curr_item->start_time_ms_conf;
+						item_json["url"]				 = curr_item->_url.CStr();
+						item_json["duration"]			 = curr_item->_duration_ms_conf;
+						item_json["start"]				 = curr_item->_start_time_ms_conf;
 
 						item_json["currentPosition"]	 = curr_item_pos;
 

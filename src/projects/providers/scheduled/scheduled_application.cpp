@@ -65,7 +65,7 @@ namespace pvd
                 if (AddSchedule(schedule_file_info_from_dir) == true)
                 {
                     _schedule_file_info_db.emplace(schedule_file_info_from_dir._file_path.Hash(), schedule_file_info_from_dir);
-                    logti("Added schedule channel : %s/%s (%s)", GetVHostAppName().CStr(), schedule_file_info_from_dir._schedule->GetStream().name.CStr(), schedule_file_info_from_dir._file_path.CStr());
+                    logti("Added schedule channel : %s/%s (%s)", GetVHostAppName().CStr(), schedule_file_info_from_dir._schedule->GetStream()._name.CStr(), schedule_file_info_from_dir._file_path.CStr());
                 }
             }
             else
@@ -77,7 +77,7 @@ namespace pvd
                     if (UpdateSchedule(schedule_file_info_from_db, schedule_file_info_from_dir) == true)
                     {
                         _schedule_file_info_db[schedule_file_info_from_dir._file_path.Hash()] = schedule_file_info_from_dir;
-                        logti("Updated schedule channel : %s/%s (%s)", GetVHostAppName().CStr(), schedule_file_info_from_dir._schedule->GetStream().name.CStr(), schedule_file_info_from_dir._file_path.CStr());
+                        logti("Updated schedule channel : %s/%s (%s)", GetVHostAppName().CStr(), schedule_file_info_from_dir._schedule->GetStream()._name.CStr(), schedule_file_info_from_dir._file_path.CStr());
                     }
                 }
             }
@@ -101,7 +101,7 @@ namespace pvd
                 }
 
                 RemoveSchedule(schedule_file_info);
-                logti("Removed schedule channel : %s/%s (%s)", GetVHostAppName().CStr(), schedule_file_info._schedule->GetStream().name.CStr(), schedule_file_info._file_path.CStr());
+                logti("Removed schedule channel : %s/%s (%s)", GetVHostAppName().CStr(), schedule_file_info._schedule->GetStream()._name.CStr(), schedule_file_info._file_path.CStr());
 
                 it = _schedule_file_info_db.erase(it);
             }
@@ -173,9 +173,9 @@ namespace pvd
 
         // Create Stream
         auto stream_info = info::Stream(*this, IssueUniqueStreamId(), StreamSourceType::Scheduled);
-        stream_info.SetName(schedule->GetStream().name);
+        stream_info.SetName(schedule->GetStream()._name);
 
-        if (schedule->GetStream().bypass_transcoder == true)
+        if (schedule->GetStream()._bypass_transcoder == true)
         {
             stream_info.SetRepresentationType(StreamRepresentationType::Relay);
         }
@@ -190,7 +190,7 @@ namespace pvd
         auto channel_info = schedule->GetStream();
 
         // Make temp tracks
-        if (channel_info.video_track == true)
+        if (channel_info._video_track == true)
         {
             auto track = std::make_shared<MediaTrack>();
             track->SetId(kScheduledVideoTrackId);
@@ -204,9 +204,9 @@ namespace pvd
             stream->AddTrack(track);
         }
 
-        if (channel_info.audio_track == true)
+        if (channel_info._audio_track == true)
         {
-			if (channel_info.audio_map.empty())
+			if (channel_info._audio_map.empty())
 			{
 				auto track = std::make_shared<MediaTrack>();
 				track->SetId(kScheduledAudioTrackId);
@@ -219,7 +219,7 @@ namespace pvd
 			}
 			else
 			{
-				for (const auto &audio_map_item : channel_info.audio_map)
+				for (const auto &audio_map_item : channel_info._audio_map)
 				{
 					auto track = std::make_shared<MediaTrack>();
 					track->SetId(kScheduledAudioTrackId + audio_map_item.GetIndex());
@@ -280,20 +280,20 @@ namespace pvd
         // Check Stream Changed
         if (old_schedule->GetStream() != new_schedule->GetStream())
         {
-            logtw("%s <Stream> cannot be changed while running. (%s -> %s)", new_schedule_file_info._file_path.CStr(), old_schedule->GetStream().name.CStr(), new_schedule->GetStream().name.CStr());
+            logtw("%s <Stream> cannot be changed while running. (%s -> %s)", new_schedule_file_info._file_path.CStr(), old_schedule->GetStream()._name.CStr(), new_schedule->GetStream()._name.CStr());
 
             return false;
         }
 
-        auto stream = std::static_pointer_cast<ScheduledStream>(GetStreamByName(new_schedule->GetStream().name));
+        auto stream = std::static_pointer_cast<ScheduledStream>(GetStreamByName(new_schedule->GetStream()._name));
         if (stream == nullptr)
         {
-            logtw("Failed to update schedule (%s stream not found ) : %s", new_schedule_file_info._file_path.CStr(), new_schedule->GetStream().name.CStr());
+            logtw("Failed to update schedule (%s stream not found ) : %s", new_schedule_file_info._file_path.CStr(), new_schedule->GetStream()._name.CStr());
         }
 
         if (stream->UpdateSchedule(new_schedule) == false)
         {
-            logtw("Failed to update schedule (%s stream failed to update schedule) : %s", new_schedule_file_info._file_path.CStr(), new_schedule->GetStream().name.CStr());
+            logtw("Failed to update schedule (%s stream failed to update schedule) : %s", new_schedule_file_info._file_path.CStr(), new_schedule->GetStream()._name.CStr());
             return false;
         }
 
@@ -305,7 +305,7 @@ namespace pvd
 
     bool ScheduledApplication::RemoveSchedule(ScheduleFileInfo &schedule_file_info)
     {
-        auto stream_name = schedule_file_info._schedule->GetStream().name;
+        auto stream_name = schedule_file_info._schedule->GetStream()._name;
 
         // Remove Stream
         auto stream = std::static_pointer_cast<ScheduledStream>(GetStreamByName(stream_name));

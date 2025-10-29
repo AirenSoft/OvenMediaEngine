@@ -72,7 +72,7 @@ namespace pvd
         PlaybackResult PlayItem(const std::shared_ptr<Schedule::Item> &item, bool fallback_item = false);
 
         PlaybackResult PlayFile(const std::shared_ptr<Schedule::Item> &item, bool fallback_item);
-        AVFormatContext *PrepareFilePlayback(const std::shared_ptr<Schedule::Item> &item);
+        bool PrepareFilePlayback(const std::shared_ptr<Schedule::Item> &item);
         
         PlaybackResult PlayStream(const std::shared_ptr<Schedule::Item> &item, bool fallback_item);
         std::shared_ptr<MediaRouterStreamTap> PrepareStreamPlayback(const std::shared_ptr<Schedule::Item> &item);

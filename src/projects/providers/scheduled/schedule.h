@@ -8,9 +8,11 @@
 //==============================================================================
 #pragma once
 
-#include <base/ovlibrary/ovlibrary.h>
 #include <base/common_types.h>
 #include <base/info/audio_map_item.h>
+#include <base/ovlibrary/ovlibrary.h>
+#include <modules/ffmpeg/compat.h>
+
 #include <pugixml-1.9/src/pugixml.hpp>
 
 /*
@@ -44,182 +46,200 @@
 
 namespace pvd
 {
-    constexpr const char* ScheduleFileExtension = "sch";
-    
-    class Schedule
-    {
-    public:
-        struct Item
-        {
-            // == operator
-            bool operator==(const Item &rhs) const
-            {
-                if (url != rhs.url ||
-                    start_time_ms_conf != rhs.start_time_ms_conf ||
-                    duration_ms_conf != rhs.duration_ms_conf)
-                {
-                    return false;
-                }
+	constexpr const char *ScheduleFileExtension = "sch";
 
-                return true;
-            }
+	class Schedule
+	{
+	public:
+		class Item
+		{
+		public:
+			Item() = default;
+			~Item() = default;
 
-            // != operator
-            bool operator!=(const Item &rhs) const
-            {
-                return !(*this == rhs);
-            }
+			// == operator
+			bool operator==(const Item &rhs) const
+			{
+				if (_url != rhs._url ||
+					_start_time_ms_conf != rhs._start_time_ms_conf ||
+					_duration_ms_conf != rhs._duration_ms_conf)
+				{
+					return false;
+				}
 
-            ov::String url;
-            ov::String file_path;
-            bool fallback_on_err = true; // default true
-            bool file = true;
-            bool fallback = false;
+				return true;
+			}
+
+			// != operator
+			bool operator!=(const Item &rhs) const
+			{
+				return !(*this == rhs);
+			}
+
+			ov::String _url;
+			ov::String _file_path;
+			bool _fallback_on_err = true;  // default true
+			bool _file			 = true;
+			bool _fallback		 = false;
 
 			// setting values
-			int64_t start_time_ms_conf;
-            int64_t duration_ms_conf;
+			int64_t _start_time_ms_conf;
+			int64_t _duration_ms_conf;
 
 			// calculated values
-			int64_t start_time_ms = 0;
-			int64_t duration_ms = 0;
-        };
+			int64_t _start_time_ms = 0;
+			int64_t _duration_ms	  = 0;
 
-        struct Stream
-        {
-            bool operator==(const Stream &rhs) const
-            {
-                if (name != rhs.name ||
-                    bypass_transcoder != rhs.bypass_transcoder ||
-                    video_track != rhs.video_track ||
-                    audio_track != rhs.audio_track)
-                {
-                    return false;
-                }
+			// File
+			std::shared_ptr<AVFormatContext> LoadContext();
+		private:
+			std::shared_ptr<AVFormatContext> _format_context;
+			struct stat _last_loaded_stat;
+		};
 
-                return true;
-            }
+		class Stream
+		{
+		public:
+			Stream()  = default;
+			~Stream() = default;
 
-            bool operator!=(const Stream &rhs) const
-            {
-                return !(*this == rhs);
-            }
+			bool operator==(const Stream &rhs) const
+			{
+				if (_name != rhs._name ||
+					_bypass_transcoder != rhs._bypass_transcoder ||
+					_video_track != rhs._video_track ||
+					_audio_track != rhs._audio_track)
+				{
+					return false;
+				}
 
-            ov::String name;
-            bool bypass_transcoder = false;
-            bool video_track = true;
-            bool audio_track = true;
+				return true;
+			}
 
-			std::vector<info::AudioMapItem> audio_map;
+			bool operator!=(const Stream &rhs) const
+			{
+				return !(*this == rhs);
+			}
 
-			int64_t error_tolerance_duration_ms = 500;
-        };
-            
-        struct Program
-        {
+			ov::String _name;
+			bool _bypass_transcoder = false;
+			bool _video_track	   = true;
+			bool _audio_track	   = true;
+
+			std::vector<info::AudioMapItem> _audio_map;
+
+			int64_t _error_tolerance_duration_ms = 500;
+		};
+
+		class Program
+		{
+		public:
+			Program()  = default;
+			~Program() = default;
+
 			std::shared_ptr<Item> GetFirstItem();
-            std::shared_ptr<Item> GetNextItem();
-            bool IsOffAir() const;
+			std::shared_ptr<Item> GetNextItem();
+			bool IsOffAir() const;
 
-            // == operator
-            bool operator==(const Program &rhs) const
-            {
-                if (scheduled_time != rhs.scheduled_time ||
-                    //duration_ms != rhs.duration_ms || // duration_ms can be changed by next program
-                    repeat != rhs.repeat || 
-                    items.size() != rhs.items.size())
-                {
-                    return false;
-                }
+			// == operator
+			bool operator==(const Program &rhs) const
+			{
+				if (_scheduled_time != rhs._scheduled_time ||
+					//duration_ms != rhs.duration_ms || // duration_ms can be changed by next program
+					_repeat != rhs._repeat ||
+					_items.size() != rhs._items.size())
+				{
+					return false;
+				}
 
-                for (size_t i = 0; i < items.size(); i++)
-                {
-                    if (*items[i] != *rhs.items[i])
-                    {
-                        return false;
-                    }
-                }
+				for (size_t i = 0; i < _items.size(); i++)
+				{
+					if (*_items[i] != *rhs._items[i])
+					{
+						return false;
+					}
+				}
 
-                return true;
-            }
+				return true;
+			}
 
-            // != operator
-            bool operator!=(const Program &rhs) const
-            {
-                return !(*this == rhs);
-            }
-            
-            ov::String name;
-            ov::String scheduled;
-            std::chrono::system_clock::time_point scheduled_time;
-            int64_t duration_ms;
-            std::chrono::system_clock::time_point end_time;
-            bool repeat;
-            std::vector<std::shared_ptr<Item>> items;
-			int64_t total_item_duration_ms = 0;
-			bool unlimited_duration = false; // if live with no duration, it will be played until the end of the program
+			// != operator
+			bool operator!=(const Program &rhs) const
+			{
+				return !(*this == rhs);
+			}
 
-        private:
-            int current_item_index = 0;
-            bool off_air = false;
-        };
+			ov::String _name;
+			ov::String _scheduled;
+			std::chrono::system_clock::time_point _scheduled_time;
+			int64_t _duration_ms;
+			std::chrono::system_clock::time_point _end_time;
+			bool _repeat;
+			std::vector<std::shared_ptr<Item>> _items;
+			int64_t _total_item_duration_ms = 0;
+			bool _unlimited_duration		   = false;	 // if live with no duration, it will be played until the end of the program
 
-        static std::tuple<std::shared_ptr<Schedule>, ov::String> CreateFromXMLFile(const ov::String &file_path, const ov::String &media_root_dir);
-        static std::tuple<std::shared_ptr<Schedule>, ov::String> CreateFromJsonObject(const Json::Value &object, const ov::String &media_root_dir);
+		private:
+			int _current_item_index = 0;
+			bool _off_air		   = false;
+		};
 
-        Schedule() = default;
-        ~Schedule() = default;
+		static std::tuple<std::shared_ptr<Schedule>, ov::String> CreateFromXMLFile(const ov::String &file_path, const ov::String &media_root_dir);
+		static std::tuple<std::shared_ptr<Schedule>, ov::String> CreateFromJsonObject(const Json::Value &object, const ov::String &media_root_dir);
 
-        bool LoadFromXMLFile(const ov::String &file_path, const ov::String &media_file_root_dir);
-        bool LoadFromJsonObject(const Json::Value &object, const ov::String &media_file_root_dir);
-        bool PatchFromJsonObject(const Json::Value &object);
+		Schedule()	= default;
+		~Schedule() = default;
 
-        std::shared_ptr<Schedule> Clone() const;
+		bool LoadFromXMLFile(const ov::String &file_path, const ov::String &media_file_root_dir);
+		bool LoadFromJsonObject(const Json::Value &object, const ov::String &media_file_root_dir);
+		bool PatchFromJsonObject(const Json::Value &object);
 
-        ov::String GetLastError() const;
-        
-        std::chrono::system_clock::time_point GetCreatedTime() const;
+		std::shared_ptr<Schedule> Clone() const;
 
-        const Stream &GetStream() const;
-        const std::shared_ptr<Program> GetFallbackProgram() const;
-        const std::vector<std::shared_ptr<Program>> &GetPrograms() const;
+		ov::String GetLastError() const;
 
-        const std::shared_ptr<Program> GetCurrentProgram() const;
-        const std::shared_ptr<Program> GetNextProgram() const;
+		std::chrono::system_clock::time_point GetCreatedTime() const;
 
-        CommonErrorCode SaveToXMLFile(const ov::String &file_path) const;
-        CommonErrorCode ToJsonObject(Json::Value &root_object) const;
+		const Stream &GetStream() const;
+		const std::shared_ptr<Program> GetFallbackProgram() const;
+		const std::vector<std::shared_ptr<Program>> &GetPrograms() const;
 
-    private:
-        bool ReadStreamNode(const pugi::xml_node &schedule_node);
-        bool ReadFallbackProgramNode(const pugi::xml_node &schedule_node);
-        bool ReadProgramNodes(const pugi::xml_node &schedule_node);
-        bool ReadItemNodes(const pugi::xml_node &item_parent_node, std::vector<std::shared_ptr<Item>> &items);
+		const std::shared_ptr<Program> GetCurrentProgram() const;
+		const std::shared_ptr<Program> GetNextProgram() const;
 
-        bool WriteItemNodes(const std::vector<std::shared_ptr<Item>> &items, pugi::xml_node &item_parent_node) const;
-        bool WriteItemObjects(const std::vector<std::shared_ptr<Item>> &items, Json::Value &item_parent_object) const;
+		CommonErrorCode SaveToXMLFile(const ov::String &file_path) const;
+		CommonErrorCode ToJsonObject(Json::Value &root_object) const;
 
-        bool ReadStreamObject(const Json::Value &root_object);
-        bool ReadFallbackProgramObject(const Json::Value &root_object);
-        bool ReadProgramObjects(const Json::Value &root_object);
-        bool ReadItemObjects(const Json::Value &item_parent_object, std::vector<std::shared_ptr<Item>> &items);
+	private:
+		bool ReadStreamNode(const pugi::xml_node &schedule_node);
+		bool ReadFallbackProgramNode(const pugi::xml_node &schedule_node);
+		bool ReadProgramNodes(const pugi::xml_node &schedule_node);
+		bool ReadItemNodes(const pugi::xml_node &item_parent_node, std::vector<std::shared_ptr<Item>> &items);
 
-        Stream MakeStream(const ov::String &name, bool bypass_transcoder, bool video_track, bool audio_track) const;
-        std::shared_ptr<Program> MakeFallbackProgram() const;
-        std::shared_ptr<Program> MakeProgram(const ov::String &name, const ov::String &scheduled_time, const ov::String &next_scheduled_time, bool repeat, bool last) const;
-        std::shared_ptr<Item> MakeItem(const ov::String &url, int64_t start_time_ms_conf, int64_t duration_ms_conf, bool fallback_on_err) const;
+		bool WriteItemNodes(const std::vector<std::shared_ptr<Item>> &items, pugi::xml_node &item_parent_node) const;
+		bool WriteItemObjects(const std::vector<std::shared_ptr<Item>> &items, Json::Value &item_parent_object) const;
 
-        Stream _stream;
-        std::shared_ptr<Program> _fallback_program;
-        std::vector<std::shared_ptr<Program>> _programs;
+		bool ReadStreamObject(const Json::Value &root_object);
+		bool ReadFallbackProgramObject(const Json::Value &root_object);
+		bool ReadProgramObjects(const Json::Value &root_object);
+		bool ReadItemObjects(const Json::Value &item_parent_object, std::vector<std::shared_ptr<Item>> &items);
 
-        ov::String _file_path;
-        ov::String _file_name_without_ext;
-        ov::String _media_root_dir;
+		Stream MakeStream(const ov::String &name, bool bypass_transcoder, bool video_track, bool audio_track) const;
+		std::shared_ptr<Program> MakeFallbackProgram() const;
+		std::shared_ptr<Program> MakeProgram(const ov::String &name, const ov::String &scheduled_time, const ov::String &next_scheduled_time, bool repeat, bool last) const;
+		std::shared_ptr<Item> MakeItem(const ov::String &url, int64_t start_time_ms_conf, int64_t duration_ms_conf, bool fallback_on_err) const;
 
-        // Created time
-        std::chrono::system_clock::time_point _created_time;
+		Stream _stream;
+		std::shared_ptr<Program> _fallback_program;
+		std::vector<std::shared_ptr<Program>> _programs;
 
-        mutable ov::String _last_error;
-    };
-}
+		ov::String _file_path;
+		ov::String _file_name_without_ext;
+		ov::String _media_root_dir;
+
+		// Created time
+		std::chrono::system_clock::time_point _created_time;
+
+		mutable ov::String _last_error;
+	};
+}  // namespace pvd
