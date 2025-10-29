@@ -15,6 +15,9 @@ namespace pvd
 {
 	std::shared_ptr<AVFormatContext> Schedule::Item::LoadContext()
 	{
+		ov::StopWatch sw;
+		sw.Start();
+
 		if (_file == false || _file_path.IsEmpty())
 		{
 			logti("LoadContext: Not a file item: %s", _file_path.CStr());
@@ -81,10 +84,12 @@ namespace pvd
 			return nullptr;
 		}
 
+		logti("LoadContext: File loaded successfully: %s (%lld ms)", _file_path.CStr(), sw.Elapsed());
+
 		return _format_context;
 	}
 
-	std::shared_ptr<Schedule::Item> Schedule::Program::GetFirstItem()
+	std::shared_ptr<Schedule::Item> Schedule::Program::GetFirstItemWithPosition()
 	{
 		// Search for the first item by now() - scheduled_time
 		if (_items.empty() || (_unlimited_duration == false && _total_item_duration_ms <= 0))
@@ -163,6 +168,20 @@ namespace pvd
 
 		auto item = _items[_current_item_index];
 		_current_item_index++;
+
+		return item;
+	}
+
+	std::shared_ptr<Schedule::Item> Schedule::Program::GetItem(int index)
+	{
+		if (index < 0 || size_t(index) >= _items.size())
+		{
+			return nullptr;
+		}
+
+		auto item = _items[index];
+
+		_current_item_index = index + 1;
 
 		return item;
 	}
@@ -946,13 +965,10 @@ namespace pvd
 		if (item->_file == true)
 		{
 			// Pre load file information
-			ov::StopWatch sw;
-			sw.Start();
 			if (item->LoadContext() == nullptr)
 			{
 				logte("Failed to preload file information. url: %s", item->_file_path.CStr());
 			}
-			logti("Preload file successful. url: %s, time taken: %lld ms", item->_file_path.CStr(), sw.Elapsed());
 		}
 
 		return item;

@@ -137,8 +137,9 @@ namespace pvd
 			Program()  = default;
 			~Program() = default;
 
-			std::shared_ptr<Item> GetFirstItem();
+			std::shared_ptr<Item> GetFirstItemWithPosition();
 			std::shared_ptr<Item> GetNextItem();
+			std::shared_ptr<Item> GetItem(int index);
 			bool IsOffAir() const;
 
 			// == operator

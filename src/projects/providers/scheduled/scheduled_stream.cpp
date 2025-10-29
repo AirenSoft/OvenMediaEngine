@@ -293,7 +293,7 @@ namespace pvd
                 guard.lock();
 				if (first_item == true)
 				{
-					_current_item = _current_program->GetFirstItem();
+					_current_item = _current_program->GetFirstItemWithPosition();
 				}
                 else
 				{
@@ -304,14 +304,11 @@ namespace pvd
                 if (_current_item == nullptr)
                 {
                     logti("Scheduled Channel %s/%s: Program ended", GetApplicationName(), GetName().CStr());
-                    PlayFallbackOrWait();
                     break;
                 }
-				else
-				{
-					first_item = false;
-				}
-                
+
+				first_item = false;
+				bool exit_loop = false;
                 while (_worker_thread_running)
                 {
                     auto result = PlayItem(_current_item);
@@ -319,15 +316,26 @@ namespace pvd
                     {
                         if (_current_item->_fallback_on_err == true)
                         {
-                            if (PlayFallbackOrWait() == PlaybackResult::FAILBACK)
+							auto fallback_result = PlayFallbackOrWait();
+                            if (fallback_result == PlaybackResult::FAILBACK)
                             {
                                 continue;
                             }
+							else if (CheckCurrentFallbackProgramChanged() == true)
+							{
+								// Fallback program changed, should reset to _fallback_program
+								exit_loop = true;
+							}
                         }
                     }
 
 					break;
                 }
+
+				if (exit_loop == true)
+				{
+					break;
+				}
             }
         }
     }
@@ -339,6 +347,7 @@ namespace pvd
         PlaybackResult result = PlaybackResult::PLAY_NEXT_ITEM;
 
         // Fallback
+		bool fisrt = true;
         while (_worker_thread_running)
         {
             if (CheckCurrentProgramChanged() == true)
@@ -366,7 +375,17 @@ namespace pvd
                 continue;
             }
 
-            auto item = _fallback_program->GetNextItem();
+			std::shared_ptr<Schedule::Item> item = nullptr;
+			if (fisrt == true)
+			{
+				item = _fallback_program->GetItem(0);
+				fisrt = false;
+			}
+			else
+			{
+				item = _fallback_program->GetNextItem();
+			}
+
             result = PlayItem(item, true);
             if (result == PlaybackResult::FAILBACK)
             {
@@ -374,7 +393,7 @@ namespace pvd
             }
             else if (result == PlaybackResult::PLAY_NEXT_ITEM)
             {
-                
+                // Next fallback item
             }
             else if (result == PlaybackResult::PLAY_NEXT_PROGRAM)
             {
@@ -390,7 +409,7 @@ namespace pvd
                 }
 
                 _realtime_clock.Pause();
-                _schedule_updated.Wait(1000);
+                _schedule_updated.Wait(250);
 
                 continue;
 			}
