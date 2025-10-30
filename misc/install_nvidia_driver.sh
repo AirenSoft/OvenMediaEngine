@@ -205,7 +205,7 @@ install_base_rocky()
     fi     
 
     # Install CUDA toolkit 
-    sudo dnf install cuda-toolkit-11-7 -y
+    sudo dnf install cuda-toolkit-11-8 -y
  
     success_exit
 }
