@@ -93,14 +93,19 @@ install_base_ubuntu()
         sudo apt -y update
         if [ -z "$NVIDIA_DRIVER_VERSION" ]
         then 
-            # installation with recommended version
-            sudo ubuntu-drivers autoinstall
+            # Insall recommended version 470
+            sudo apt-get install -y --no-install-recommends nvidia-driver-470
+			# Install CUDA Toolkit 11.8
+			wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+			dpkg -i cuda-keyring_1.1-1_all.deb
+			apt-get update
+			apt-get -y install cuda-toolkit-11-8
         else
             # installation with specific version
             sudo apt-get install -y --no-install-recommends nvidia-driver-${NVIDIA_DRIVER_VERSION}
-        fi     
-        sudo apt-get install -y --no-install-recommends nvidia-cuda-toolkit
-
+			sudo apt-get install -y --no-install-recommends nvidia-cuda-toolkit
+        fi
+		
         success_exit
     else
         fail_exit
