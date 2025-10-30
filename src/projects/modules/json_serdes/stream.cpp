@@ -29,27 +29,24 @@ namespace serdes
 
 		SetBool(object, "bypass", track->IsBypass());
 
-		if (track->IsBypass() == false)
-		{
-			SetString(object, "codec", cmn::GetCodecIdString(track->GetCodecId()), Optional::False);
-			SetInt(object, "width", track->GetWidth());
-			SetInt(object, "height", track->GetHeight());
-			SetInt(object, "bitrate", track->GetBitrate());
-			SetInt(object, "bitrateConf", track->GetBitrateByConfig());
-			SetInt(object, "bitrateAvg", track->GetBitrateByMeasured());
-			SetInt(object, "bitrateLatest", track->GetBitrateLastSecond());
-			SetFloat(object, "framerate", track->GetFrameRate());
-			SetFloat(object, "framerateConf", track->GetFrameRateByConfig());
-			SetFloat(object, "framerateAvg", track->GetFrameRateByMeasured());
-			SetFloat(object, "framerateLatest", track->GetFrameRateLastSecond());
-			SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
-			SetBool(object, "hasBframes", track->HasBframes());
-			SetFloat(object, "keyFrameInterval", track->GetKeyFrameInterval());
-			SetFloat(object, "keyFrameIntervalConf", track->GetKeyFrameIntervalByConfig());
-			SetFloat(object, "keyFrameIntervalAvg", track->GetKeyFrameIntervalByMeasured());
-			SetFloat(object, "keyFrameIntervalLatest", track->GetKeyFrameIntervalLatest());
-			SetInt(object, "deltaFramesSinceLastKeyFrame", track->GetDeltaFramesSinceLastKeyFrame());
-		}
+		SetString(object, "codec", cmn::GetCodecIdString(track->GetCodecId()), Optional::False);
+		SetInt(object, "width", track->GetWidth());
+		SetInt(object, "height", track->GetHeight());
+		SetInt(object, "bitrate", track->GetBitrate());
+		SetInt(object, "bitrateConf", track->GetBitrateByConfig());
+		SetInt(object, "bitrateAvg", track->GetBitrateByMeasured());
+		SetInt(object, "bitrateLatest", track->GetBitrateLastSecond());
+		SetFloat(object, "framerate", track->GetFrameRate());
+		SetFloat(object, "framerateConf", track->GetFrameRateByConfig());
+		SetFloat(object, "framerateAvg", track->GetFrameRateByMeasured());
+		SetFloat(object, "framerateLatest", track->GetFrameRateLastSecond());
+		SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
+		SetBool(object, "hasBframes", track->HasBframes());
+		SetFloat(object, "keyFrameInterval", track->GetKeyFrameInterval());
+		SetFloat(object, "keyFrameIntervalConf", track->GetKeyFrameIntervalByConfig());
+		SetFloat(object, "keyFrameIntervalAvg", track->GetKeyFrameIntervalByMeasured());
+		SetFloat(object, "keyFrameIntervalLatest", track->GetKeyFrameIntervalLatest());
+		SetInt(object, "deltaFramesSinceLastKeyFrame", track->GetDeltaFramesSinceLastKeyFrame());
 	}
 
 	static void SetAudioChannel(Json::Value &parent_object, const char *key, const cmn::AudioChannel &channel, Optional optional)
@@ -66,18 +63,15 @@ namespace serdes
 
 		SetBool(object, "bypass", track->IsBypass());
 
-		if (track->IsBypass() == false)
-		{
-			SetString(object, "codec", cmn::GetCodecIdString(track->GetCodecId()), Optional::False);
-			SetInt(object, "samplerate", track->GetSampleRate());
-			// SetAudioChannel(object, "channel", track->GetChannel(), Optional::False);
-			SetInt(object, "channel", track->GetChannel().GetCounts());
-			SetInt(object, "bitrate", track->GetBitrate());
-			SetInt(object, "bitrateConf", track->GetBitrateByConfig());
-			SetInt(object, "bitrateAvg", track->GetBitrateByMeasured());
-			SetInt(object, "bitrateLatest", track->GetBitrateLastSecond());
-			SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
-		}
+		SetString(object, "codec", cmn::GetCodecIdString(track->GetCodecId()), Optional::False);
+		SetInt(object, "samplerate", track->GetSampleRate());
+		// SetAudioChannel(object, "channel", track->GetChannel(), Optional::False);
+		SetInt(object, "channel", track->GetChannel().GetCounts());
+		SetInt(object, "bitrate", track->GetBitrate());
+		SetInt(object, "bitrateConf", track->GetBitrateByConfig());
+		SetInt(object, "bitrateAvg", track->GetBitrateByMeasured());
+		SetInt(object, "bitrateLatest", track->GetBitrateLastSecond());
+		SetTimebase(object, "timebase", track->GetTimeBase(), Optional::False);
 	}
 
 	static void SetTrack(Json::Value &parent_object, const char *key, const std::shared_ptr<const MediaTrack> &track, Optional optional)
