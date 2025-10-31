@@ -161,25 +161,28 @@ namespace pvd
         return true;
     }
 
-    bool ScheduledStream::CheckCurrentItemAvailable()
+    bool ScheduledStream::CheckCurrentItemAvailable(bool immediate)
     {
         if (_current_item == nullptr)
         {
             return false;
         }
 
-        // check every 3 seconds
-        if (_failback_check_clock.IsStart() == false)
-        {
-            _failback_check_clock.Start();
-        }
+		if (immediate == false)
+		{
+			// check every 1 seconds
+			if (_failback_check_clock.IsStart() == false)
+			{
+				_failback_check_clock.Start();
+			}
 
-        if (_failback_check_clock.Elapsed() < 3000)
-        {
-            return false;
-        }
+			if (_failback_check_clock.Elapsed() < 1000)
+			{
+				return false;
+			}
 
-        _failback_check_clock.Stop();
+			_failback_check_clock.Stop();
+		}
 
         if (_current_item->_file == true)
         {
@@ -364,7 +367,7 @@ namespace pvd
 
             if (_fallback_program == nullptr || _fallback_program->_items.empty() == true)
             {
-                if (CheckCurrentItemAvailable() == true)
+                if (CheckCurrentItemAvailable(true) == true)
                 {
                     return PlaybackResult::FAILBACK;
                 }
@@ -403,7 +406,7 @@ namespace pvd
             {
 				logte("Scheduled Channel %s/%s: Playback error in fallback program. Try to play next item", GetApplicationName(), GetName().CStr());
 
-				if (CheckCurrentItemAvailable() == true)
+				if (CheckCurrentItemAvailable(true) == true)
                 {
                     return PlaybackResult::FAILBACK;
                 }

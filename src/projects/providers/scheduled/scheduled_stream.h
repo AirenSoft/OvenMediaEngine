@@ -81,7 +81,7 @@ namespace pvd
         bool CheckCurrentProgramChanged();
         bool CheckCurrentFallbackProgramChanged();
 
-        bool CheckCurrentItemAvailable();
+        bool CheckCurrentItemAvailable(bool immediate=false);
         bool CheckFileItemAvailable(const std::shared_ptr<Schedule::Item> &item);
         bool CheckStreamItemAvailable(const std::shared_ptr<Schedule::Item> &item);
         
