@@ -124,11 +124,20 @@ namespace ov::logger
 			sinks.push_back(sink);
 		}
 
+		std::optional<spdlog::spdlog_ex> error;
+
 		if (options.to_file)
 		{
-			auto sink = sinks::DailyFileSink::Create(options.to_file.value());
+			try
+			{
+				auto sink = sinks::DailyFileSink::Create(options.to_file.value());
 
-			sinks.push_back(sink);
+				sinks.push_back(sink);
+			}
+			catch (const spdlog::spdlog_ex &ex)
+			{
+				error = ex;
+			}
 		}
 
 		auto internal_logger = std::make_shared<spdlog::logger>(tag, sinks.begin(), sinks.end());
@@ -147,6 +156,12 @@ namespace ov::logger
 		auto logger		= std::make_shared<Logger>(internal_logger);
 
 		logger_map[tag] = logger;
+
+		if (error.has_value())
+		{
+			logger->Error(__FILE__, __LINE__, __PRETTY_FUNCTION__,
+						  "Failed to create file for logging: {}", error->what());
+		}
 
 		return logger;
 	}
