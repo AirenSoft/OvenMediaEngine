@@ -8,14 +8,11 @@
 //==============================================================================
 #include "./string_formatter.h"
 
-namespace ov
+namespace ov::logger
 {
-	namespace logger
+	FormatResult StringFormatter::Format(String const &instance, FormatContext &ctx) const
 	{
-		FormatResult StringFormatter::Format(String const &instance, FormatContext &ctx) const
-		{
-			return fmt::formatter<std::string_view>::format(
-				std::string_view(instance.CStr(), instance.GetLength()), ctx);
-		}
-	}  // namespace logger
-}  // namespace ov
+		return fmt::formatter<std::string_view>::format(
+			std::string_view(instance.CStr(), instance.GetLength()), ctx);
+	}
+}  // namespace ov::logger

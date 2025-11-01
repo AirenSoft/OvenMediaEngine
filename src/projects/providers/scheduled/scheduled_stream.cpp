@@ -244,6 +244,8 @@ namespace pvd
 
     void ScheduledStream::WorkerThread()
     {
+		ov::logger::ThreadHelper thread_helper;
+
         while (_worker_thread_running)
         {
             // Schedule

@@ -419,39 +419,10 @@ install_hiredis()
 
 install_spdlog()
 {
-    # Apply patch for getting thread name
-    local SPDLOG_PATCH_CONTENT='diff --git a/include/spdlog/details/log_msg-inl.h b/include/spdlog/details/log_msg-inl.h
-index aa3a9576..508ae9c1 100644
---- a/include/spdlog/details/log_msg-inl.h
-+++ b/include/spdlog/details/log_msg-inl.h
-@@ -25,6 +25,8 @@ SPDLOG_INLINE log_msg::log_msg(spdlog::log_clock::time_point log_time,
-       thread_id(os::thread_id())
- #endif
-       ,
-+      // AirenSoft - Add pthread to get thread name
-+      pthread_id(::pthread_self()),
-       source(loc),
-       payload(msg) {
- }
-diff --git a/include/spdlog/details/log_msg.h b/include/spdlog/details/log_msg.h
-index 87df1e83..e83f8576 100644
---- a/include/spdlog/details/log_msg.h
-+++ b/include/spdlog/details/log_msg.h
-@@ -24,6 +24,8 @@ struct SPDLOG_API log_msg {
-     level::level_enum level{level::off};
-     log_clock::time_point time;
-     size_t thread_id{0};
-+    // AirenSoft - Add pthread to get thread name
-+    pthread_t pthread_id{0};
- 
-     // wrapping the formatted text with color (updated by pattern_formatter).
-     mutable size_t color_range_start{0};
-'
     (DIR=${TEMP_PATH}/spdlog && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
     curl -sSLf https://github.com/gabime/spdlog/archive/refs/tags/v${SPDLOG_VERSION}.tar.gz | tar -xz --strip-components=1 && \
-    echo "${SPDLOG_PATCH_CONTENT}" | git apply && \
     mkdir -p build && \
     cd build && \
     cmake .. \

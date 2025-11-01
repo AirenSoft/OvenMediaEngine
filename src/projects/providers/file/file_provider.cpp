@@ -70,6 +70,8 @@ namespace pvd
 		}
 
 		std::thread t([&](const info::Application &info) {
+			ov::logger::ThreadHelper thread_helper;
+
 			CreateStreamFromStreamMap(info);
 		}, app_info);
 		t.detach();

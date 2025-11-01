@@ -166,6 +166,8 @@ namespace mon
 
 		void Alert::EventWorkerThread()
 		{
+			ov::logger::ThreadHelper thread_helper;
+
 			while (!_stop_thread_flag)
 			{
 				_queue_event.Wait();
@@ -553,11 +555,7 @@ namespace mon
 
 			// Notification
 			auto notification_server_url = ov::Url::Parse(alert.GetUrl());
-#ifdef OME_ENTERPRISE
-			std::shared_ptr<Notification> notification_response = Notification::Query(notification_server_url, alert.GetTimeoutMsec(), alert.GetSecretKey(), alert.GetHashAlgorithm(), message_body);
-#else	// OME_ENTERPRISE
 			std::shared_ptr<Notification> notification_response = Notification::Query(notification_server_url, alert.GetTimeoutMsec(), alert.GetSecretKey(), message_body);
-#endif	// OME_ENTERPRISE
 			if (notification_response == nullptr)
 			{
 				// Probably this doesn't happen

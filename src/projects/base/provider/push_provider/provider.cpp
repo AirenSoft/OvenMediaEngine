@@ -168,6 +168,8 @@ namespace pvd
 
 	void PushProvider::ChannelTaskRunner()
 	{
+		ov::logger::ThreadHelper thread_helper;
+
 		std::shared_lock<std::shared_mutex> lock(_channels_lock, std::defer_lock);
 
 		while(_run_task_runner == true)

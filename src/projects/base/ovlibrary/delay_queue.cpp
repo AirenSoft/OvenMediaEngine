@@ -13,6 +13,7 @@
 #include <thread>
 
 #include "./log.h"
+#include "./logger/thread_helper.h"
 #include "./ovlibrary_private.h"
 
 namespace ov
@@ -114,6 +115,8 @@ namespace ov
 
 	void DelayQueue::DispatchThreadProc()
 	{
+		logger::ThreadHelper thread_helper;
+
 		std::unique_lock<std::mutex> lock(_mutex, std::defer_lock);
 		while (_stop == false)
 		{

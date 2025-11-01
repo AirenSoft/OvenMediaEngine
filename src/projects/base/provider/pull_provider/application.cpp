@@ -53,6 +53,8 @@ namespace pvd
 	// It works only with pull provider
 	void PullApplication::WhiteElephantStreamCollector()
 	{
+		ov::logger::ThreadHelper thread_helper;
+
 		auto global_no_input_timeout_ms = GetHostInfo().GetOrigins().GetProperties().GetNoInputFailoverTimeout(); 
 		auto global_unused_stream_timeout_ms = GetHostInfo().GetOrigins().GetProperties().GetUnusedStreamDeletionTimeout();
 		auto global_failback_timeout_ms = GetHostInfo().GetOrigins().GetProperties().GetStreamFailbackTimeout();	

@@ -111,6 +111,8 @@ bool EncoderWhisper::InitCodec()
 
 void EncoderWhisper::CodecThread()
 {
+	ov::logger::ThreadHelper thread_helper;
+
 	// Initialize the codec and notify the main thread.
 	if(_codec_init_event.Submit(InitCodec()) == false)
 	{

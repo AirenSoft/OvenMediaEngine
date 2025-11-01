@@ -102,6 +102,8 @@ namespace pvd
 
     void MultiplexStream::WorkerThread()
     {
+		ov::logger::ThreadHelper thread_helper;
+
         while (_worker_thread_running)
         {
             _mux_state = MuxState::Pulling;

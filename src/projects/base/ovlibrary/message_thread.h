@@ -71,6 +71,8 @@ namespace ov
 	private:
 		void Postman()
 		{
+			logger::ThreadHelper thread_helper;
+
 			while(_run_thread)
 			{
 				_event.Wait();	

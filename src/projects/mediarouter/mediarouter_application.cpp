@@ -874,6 +874,8 @@ uint32_t MediaRouteApplication::GetWorkerIDByStreamID(info::stream_id_t stream_i
 
 void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 {
+	ov::logger::ThreadHelper thread_helper;
+
 	logtd("Created Inbound worker thread #%d", worker_id);
 
 	while (!_kill_flag)
@@ -959,6 +961,8 @@ void MediaRouteApplication::InboundWorkerThread(uint32_t worker_id)
 
 void MediaRouteApplication::OutboundWorkerThread(uint32_t worker_id)
 {
+	ov::logger::ThreadHelper thread_helper;
+
 	logtd("Created outbound worker thread #%d", worker_id);
 
 	while (!_kill_flag)

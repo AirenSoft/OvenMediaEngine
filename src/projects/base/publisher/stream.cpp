@@ -167,6 +167,8 @@ namespace pub
 
 	void StreamWorker::WorkerThread()
 	{
+		ov::logger::ThreadHelper thread_helper;
+
 		std::shared_lock<std::shared_mutex> session_lock(_session_map_mutex, std::defer_lock);
 
 		while (!_stop_thread_flag)

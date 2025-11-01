@@ -668,6 +668,8 @@ uint32_t TranscodeGPU::GetUtilization(IPType type, cmn::MediaCodecModuleId id, c
 
 void TranscodeGPU::CodecThread()
 {
+	ov::logger::ThreadHelper thread_helper;
+
 	std::vector<cmn::MediaCodecModuleId> modules;
 
 	modules.push_back(cmn::MediaCodecModuleId::NVENC);

@@ -197,6 +197,8 @@ namespace pvd
 
 	void StreamMotor::WorkerThread()
 	{
+		ov::logger::ThreadHelper thread_helper;
+
 		while(true)
 		{
 			struct epoll_event epoll_events[MAX_EPOLL_EVENTS];

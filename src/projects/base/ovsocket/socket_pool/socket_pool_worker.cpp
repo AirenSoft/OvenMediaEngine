@@ -269,6 +269,8 @@ namespace ov
 
 	void SocketPoolWorker::ThreadProc()
 	{
+		logger::ThreadHelper thread_helper;
+
 		_connection_callback_queue.Start();
 
 		_gc_interval.Start();

@@ -587,6 +587,8 @@ bool FilterRescaler::PopProcess(bool is_flush)
 
 void FilterRescaler::WorkerThread()
 {
+	ov::logger::ThreadHelper thread_helper;
+
 	if(_codec_init_event.Submit(Configure(_input_track, _output_track)) == false)
 	{
 		return;

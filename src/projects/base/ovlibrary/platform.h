@@ -116,12 +116,14 @@
 
 namespace ov
 {
+	constexpr int MAX_THREAD_NAME_LENGTH = 16;
 	class Platform
 	{
 	public:
 		static const char *GetName();
 		static uint64_t GetProcessId();
 		static uint64_t GetThreadId();
+		static const char *GetThreadName(pthread_t thread_id);
 		static const char *GetThreadName();
 
 	public:

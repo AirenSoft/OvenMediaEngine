@@ -236,6 +236,8 @@ void FilterResampler::Stop()
 
 void FilterResampler::WorkerThread()
 {
+	ov::logger::ThreadHelper thread_helper;
+
 	auto result = Configure(_input_track, _output_track);
 	if (_codec_init_event.Submit(result) == false)
 	{

@@ -11,21 +11,18 @@
 #include "../../string.h"
 #include "./common.h"
 
-namespace ov
+namespace ov::logger
 {
-	namespace logger
+	class StringFormatter : protected fmt::formatter<std::string_view>
 	{
-		class StringFormatter : protected fmt::formatter<std::string_view>
+	public:
+		constexpr ParseResult Parse(ParseContext &ctx)
 		{
-		public:
-			constexpr ParseResult Parse(ParseContext &ctx)
-			{
-				return fmt::formatter<std::string_view>::parse(ctx);
-			}
+			return fmt::formatter<std::string_view>::parse(ctx);
+		}
 
-			FormatResult Format(String const &instance, FormatContext &ctx) const;
-		};
-	}  // namespace logger
-}  // namespace ov
+		FormatResult Format(String const &instance, FormatContext &ctx) const;
+	};
+}  // namespace ov::logger
 
 DECLARE_CUSTOM_FORMATTER(ov::logger::StringFormatter, ov::String);

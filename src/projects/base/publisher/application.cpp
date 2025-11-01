@@ -109,6 +109,8 @@ namespace pub
 
 	void ApplicationWorker::WorkerThread()
 	{
+		ov::logger::ThreadHelper thread_helper;
+
 		while (!_stop_thread_flag)
 		{
 			_queue_event.Wait();

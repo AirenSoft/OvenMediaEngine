@@ -48,15 +48,23 @@ namespace ov
 #endif
 	}
 
+	const char *Platform::GetThreadName(pthread_t thread_id)
+	{
+		static thread_local char name[16]{0};
+
+		if (::pthread_getname_np(thread_id, name, 16) != 0)
+		{
+			name[0] = '\0';
+		}
+
+		return name;
+	}
+
 	// I disabled the cache: Occasionally, if GetThreadName() is called just before pthread_setname_np() is called,
 	//                       the thread name may be set to OvenMediaEngine
 	const char *Platform::GetThreadName()
 	{
-		static thread_local char name[16]{0};
-
-		::pthread_getname_np(::pthread_self(), name, 16);
-
-		return name;
+		return GetThreadName(::pthread_self());
 	}
 
 	// Check if the CPU supports a specific feature

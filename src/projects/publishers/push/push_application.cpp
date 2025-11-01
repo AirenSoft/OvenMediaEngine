@@ -277,6 +277,8 @@ namespace pub
 
 	void PushApplication::SessionControlThread()
 	{
+		ov::logger::ThreadHelper thread_helper;
+
 		ov::StopWatch timer;
 		int64_t timer_interval = 1000;
 		timer.Start();

@@ -352,6 +352,8 @@ namespace mon
 
 	void EventForwarder::ForwarderThread()
 	{
+		ov::logger::ThreadHelper thread_helper;
+
 		// Get the last_shipped_log_time and file_offset
 		auto [result, last_file_time, last_file_offset] = LoadLastShippedInfo();
 		EventLogFileFinder event_stream(_log_path);

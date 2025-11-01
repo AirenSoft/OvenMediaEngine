@@ -553,6 +553,8 @@ bool TranscodeEncoder::PopProcess()
 
 void TranscodeEncoder::CodecThread()
 {
+	ov::logger::ThreadHelper thread_helper;
+
 	// Initialize the codec and notify to the main thread.
 	if (_codec_init_event.Submit(InitCodecInteral()) == false)
 	{

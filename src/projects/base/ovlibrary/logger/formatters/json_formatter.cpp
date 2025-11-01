@@ -8,16 +8,13 @@
 //==============================================================================
 #include "./json_formatter.h"
 
-namespace ov
+namespace ov::logger
 {
-	namespace logger
+	FormatResult JsonFormatter::Format(::Json::Value const &instance, FormatContext &ctx) const
 	{
-		FormatResult JsonFormatter::Format(::Json::Value const &instance, FormatContext &ctx) const
-		{
-			auto json_str = ov::Json::Stringify(instance);
+		auto json_str = ov::Json::Stringify(instance);
 
-			return fmt::formatter<std::string_view>::format(
-				std::string_view(json_str.CStr(), json_str.GetLength()), ctx);
-		}
-	}  // namespace logger
-}  // namespace ov
+		return fmt::formatter<std::string_view>::format(
+			std::string_view(json_str.CStr(), json_str.GetLength()), ctx);
+	}
+}  // namespace ov::logger

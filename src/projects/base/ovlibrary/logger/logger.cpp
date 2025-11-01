@@ -54,119 +54,116 @@
 #define OV_LOG_COLOR_BG_BR_CYAN "\x1B[106m"
 #define OV_LOG_COLOR_BG_BR_WHITE "\x1B[107m"
 
-namespace ov
+namespace ov::logger
 {
-	namespace logger
+	constexpr spdlog::level::level_enum LogLevelToSpdlogLevel(LogLevel level)
 	{
-		constexpr spdlog::level::level_enum LogLevelToSpdlogLevel(LogLevel level)
+		switch (level)
 		{
-			switch (level)
-			{
-				case LogLevel::Trace:
-					return spdlog::level::trace;
+			case LogLevel::Trace:
+				return spdlog::level::trace;
 
-				case LogLevel::Debug:
-					return spdlog::level::debug;
+			case LogLevel::Debug:
+				return spdlog::level::debug;
 
-				case LogLevel::Info:
-					return spdlog::level::info;
+			case LogLevel::Info:
+				return spdlog::level::info;
 
-				case LogLevel::Warn:
-					return spdlog::level::warn;
+			case LogLevel::Warn:
+				return spdlog::level::warn;
 
-				case LogLevel::Error:
-					return spdlog::level::err;
+			case LogLevel::Error:
+				return spdlog::level::err;
 
-				case LogLevel::Critical:
-					return spdlog::level::critical;
-			}
-
-			return spdlog::level::off;
+			case LogLevel::Critical:
+				return spdlog::level::critical;
 		}
 
-		struct DailyFilenameCalculator
+		return spdlog::level::off;
+	}
+
+	struct DailyFilenameCalculator
+	{
+		static spdlog::filename_t calc_filename(const spdlog::filename_t &filename, const tm &now_tm)
 		{
-			static spdlog::filename_t calc_filename(const spdlog::filename_t &filename, const tm &now_tm)
-			{
-				return spdlog::fmt_lib::format(
-					SPDLOG_FMT_STRING(SPDLOG_FILENAME_T("{}.{:04d}-{:02d}-{:02d}")),
-					filename, now_tm.tm_year + 1900, now_tm.tm_mon + 1, now_tm.tm_mday);
-			}
-		};
+			return spdlog::fmt_lib::format(
+				SPDLOG_FMT_STRING(SPDLOG_FILENAME_T("{}.{:04d}-{:02d}-{:02d}")),
+				filename, now_tm.tm_year + 1900, now_tm.tm_mon + 1, now_tm.tm_mday);
+		}
+	};
 
-		std::shared_ptr<Logger> GetLogger(const char *tag, const LogOptions &options)
+	std::shared_ptr<Logger> GetLogger(const char *tag, const LogOptions &options)
+	{
+		static std::mutex logger_map_mutex;
+		static std::map<std::string, std::shared_ptr<Logger>> logger_map;
+
+		std::lock_guard lock_guard(logger_map_mutex);
+
 		{
-			static std::mutex logger_map_mutex;
-			static std::map<std::string, std::shared_ptr<Logger>> logger_map;
+			auto logger = logger_map.find(tag);
 
-			std::lock_guard lock_guard(logger_map_mutex);
-
+			if (logger != logger_map.end())
 			{
-				auto logger = logger_map.find(tag);
-
-				if (logger != logger_map.end())
-				{
-					return logger->second;
-				}
+				return logger->second;
 			}
-
-			std::vector<spdlog::sink_ptr> sinks;
-
-			if (options.to_stdout_err)
-			{
-				auto sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-
-				sink->set_color(spdlog::level::trace, OV_LOG_COLOR_FG_CYAN);
-				sink->set_color(spdlog::level::debug, OV_LOG_COLOR_FG_CYAN);
-				sink->set_color(spdlog::level::info, OV_LOG_COLOR_FG_WHITE);
-				sink->set_color(spdlog::level::warn, OV_LOG_COLOR_FG_YELLOW);
-				sink->set_color(spdlog::level::err, OV_LOG_COLOR_FG_RED);
-				sink->set_color(spdlog::level::critical, OV_LOG_COLOR_FG_BR_WHITE OV_LOG_COLOR_BG_RED);
-
-				sinks.push_back(sink);
-			}
-
-			if (options.to_file)
-			{
-				auto sink = sinks::DailyFileSink::Create(options.to_file.value());
-
-				sinks.push_back(sink);
-			}
-
-			auto internal_logger = std::make_shared<spdlog::logger>(tag, sinks.begin(), sinks.end());
-
-			// [2025-02-12 17:54:01.445] I [SPRTMP-t41935:423153] Publisher | stream.cpp:294  | [stream(1423176515)] LLHLS Publisher Application - All StreamWorker has been stopped
-
-			// https://github.com/gabime/spdlog/wiki/3.-Custom-formatting#pattern-flags
-			auto formatter = std::make_unique<spdlog::pattern_formatter>();
-			formatter
-				->add_flag<ThreadNamePatternFlag>(ThreadNamePatternFlag::FLAG)
-				.set_pattern("%^[%Y-%m-%d %H:%M:%S.%e%z] %L [%N:%t] %n | %s:%-4# | %v%$");
-
-			// TODO(dimiden): Need to initialize logger according to the contents of Logger.xml here
-			internal_logger->set_formatter(std::move(formatter));
-
-			auto logger = std::make_shared<Logger>(internal_logger);
-
-			logger_map[tag] = logger;
-
-			return logger;
 		}
 
-		std::shared_ptr<Logger> GetLogger(const char *tag)
+		std::vector<spdlog::sink_ptr> sinks;
+
+		if (options.to_stdout_err)
 		{
-			return GetLogger(tag, {});
+			auto sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+
+			sink->set_color(spdlog::level::trace, OV_LOG_COLOR_FG_CYAN);
+			sink->set_color(spdlog::level::debug, OV_LOG_COLOR_FG_CYAN);
+			sink->set_color(spdlog::level::info, OV_LOG_COLOR_FG_WHITE);
+			sink->set_color(spdlog::level::warn, OV_LOG_COLOR_FG_YELLOW);
+			sink->set_color(spdlog::level::err, OV_LOG_COLOR_FG_RED);
+			sink->set_color(spdlog::level::critical, OV_LOG_COLOR_FG_BR_WHITE OV_LOG_COLOR_BG_RED);
+
+			sinks.push_back(sink);
 		}
 
-		void Logger::SetLogPattern(const char *pattern)
+		if (options.to_file)
 		{
-			_logger->set_pattern(pattern);
+			auto sink = sinks::DailyFileSink::Create(options.to_file.value());
+
+			sinks.push_back(sink);
 		}
 
-		void Logger::Log(LogLevel level, const char *file, int line, const char *function, const std::string &message)
-		{
-			_logger->log(spdlog::source_loc{file, line, function}, LogLevelToSpdlogLevel(level), message);
-			_logger->flush();
-		}
-	}  // namespace logger
-}  // namespace ov
+		auto internal_logger = std::make_shared<spdlog::logger>(tag, sinks.begin(), sinks.end());
+
+		// [2025-02-12 17:54:01.445] I [SPRTMP-t41935:423153] Publisher | stream.cpp:294  | [stream(1423176515)] LLHLS Publisher Application - All StreamWorker has been stopped
+
+		// https://github.com/gabime/spdlog/wiki/3.-Custom-formatting#pattern-flags
+		auto formatter		 = std::make_unique<spdlog::pattern_formatter>();
+		formatter
+			->add_flag<ThreadNamePatternFlag>(ThreadNamePatternFlag::FLAG)
+			.set_pattern("%^[%Y-%m-%d %H:%M:%S.%e%z] %L [%N:%t] %n | %s:%-4# | %v%$");
+
+		// TODO(dimiden): Need to initialize logger according to the contents of Logger.xml here
+		internal_logger->set_formatter(std::move(formatter));
+
+		auto logger		= std::make_shared<Logger>(internal_logger);
+
+		logger_map[tag] = logger;
+
+		return logger;
+	}
+
+	std::shared_ptr<Logger> GetLogger(const char *tag)
+	{
+		return GetLogger(tag, {});
+	}
+
+	void Logger::SetLogPattern(const char *pattern)
+	{
+		_logger->set_pattern(pattern);
+	}
+
+	void Logger::Log(LogLevel level, const char *file, int line, const char *function, const std::string &message)
+	{
+		_logger->log(spdlog::source_loc{file, line, function}, LogLevelToSpdlogLevel(level), message);
+		_logger->flush();
+	}
+}  // namespace ov::logger
