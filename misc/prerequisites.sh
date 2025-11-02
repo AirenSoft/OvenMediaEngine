@@ -306,27 +306,38 @@ install_ffmpeg()
     cd ${DIR} && \
     curl -sSLf ${FFMPEG_DOWNLOAD_URL} | tar -xz --strip-components=1 ) || fail_exit "ffmpeg"
 
-    # If there is an enable-xma option, add xilinx video sdk 
+    if [ true ]; then
+        PATCHES_NAMES=("scte35")
 
+        for NAME in "${PATCHES_NAMES[@]}"; do
+            PATCH_PATH=$SCRIPT_PATH/patches/ffmpeg_n${FFMPEG_VERSION}_${NAME}.patch
+            if [ ! -f $PATCH_PATH ]; then
+                continue
+            fi
+            # Apply patch
+            echo "Applying the patch found in $PATCH_PATH"
+            (cd ${DIR} && git apply $PATCH_PATH) || fail_exit "ffmpeg"
+        done
+    fi
+
+    # If there is an enable-xma option, add xilinx video sdk 
     if [ "$XILINX_XMA_CODEC_HWACCELS" = true ] ; then
-        XILINX_XMA_PATCH_PATH=$SCRIPT_PATH/patches/u30_ffmpeg_5.1.4_diff.patch
+        XILINX_XMA_PATCH_PATH=$SCRIPT_PATH/patches/ffmpeg_n5.1.4_u30ma.patch
         if [ ! -f $XILINX_XMA_PATCH_PATH ]; then
             echo "Could not found the patch file $XILINX_XMA_PATCH_PATH"
-            fail_exit "ffmpeg"
+        else
+            # Apply patch for XMA
+            echo "Applying the patch found in $XILINX_XMA_PATCH_PATH"
+            (cd ${DIR} && git apply $XILINX_XMA_PATCH_PATH) || fail_exit "ffmpeg"
+
+            ADDI_ENCODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
+            ADDI_DECODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
+            ADDI_FILTERS+=",multiscale_xma,xvbm_convert"
+            ADDI_LIBS+=" --enable-x86asm --enable-libxma2api --enable-libxvbm --enable-libxrm --enable-cross-compile "
+            ADDI_CFLAGS+=" -I/opt/xilinx/xrt/include/xma2 "
+            ADDI_LDFLAGS+="-L/opt/xilinx/xrt/lib -L/opt/xilinx/xrm/lib  -Wl,-rpath,/opt/xilinx/xrt/lib,-rpath,/opt/xilinx/xrm/lib"
+            ADDI_EXTRA_LIBS+="--extra-libs=-lxma2api --extra-libs=-lxrt_core --extra-libs=-lxrm --extra-libs=-lxrt_coreutil --extra-libs=-lpthread --extra-libs=-ldl "
         fi
-        # Apply patch for XMA
-        echo "Applying the patch founed in $XILINX_XMA_PATCH_PATH"
-
-        # Apply path to ffmpeg
-        (cd ${DIR} && git apply $XILINX_XMA_PATCH_PATH) || fail_exit "ffmpeg"
-
-        ADDI_ENCODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
-        ADDI_DECODER+=",h264_vcu_mpsoc,hevc_vcu_mpsoc"
-        ADDI_FILTERS+=",multiscale_xma,xvbm_convert"
-     	ADDI_LIBS+=" --enable-x86asm --enable-libxma2api --enable-libxvbm --enable-libxrm --enable-cross-compile "
-        ADDI_CFLAGS+=" -I/opt/xilinx/xrt/include/xma2 "
-        ADDI_LDFLAGS+="-L/opt/xilinx/xrt/lib -L/opt/xilinx/xrm/lib  -Wl,-rpath,/opt/xilinx/xrt/lib,-rpath,/opt/xilinx/xrm/lib"
-        ADDI_EXTRA_LIBS+="--extra-libs=-lxma2api --extra-libs=-lxrt_core --extra-libs=-lxrm --extra-libs=-lxrt_coreutil --extra-libs=-lpthread --extra-libs=-ldl "
     fi
 	
     # If there is an enable-nilogan option, add patch from libxcoder_logan-path 
