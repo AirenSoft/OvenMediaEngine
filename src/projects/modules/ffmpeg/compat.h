@@ -39,7 +39,6 @@ extern "C"
 #include <modules/bitstream/h265/h265_decoder_configuration_record.h>
 #include <modules/bitstream/opus/opus_specific_config.h>
 #include <transcoder/transcoder_context.h>
-#include <transcoder/transcoder_gpu.h>
 
 namespace ffmpeg
 {

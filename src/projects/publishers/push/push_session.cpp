@@ -283,8 +283,8 @@ namespace pub
 		else if (protocol_type == info::Push::ProtocolType::SRT || protocol_type == info::Push::ProtocolType::MPEGTS)
 		{
 			if (track->GetMediaType() == cmn::MediaType::Video ||
-				track->GetMediaType() == cmn::MediaType::Audio)
-				// SRT and MPEGTS do not support data track.
+				track->GetMediaType() == cmn::MediaType::Audio || 
+				track->GetMediaType() == cmn::MediaType::Data)
 			{
 				return true;
 			}
@@ -313,7 +313,8 @@ namespace pub
 				codec_id == cmn::MediaCodecId::Vp9 ||
 				codec_id == cmn::MediaCodecId::Aac ||
 				codec_id == cmn::MediaCodecId::Mp3 ||
-				codec_id == cmn::MediaCodecId::Opus)
+				codec_id == cmn::MediaCodecId::Opus || 
+				codec_id == cmn::MediaCodecId::None)
 			{
 				return true;
 			}

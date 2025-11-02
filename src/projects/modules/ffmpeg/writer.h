@@ -75,8 +75,9 @@ namespace ffmpeg
 		std::shared_ptr<AVFormatContext> GetAVFormatContext() const;
 		void SetAVFormatContext(AVFormatContext* av_format);
 		void ReleaseAVFormatContext();
-		std::pair<std::shared_ptr<AVStream>, std::shared_ptr<MediaTrack>> GetTrack(int32_t track_id) const;
+		std::pair<std::shared_ptr<AVStream>, std::shared_ptr<MediaTrack>> GetTrack(int32_t track_id, cmn::BitstreamFormat format) const;
 		bool ToAVPacket(AVPacket &av_packet, const std::shared_ptr<AVStream> av_stream, const std::shared_ptr<MediaPacket> &media_packet, const std::shared_ptr<MediaTrack> &media_track, int64_t start_time);
+		std::shared_ptr<AVStream> CreateAVStream(const std::shared_ptr<MediaTrack> &media_track);
 
 		std::atomic<WriterState> _state;
 
@@ -90,7 +91,10 @@ namespace ffmpeg
 		bool _need_to_close = false;
 
 		// MediaTrackId -> AVStream, MediaTrack
-		std::map<int32_t, std::pair<std::shared_ptr<AVStream>, std::shared_ptr<MediaTrack>>> _track_map;
+		bool AddMediaTrack(const std::shared_ptr<MediaTrack> &media_track, const std::shared_ptr<AVStream> &av_stream);
+		bool AddEventTrack(const std::shared_ptr<MediaTrack> &media_track, const std::shared_ptr<AVStream> &av_stream, cmn::BitstreamFormat format);
+		std::map<int32_t, std::pair<std::shared_ptr<AVStream>, std::shared_ptr<MediaTrack>>> _av_track_map;
+		std::map<std::pair<int32_t, cmn::BitstreamFormat>, std::pair<std::shared_ptr<AVStream>, std::shared_ptr<MediaTrack>>> _event_track_map;
 		mutable std::shared_mutex _track_map_lock;
 
 		std::shared_ptr<AVFormatContext> _av_format = nullptr;

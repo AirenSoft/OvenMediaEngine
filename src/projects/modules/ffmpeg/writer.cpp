@@ -1,9 +1,11 @@
 #include "writer.h"
 
+#include <base/modules/data_format/scte35_event/scte35_event.h>
 #include <modules/bitstream/aac/aac_converter.h>
 #include <modules/bitstream/nalu/nal_stream_converter.h>
 #include <modules/bitstream/opus/opus_specific_config.h>
 #include <modules/ffmpeg/compat.h>
+#include <modules/rtmp/amf0/amf_document.h>
 
 #define OV_LOG_TAG "FFmpegWriter"
 
@@ -113,6 +115,70 @@ namespace ffmpeg
 		return _timestamp_mode;
 	}
 
+	std::shared_ptr<AVStream> Writer::CreateAVStream(const std::shared_ptr<MediaTrack> &media_track)
+	{
+		auto av_format = GetAVFormatContext();
+		if (!av_format)
+		{
+			logte("AVFormatContext is null");
+			return nullptr;
+		}
+
+		AVStream *new_stream = avformat_new_stream(av_format.get(), nullptr);
+		if (!new_stream)
+		{
+			logte("Could not allocate stream");
+
+			return nullptr;
+		}
+
+		std::shared_ptr<AVStream> av_stream(new_stream, [](AVStream *av_stream) {});
+		if (!av_stream)
+		{
+			logte("Could not create AVStream");
+
+			return nullptr;
+		}
+
+		// Convert MediaTrack to AVStream
+		if (ffmpeg::compat::ToAVStream(media_track, av_stream.get()) == false)
+		{
+			logte("Could not convert track info to AVStream");
+
+			return nullptr;
+		}
+
+		return av_stream;
+	}
+
+	bool Writer::AddMediaTrack(const std::shared_ptr<MediaTrack> &media_track, const std::shared_ptr<AVStream> &av_stream)
+	{
+		std::lock_guard<std::shared_mutex> mlock(_track_map_lock);
+		_av_track_map[media_track->GetId()] = std::make_pair(av_stream, media_track);
+
+		logtd("Added %s track. id(%d), codec(%s), format(%s)",
+			  cmn::GetMediaTypeString(media_track->GetMediaType()),
+			  media_track->GetId(),
+			  ffmpeg::compat::GetCodecName(av_stream->codecpar->codec_id).CStr(),
+			  cmn::GetBitstreamFormatString(media_track->GetOriginBitstream()));
+
+		return true;
+	}
+
+	bool Writer::AddEventTrack(const std::shared_ptr<MediaTrack> &media_track, const std::shared_ptr<AVStream> &av_stream, cmn::BitstreamFormat format)
+	{
+		std::lock_guard<std::shared_mutex> mlock(_track_map_lock);
+		_event_track_map[std::make_pair(media_track->GetId(), format)] = std::make_pair(av_stream, media_track);
+
+		logtd("Added %s track. id(%d), codec(%s), format(%s)",
+			  cmn::GetMediaTypeString(media_track->GetMediaType()),
+			  media_track->GetId(),
+			  ffmpeg::compat::GetCodecName(av_stream->codecpar->codec_id).CStr(),
+			  cmn::GetBitstreamFormatString(format));
+
+		return true;
+	}
+
 	bool Writer::AddTrack(const std::shared_ptr<MediaTrack> &media_track)
 	{
 		// TODO: This code will move to mediarouter.
@@ -123,34 +189,50 @@ namespace ffmpeg
 			media_track->SetDecoderConfigurationRecord(opus_config);
 		}
 
-		auto av_format = GetAVFormatContext();
-		if (av_format == nullptr)
+		// Video/Audio is mapped 1:1
+		if (media_track->GetMediaType() == cmn::MediaType::Video ||
+			media_track->GetMediaType() == cmn::MediaType::Audio)
 		{
-			logte("AVFormatContext is null");
-			return false;
+			// Audio or Video stream track
+			auto av_stream = CreateAVStream(media_track);
+			if (!av_stream)
+			{
+				return false;
+			}
+
+			if (!AddMediaTrack(media_track, av_stream))
+			{
+				return false;
+			}
 		}
 
-		AVStream *av_stream = avformat_new_stream(av_format.get(), nullptr);
-		if (!av_stream)
+		// Data tracks are handled differently depending on the Bitstream format.
+
+
+		else if (media_track->GetMediaType() == cmn::MediaType::Data)
 		{
-			logte("Could not allocate stream");
+			// FLV(RTMP Push) - AMF0/AMF3 Metadata
+			if (_output_format_name == "flv")
+			{
+				// AMF0/AMF3 event stream track
+				auto av_stream = CreateAVStream(media_track);
+				if (!av_stream)
+				{
+					return false;
+				}
 
-			return false;
+				if (!AddEventTrack(media_track, av_stream, cmn::BitstreamFormat::AMF))
+				{
+					return false;
+				}
+			}
+			
+			// MP4(MPEG-4 File) -  Data is not used
+			if (_output_format_name == "mp4")
+			{
+				// Data track is not used in MP4
+			}
 		}
-
-		// Convert MediaTrack to AVStream
-		if (ffmpeg::compat::ToAVStream(media_track, av_stream) == false)
-		{
-			logte("Could not convert track info to AVStream");
-
-			return false;
-		}
-
-		std::lock_guard<std::shared_mutex> mlock(_track_map_lock);
-		// MediaTrackID -> AVStream, MediaTrack
-		// AVStream doesn't need to be released. It will be released when AVFormatContext is released.
-		std::shared_ptr<AVStream> av_stream_ptr(av_stream, [](AVStream *av_stream) {});
-		_track_map[media_track->GetId()] = std::make_pair(av_stream_ptr, media_track);
 
 		return true;
 	}
@@ -169,6 +251,10 @@ namespace ffmpeg
 			logte("AVFormatContext is null");
 			return false;
 		}
+
+		// Set service & provider metadata
+		av_dict_set(&av_format->metadata, "service_provider", "OvenMediaEngine", 0);
+		av_dict_set(&av_format->metadata, "service_name", "OvenMediaEngine", 0);
 
 		av_format->flush_packets = 1;
 
@@ -216,9 +302,6 @@ namespace ffmpeg
 			
 			return false;
 		}
-		
-		// Set output format name
-		_output_format_name = av_format->oformat->name;
 
 		_need_to_flush = true;
 
@@ -251,7 +334,7 @@ namespace ffmpeg
 		}
 
 		// Drop packets that do not need to be transmitted
-		auto [av_stream, media_track] = GetTrack(packet->GetTrackId());
+		auto [av_stream, media_track] = GetTrack(packet->GetTrackId(), packet->GetBitstreamFormat());
 		if (av_stream == nullptr || media_track == nullptr)
 		{
 			return true;
@@ -326,9 +409,16 @@ namespace ffmpeg
 					av_packet.data = (uint8_t *)new_data->GetDataAs<uint8_t>();
 				}
 				break;
-				case cmn::BitstreamFormat::AMF:
+				case cmn::BitstreamFormat::AMF: {
 					// Related to 'com.youtube.cuepoint', 'textdata' event message
-					break;
+					ov::ByteStream byte_stream(packet->GetData());
+					AmfDocument document;
+					if (document.Decode(byte_stream) == true)
+					{
+						logtd("AMF Event: %s", document.ToString().CStr());
+					}
+				}
+				break;
 				default:
 					// Unsupported bitstream foramt, but it is not an error.
 					return true;
@@ -399,7 +489,7 @@ namespace ffmpeg
 				case cmn::BitstreamFormat::MP3:
 					break;
 				default:
-					// Unsupported bitstream foramt, but it is not an error.
+					// Unsupported bitstream format, but it is not an error.
 					return true;
 			}
 		}
@@ -470,6 +560,9 @@ namespace ffmpeg
 			
 			avformat_free_context(av_format_ptr);
 		});
+
+		// Set output format name
+		_output_format_name = _av_format->oformat->name;
 	}
 
 	void Writer::ReleaseAVFormatContext()
@@ -480,15 +573,29 @@ namespace ffmpeg
 		_need_to_close = false;
 	}
 
-	std::pair<std::shared_ptr<AVStream>, std::shared_ptr<MediaTrack>> Writer::GetTrack(int32_t track_id) const
+	std::pair<std::shared_ptr<AVStream>, std::shared_ptr<MediaTrack>> Writer::GetTrack(int32_t track_id, cmn::BitstreamFormat format) const
 	{
 		std::shared_lock<std::shared_mutex> mlock(_track_map_lock);
-		auto it = _track_map.find(track_id);
-		if (it == _track_map.end())
+
+		// Check track for Audio/Video first
 		{
-			return std::make_pair(nullptr, nullptr);
+			auto it = _av_track_map.find(track_id);
+			if (it != _av_track_map.end())
+			{
+				return it->second;
+			}
 		}
-		return it->second;
+
+		// Check track for Data/Event
+		{
+			auto it = _event_track_map.find(std::make_pair(track_id, format));
+			if (it != _event_track_map.end())
+			{
+				return it->second;
+			}
+		}
+
+		return std::make_pair(nullptr, nullptr);
 	}
 
 	bool Writer::ToAVPacket(AVPacket &av_packet, const std::shared_ptr<AVStream> av_stream, const std::shared_ptr<MediaPacket> &media_packet, const std::shared_ptr<MediaTrack> &media_track, int64_t start_time)

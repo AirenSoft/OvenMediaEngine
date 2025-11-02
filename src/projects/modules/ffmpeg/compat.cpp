@@ -7,6 +7,7 @@
 //
 //==============================================================================
 #include "./compat.h"
+#include <transcoder/transcoder_gpu.h>
 
 namespace ffmpeg
 {

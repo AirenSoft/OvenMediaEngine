@@ -45,6 +45,7 @@ public:
 
 	std::shared_ptr<ov::Data> MakeScteData() const;
 
+	ov::String ToString() const;
 private:
 	mpegts::SpliceCommandType _splice_command_type;
 	uint32_t _id = 0;

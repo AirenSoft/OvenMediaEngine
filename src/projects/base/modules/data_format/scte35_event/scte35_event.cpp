@@ -122,3 +122,17 @@ std::shared_ptr<ov::Data> Scte35Event::MakeScteData() const
 
 	return splice_info_section->GetData().Clone();
 }
+
+ov::String Scte35Event::ToString() const
+{
+	ov::String str = ov::String::FormatString(
+		"SCTE-35 Event: SpliceCommandType=%d, ID=%u, OutOfNetwork=%s, Timestamp=%lld ms, Duration=%lld ms, AutoReturn=%s",
+		static_cast<int>(_splice_command_type),
+		_id,
+		_out_of_network ? "true" : "false",
+		_timestamp_msec,
+		_duration_msec,
+		_auto_return ? "true" : "false");
+
+	return str;
+}
