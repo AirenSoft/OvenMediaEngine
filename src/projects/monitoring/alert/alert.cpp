@@ -110,7 +110,7 @@ namespace mon
 				messages_key = NotificationData::StringFromType(type);
 				new_messages_keys.push_back(messages_key);
 
-				const auto &queue_metric_list = MonitorInstance->GetServerMetrics()->GetQueueMetricsList();
+				const auto queue_metric_list = MonitorInstance->GetServerMetrics()->GetQueueMetricsList();
 				for (const auto &[queue_key, queue_metric] : queue_metric_list)
 				{
 					if (!VerifyQueueCongestionRules(*rules, queue_metric, message_list))
