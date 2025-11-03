@@ -474,7 +474,7 @@ namespace ov
 		OV_ASSERT2(in != nullptr);
 		OV_ASSERT2(inl >= 0);
 
-		logtp("Trying to write %d bytes...\n%s", inl, ov::Dump(in, inl).CStr());
+		logtt("Trying to write %d bytes...\n%s", inl, ov::Dump(in, inl).CStr());
 
 		auto written_bytes = DO_CALLBACK_IF_AVAILABLE(ssize_t, -1, BIO_get_data(b), write_callback, in, static_cast<size_t>(inl));
 

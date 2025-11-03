@@ -361,7 +361,7 @@ bool RtcSignallingServer::SetupWebSocketHandler(std::shared_ptr<http::svr::ws::I
 			auto connection = ws_session->GetConnection();
 			auto request = ws_session->GetRequest();
 
-			logtp("The client sent a message:\n%s", message->Dump().CStr());
+			logtt("The client sent a message:\n%s", message->Dump().CStr());
 
 			auto info = ws_session->GetExtraAs<RtcSignallingInfo>();
 

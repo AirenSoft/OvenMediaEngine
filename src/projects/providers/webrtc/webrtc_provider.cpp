@@ -824,7 +824,7 @@ namespace pvd
 
 	void WebRTCProvider::OnDataReceived(IcePort &port, uint32_t session_id, std::shared_ptr<const ov::Data> data, std::any user_data)
 	{
-		logtp("WebRTCProvider::OnDataReceived");
+		logtt("WebRTCProvider::OnDataReceived");
 
 		std::shared_ptr<WebRTCStream> stream;
 		try

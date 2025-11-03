@@ -14,10 +14,8 @@
 #undef OV_LOG_TAG
 #define OV_LOG_TAG "Socket.Pool.Worker"
 
-#define logap(format, ...) logtp("[#%d] [%p] " format, (GetNativeHandle() == InvalidSocket) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
+#define logat(format, ...) logtt("[#%d] [%p] " format, (GetNativeHandle() == InvalidSocket) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
 #define logad(format, ...) logtd("[#%d] [%p] " format, (GetNativeHandle() == InvalidSocket) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
-#define logas(format, ...) logts("[#%d] [%p] " format, (GetNativeHandle() == InvalidSocket) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
-
 #define logai(format, ...) logti("[#%d] [%p] " format, (GetNativeHandle() == InvalidSocket) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
 #define logaw(format, ...) logtw("[#%d] [%p] " format, (GetNativeHandle() == InvalidSocket) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
 #define logae(format, ...) logte("[#%d] [%p] " format, (GetNativeHandle() == InvalidSocket) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
@@ -307,7 +305,7 @@ namespace ov
 					OV_ASSERT2(socket != nullptr);
 					OV_ASSERT2(event_callback != nullptr);
 
-					logad("Epoll event #%d (total: %d): %s, events: %s (%d, 0x%x), %s",
+					logat("Epoll event #%d (total: %d): %s, events: %s (%d, 0x%x), %s",
 						  index, count,
 						  socket->ToString().CStr(),
 						  StringFromEpollEvent(event).CStr(), events, events,

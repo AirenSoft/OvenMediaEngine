@@ -12,10 +12,8 @@
 #include "srt_session.h"
 #include "srt_stream.h"
 
-#define logap(format, ...) logtp("[%s(%u)] " format, GetVHostAppName().CStr(), GetId(), ##__VA_ARGS__)
+#define logat(format, ...) logtt("[%s(%u)] " format, GetVHostAppName().CStr(), GetId(), ##__VA_ARGS__)
 #define logad(format, ...) logtd("[%s(%u)] " format, GetVHostAppName().CStr(), GetId(), ##__VA_ARGS__)
-#define logas(format, ...) logts("[%s(%u)] " format, GetVHostAppName().CStr(), GetId(), ##__VA_ARGS__)
-
 #define logai(format, ...) logti("[%s(%u)] " format, GetVHostAppName().CStr(), GetId(), ##__VA_ARGS__)
 #define logaw(format, ...) logtw("[%s(%u)] " format, GetVHostAppName().CStr(), GetId(), ##__VA_ARGS__)
 #define logae(format, ...) logte("[%s(%u)] " format, GetVHostAppName().CStr(), GetId(), ##__VA_ARGS__)

@@ -23,10 +23,8 @@ extern "C"
 
 #define OV_LOG_TAG "Writer"
 
-#define logap(format, ...) logtp("[%p] " format, this, ##__VA_ARGS__)
+#define logat(format, ...) logtt("[%p] " format, this, ##__VA_ARGS__)
 #define logad(format, ...) logtd("[%p] " format, this, ##__VA_ARGS__)
-#define logas(format, ...) logts("[%p] " format, this, ##__VA_ARGS__)
-
 #define logai(format, ...) logti("[%p] " format, this, ##__VA_ARGS__)
 #define logaw(format, ...) logtw("[%p] " format, this, ##__VA_ARGS__)
 #define logae(format, ...) logte("[%p] " format, this, ##__VA_ARGS__)
@@ -293,7 +291,7 @@ bool Writer::FillCodecParameters(const std::shared_ptr<const Track> &track, AVCo
 
 int Writer::OnWrite(const uint8_t *buf, int buf_size)
 {
-	logap("Writing %d bytes", buf_size);
+	logat("Writing %d bytes", buf_size);
 
 	if (buf_size < 0)
 	{

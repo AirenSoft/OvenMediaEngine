@@ -16,8 +16,6 @@
 #define OV_LOG_TAG "Socket.Datagram"
 
 #define logad(format, ...) logtd("[%p] " format, this, ##__VA_ARGS__)
-#define logas(format, ...) logts("[%p] " format, this, ##__VA_ARGS__)
-
 #define logai(format, ...) logti("[%p] " format, this, ##__VA_ARGS__)
 #define logaw(format, ...) logtw("[%p] " format, this, ##__VA_ARGS__)
 #define logae(format, ...) logte("[%p] " format, this, ##__VA_ARGS__)
@@ -95,7 +93,7 @@ namespace ov
 
 	void DatagramSocket::OnReadable()
 	{
-		logtp("Trying to read UDP packets...");
+		logtt("Trying to read UDP packets...");
 
 		auto data = std::make_shared<ov::Data>(UdpBufferSize);
 

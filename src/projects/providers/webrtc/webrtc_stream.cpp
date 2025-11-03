@@ -447,7 +447,7 @@ namespace pvd
 
 	bool WebRTCStream::OnDataReceived(const std::shared_ptr<const ov::Data> &data)
 	{
-		logtp("OnDataReceived (%d)", data->GetLength());
+		logtt("OnDataReceived (%d)", data->GetLength());
 		// To DTLS -> SRTP -> RTP|RTCP -> WebRTCStream::OnRtxpReceived
 
 		//It must not be called during start and stop.
@@ -469,7 +469,7 @@ namespace pvd
 		}
 		auto track_id = track_id_opt.value();
 
-		logtp("%s", first_rtp_packet->Dump().CStr());
+		logtt("%s", first_rtp_packet->Dump().CStr());
 
 		auto track = GetTrack(track_id);
 		if (track == nullptr)
@@ -488,7 +488,7 @@ namespace pvd
 		std::vector<std::shared_ptr<ov::Data>> payload_list;
 		for (const auto &packet : rtp_packets)
 		{
-			logtp("%s", packet->Dump().CStr());
+			logtt("%s", packet->Dump().CStr());
 			auto payload = std::make_shared<ov::Data>(packet->Payload(), packet->PayloadSize());
 			payload_list.push_back(payload);
 		}
@@ -624,7 +624,7 @@ namespace pvd
 
 	void WebRTCStream::OnFrame(const std::shared_ptr<MediaTrack> &track, const std::shared_ptr<MediaPacket> &media_packet)
 	{
-		logtp("Send Frame : track_id(%d) codec_id(%d) bitstream_format(%d) packet_type(%d) data_length(%d) pts(%u)", track->GetId(), track->GetCodecId(), media_packet->GetBitstreamFormat(), media_packet->GetPacketType(), media_packet->GetDataLength(), media_packet->GetPts());
+		logtt("Send Frame : track_id(%d) codec_id(%d) bitstream_format(%d) packet_type(%d) data_length(%d) pts(%u)", track->GetId(), track->GetCodecId(), media_packet->GetBitstreamFormat(), media_packet->GetPacketType(), media_packet->GetDataLength(), media_packet->GetPts());
 
 		// This may not work since almost WebRTC browser sends SPS/PPS/VPS in-band
 		if ((track->GetCodecId() == cmn::MediaCodecId::H264 || track->GetCodecId() == cmn::MediaCodecId::H265) &&

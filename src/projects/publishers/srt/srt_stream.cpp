@@ -16,10 +16,8 @@
 #include "srt_private.h"
 #include "srt_session.h"
 
-#define logap(format, ...) logtp("[%s/%s(%u)] " format, GetApplicationName(), GetName().CStr(), GetId(), ##__VA_ARGS__)
+#define logat(format, ...) logtt("[%s/%s(%u)] " format, GetApplicationName(), GetName().CStr(), GetId(), ##__VA_ARGS__)
 #define logad(format, ...) logtd("[%s/%s(%u)] " format, GetApplicationName(), GetName().CStr(), GetId(), ##__VA_ARGS__)
-#define logas(format, ...) logts("[%s/%s(%u)] " format, GetApplicationName(), GetName().CStr(), GetId(), ##__VA_ARGS__)
-
 #define logai(format, ...) logti("[%s/%s(%u)] " format, GetApplicationName(), GetName().CStr(), GetId(), ##__VA_ARGS__)
 #define logaw(format, ...) logtw("[%s/%s(%u)] " format, GetApplicationName(), GetName().CStr(), GetId(), ##__VA_ARGS__)
 #define logae(format, ...) logte("[%s/%s(%u)] " format, GetApplicationName(), GetName().CStr(), GetId(), ##__VA_ARGS__)

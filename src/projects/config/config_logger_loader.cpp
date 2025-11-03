@@ -96,7 +96,7 @@ namespace cfg
 		}
 
 		tag_info->SetName(name);
-		tag_info->SetLevel(LoggerTagInfo::OVLogLevelFromString(level));
+		tag_info->SetLevel(LoggerTagInfo::OVLogLevelFromString(level).value_or(OVLogLevelInformation));
 
 		return tag_info;
 	}

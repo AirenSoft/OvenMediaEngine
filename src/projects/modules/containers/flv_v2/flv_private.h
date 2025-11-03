@@ -16,10 +16,8 @@
 #define FLV_DESC \
 	this
 
-#define logap(format, ...) logtp(FLV_FORMAT_PREFIX format, FLV_DESC, ##__VA_ARGS__)
+#define logat(format, ...) logtt(FLV_FORMAT_PREFIX format, FLV_DESC, ##__VA_ARGS__)
 #define logad(format, ...) logtd(FLV_FORMAT_PREFIX format, FLV_DESC, ##__VA_ARGS__)
-#define logas(format, ...) logts(FLV_FORMAT_PREFIX format, FLV_DESC, ##__VA_ARGS__)
-
 #define logai(format, ...) logti(FLV_FORMAT_PREFIX format, FLV_DESC, ##__VA_ARGS__)
 #define logaw(format, ...) logtw(FLV_FORMAT_PREFIX format, FLV_DESC, ##__VA_ARGS__)
 #define logae(format, ...) logte(FLV_FORMAT_PREFIX format, FLV_DESC, ##__VA_ARGS__)

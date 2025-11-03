@@ -120,7 +120,7 @@ namespace pvd::rtmp
 			_remaining_data->Append(data);
 		}
 
-		logap("Trying to parse data\n%s", _remaining_data->Dump(_remaining_data->GetLength()).CStr());
+		logat("Trying to parse data\n%s", _remaining_data->Dump(_remaining_data->GetLength()).CStr());
 
 		while (true)
 		{

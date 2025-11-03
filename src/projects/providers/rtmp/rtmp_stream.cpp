@@ -197,7 +197,7 @@ namespace pvd
 			_remained_data->Append(data);
 		}
 
-		logtp("Trying to parse data\n%s", _remained_data->Dump(_remained_data->GetLength()).CStr());
+		logtt("Trying to parse data\n%s", _remained_data->Dump(_remained_data->GetLength()).CStr());
 
 		while (true)
 		{
@@ -1010,7 +1010,7 @@ namespace pvd
 					if (ReceiveChunkMessage() == false)
 					{
 						logtd("ReceiveChunkMessage Fail");
-						logtp("Failed to import packet\n%s", current_data->Dump(current_data->GetLength()).CStr());
+						logtt("Failed to import packet\n%s", current_data->Dump(current_data->GetLength()).CStr());
 
 						return -1LL;
 					}

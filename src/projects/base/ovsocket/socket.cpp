@@ -23,10 +23,8 @@
 #include "socket_private.h"
 #include "socket_utilities.h"
 
-#define logap(format, ...) logtp("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
+#define logat(format, ...) logtt("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
 #define logad(format, ...) logtd("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
-#define logas(format, ...) logts("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
-
 #define logai(format, ...) logti("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
 #define logaw(format, ...) logtw("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
 #define logae(format, ...) logte("[#%d] [%p] " format, (GetNativeHandle() == -1) ? 0 : GetNativeHandle(), this, ##__VA_ARGS__)
@@ -833,7 +831,7 @@ namespace ov
 		ssize_t sent_bytes = 0;
 		auto &data = command.data;
 
-		logap("Dispatching event: %s", command.ToString().CStr());
+		logat("Dispatching event: %s", command.ToString().CStr());
 
 		switch (command.type)
 		{
@@ -930,7 +928,7 @@ namespace ov
 
 			if (_dispatch_queue.empty() == false)
 			{
-				logap("Dispatching events (count: %zu)...", _dispatch_queue.size());
+				logat("Dispatching events (count: %zu)...", _dispatch_queue.size());
 
 				while (_dispatch_queue.empty() == false)
 				{
@@ -1103,7 +1101,7 @@ namespace ov
 		size_t remaining_bytes = data->GetLength();
 		size_t total_sent_bytes = 0L;
 
-		logap("Trying to send data %zu bytes...", remaining_bytes);
+		logat("Trying to send data %zu bytes...", remaining_bytes);
 
 		while ((remaining_bytes > 0L) && (_force_stop == false))
 		{
@@ -1125,7 +1123,7 @@ namespace ov
 			UpdateLastSentTime();
 		}
 
-		logap("%zu bytes sent", total_sent_bytes);
+		logat("%zu bytes sent", total_sent_bytes);
 		return total_sent_bytes;
 	}
 
@@ -1136,7 +1134,7 @@ namespace ov
 		size_t remaining_bytes = data->GetLength();
 		size_t total_sent_bytes = 0L;
 
-		logap("Trying to send data %zu bytes...", remaining_bytes);
+		logat("Trying to send data %zu bytes...", remaining_bytes);
 
 		while ((remaining_bytes > 0L) && (_force_stop == false))
 		{
@@ -1172,7 +1170,7 @@ namespace ov
 			UpdateLastSentTime();
 		}
 
-		logap("%zu bytes sent", total_sent_bytes);
+		logat("%zu bytes sent", total_sent_bytes);
 		return total_sent_bytes;
 	}
 
@@ -1239,7 +1237,7 @@ namespace ov
 		size_t remaining_bytes = data->GetLength();
 		size_t total_sent_bytes = 0L;
 
-		logap("Trying to send data %zu bytes to %s...", remaining_bytes, address.ToString(false).CStr());
+		logat("Trying to send data %zu bytes to %s...", remaining_bytes, address.ToString(false).CStr());
 
 		while ((remaining_bytes > 0L) && (_force_stop == false))
 		{
@@ -1261,7 +1259,7 @@ namespace ov
 			UpdateLastSentTime();
 		}
 
-		logap("%zu bytes sent", total_sent_bytes);
+		logat("%zu bytes sent", total_sent_bytes);
 		return total_sent_bytes;
 	}
 
@@ -1366,7 +1364,7 @@ namespace ov
 			*total_sent_bytes += sent;
 		}
 
-		logtp("[#%d] %zu bytes sent", socket_handle, *total_sent_bytes);
+		logtt("[#%d] %zu bytes sent", socket_handle, *total_sent_bytes);
 
 		return true;
 	}
@@ -1386,7 +1384,7 @@ namespace ov
 
 		const auto data_length = data->GetLength();
 
-		logap("Trying to send data %zu bytes to %s from %s...",
+		logat("Trying to send data %zu bytes to %s from %s...",
 			  data_length,
 			  remote_address.ToString().CStr(), local_address.ToString().CStr());
 
@@ -1501,7 +1499,7 @@ namespace ov
 		OV_ASSERT2(data != nullptr);
 		OV_ASSERT2(received_length != nullptr);
 
-		logap("Trying to read from the socket...");
+		logat("Trying to read from the socket...");
 
 		ssize_t read_bytes = -1;
 		std::shared_ptr<SocketError> socket_error;
@@ -1649,7 +1647,7 @@ namespace ov
 		}
 		else
 		{
-			logap("%zd bytes read", read_bytes);
+			logat("%zd bytes read", read_bytes);
 			*received_length = static_cast<size_t>(read_bytes);
 			UpdateLastRecvTime();
 		}

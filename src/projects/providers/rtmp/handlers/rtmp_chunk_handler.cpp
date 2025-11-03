@@ -1851,7 +1851,7 @@ namespace pvd::rtmp
 					if (HandleChunkMessage() == false)
 					{
 						logad("HandleChunkMessage Fail");
-						logap("Failed to import packet\n%s", current_data->Dump(current_data->GetLength()).CStr());
+						logat("Failed to import packet\n%s", current_data->Dump(current_data->GetLength()).CStr());
 
 						return -1LL;
 					}
