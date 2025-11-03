@@ -4,6 +4,8 @@ After=network-online.target
 
 [Service]
 Type=forking
+User=root
+Group=root
 PIDFile=/var/run/ovenmediaengine.pid
 WorkingDirectory=/usr/share/ovenmediaengine
 ExecStart=/usr/share/ovenmediaengine/ome_launcher.sh -d
