@@ -61,3 +61,7 @@ ifneq ($(OS_VERSION), darwin)
     # -Wl,--export-dynamic: backtrace 출력가능
     GLOBAL_LDFLAGS_DEBUG := $(GLOBAL_LDFLAGS_DEBUG) -Wl,--export-dynamic
 endif
+
+__GLOBAL_CONFIG_PATH := $(lastword $(MAKEFILE_LIST))
+__GLOBAL_CONFIG_PATH := $(dir $(__GLOBAL_CONFIG_PATH))
+-include $(__GLOBAL_CONFIG_PATH)local_config.mk
