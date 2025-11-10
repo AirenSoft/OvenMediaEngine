@@ -180,7 +180,7 @@ namespace mon
 
 				auto code				= stream_event->_code;
 				auto stream_metric		= stream_event->_metric;
-				auto parent_source_info	= stream_event->_parent_source_info;
+				auto parent_source_info = stream_event->_parent_source_info;
 				auto output_profile		= stream_event->_output_profile;
 				auto codec_modules		= stream_event->_codec_modules;
 
@@ -216,17 +216,17 @@ namespace mon
 						data.SetSourceUri(stream_metric->GetUri());
 					}
 
-					if(parent_source_info != nullptr)
+					if (parent_source_info != nullptr)
 					{
 						data.SetParentSourceInfo(parent_source_info);
 					}
 
-					if(output_profile != nullptr)
+					if (output_profile != nullptr)
 					{
 						data.SetOutputProfile(output_profile);
 					}
 
-					if(!codec_modules.empty())
+					if (!codec_modules.empty())
 					{
 						data.SetCodecModules(codec_modules);
 					}
@@ -554,7 +554,7 @@ namespace mon
 			}
 
 			// Notification
-			auto notification_server_url = ov::Url::Parse(alert.GetUrl());
+			auto notification_server_url						= ov::Url::Parse(alert.GetUrl());
 			std::shared_ptr<Notification> notification_response = Notification::Query(notification_server_url, alert.GetTimeoutMsec(), alert.GetSecretKey(), message_body);
 			if (notification_response == nullptr)
 			{
