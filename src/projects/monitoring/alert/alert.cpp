@@ -108,18 +108,19 @@ namespace mon::alrt
 			messages_key = NotificationData::StringFromType(type);
 			new_messages_keys.push_back(messages_key);
 
+			std::map<uint32_t, std::shared_ptr<QueueMetrics>> congest_queue_metric_list;
 			const auto queue_metric_list = MonitorInstance->GetServerMetrics()->GetQueueMetricsList();
 			for (const auto &[queue_key, queue_metric] : queue_metric_list)
 			{
 				if (!VerifyQueueCongestionRules(*rules, queue_metric, message_list))
 				{
-					break;
+					congest_queue_metric_list[queue_key] = queue_metric;
 				}
 			}
 
 			if (IsAlertNeeded(messages_key, message_list))
 			{
-				SendNotification(type, message_list, queue_metric_list);
+				SendNotification(type, message_list, congest_queue_metric_list);
 			}
 
 			PutVerifiedMessages(messages_key, message_list);
