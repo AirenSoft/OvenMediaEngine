@@ -13,7 +13,10 @@
 
 namespace mon::alrt
 {
-	std::shared_ptr<Notification> Notification::Query(const std::shared_ptr<ov::Url> &notification_server_url, uint32_t timeout_msec, const ov::String secret_key, const ov::String message_body)
+	std::shared_ptr<Notification> Notification::Query(const std::shared_ptr<ov::Url> &notification_server_url,
+													  uint32_t timeout_msec,
+													  const ov::String secret_key,
+													  const ov::String message_body)
 	{
 		auto notification					   = std::make_shared<Notification>();
 

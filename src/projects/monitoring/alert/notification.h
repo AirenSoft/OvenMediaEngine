@@ -32,7 +32,10 @@ namespace mon::alrt
 			INTERNAL_ERROR,
 		};
 
-		static std::shared_ptr<Notification> Query(const std::shared_ptr<ov::Url> &notification_server_url, uint32_t timeout_msec, const ov::String secret_key, const ov::String message_body);
+		static std::shared_ptr<Notification> Query(const std::shared_ptr<ov::Url> &notification_server_url,
+												   uint32_t timeout_msec,
+												   const ov::String secret_key,
+												   const ov::String message_body);
 
 		StatusCode GetStatusCode() const;
 		ov::String GetErrorReason() const;
