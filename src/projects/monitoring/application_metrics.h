@@ -32,8 +32,7 @@ namespace mon
 		{
 			_host_metrics.reset();
 
-			std::unique_lock<std::shared_mutex> lock(_streams_guard);
-			_streams.clear();
+			Release();
 		}
 
 		void Release()

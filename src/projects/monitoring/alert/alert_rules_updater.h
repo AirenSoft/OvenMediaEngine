@@ -10,31 +10,28 @@
 
 #include <base/info/info.h>
 
-namespace mon
+namespace mon::alrt
 {
-	namespace alrt
+	class AlertRulesUpdater
 	{
-		class AlertRulesUpdater
-		{
-		public:
-			AlertRulesUpdater(cfg::alrt::Alert &alert_config);
+	public:
+		AlertRulesUpdater(cfg::alrt::Alert &alert_config);
 
-			std::shared_ptr<const cfg::alrt::rule::Rules> GetRules() const;
+		std::shared_ptr<const cfg::alrt::rule::Rules> GetRules() const;
 
-			/// @return true if the auth file is updated successfully or no need to update, otherwise false
-			bool UpdateIfNeeded();
+		/// @return true if the auth file is updated successfully or no need to update, otherwise false
+		bool UpdateIfNeeded();
 
-		private:
-			bool Update();
+	private:
+		bool Update();
 
-			const cfg::alrt::Alert _alert_config;
-			bool _is_dynamic_update				 = false;
+		const cfg::alrt::Alert _alert_config;
+		bool _is_dynamic_update				 = false;
 
-			std::atomic<uint64_t> _last_modified = 0;
-			ov::String _rules_file;
+		std::atomic<uint64_t> _last_modified = 0;
+		ov::String _rules_file;
 
-			mutable std::shared_mutex _dynamic_rules_mutex;
-			std::shared_ptr<const cfg::alrt::rule::Rules> _rules = nullptr;
-		};
-	}  // namespace alrt
-}  // namespace mon
+		mutable std::shared_mutex _dynamic_rules_mutex;
+		std::shared_ptr<const cfg::alrt::rule::Rules> _rules = nullptr;
+	};
+}  // namespace mon::alrt
