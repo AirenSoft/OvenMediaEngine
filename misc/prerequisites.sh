@@ -493,6 +493,8 @@ install_base_rhel()
     sudo dnf install -y perl-IPC-Cmd
 	sudo dnf install -y git
 	sudo dnf install -y libgomp
+	sudo dnf install -y gcc-toolset-9 
+	source /opt/rh/gcc-toolset-9/enable
 
     if [[ "${OSVERSION}" == "9" ]]; then
         sudo dnf install -y perl-FindBin
