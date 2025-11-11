@@ -182,7 +182,6 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(
 				default:
 					break;
 			}
-			break;
 		}
 		else if (candidate->GetCodecId() == cmn::MediaCodecId::H265)
 		{
