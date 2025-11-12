@@ -474,8 +474,7 @@ install_whisper()
 		-DWHISPER_BUILD_TESTS=OFF \
 		-DWHISPER_BUILD_SERVER=OFF \
 		-DGGML_CUDA=${WHISPER_CUDA} \
-		-DCMAKE_CUDA_ARCHITECTURES=${WHISPER_CUDA_ARCH} \
-		-DCMAKE_SHARED_LINKER_FLAGS=-lstdc++fs && \
+		-DCMAKE_CUDA_ARCHITECTURES=${WHISPER_CUDA_ARCH} && \
 	cd build && \
 	make -j$(nproc) && \
 	sudo make install && \
@@ -505,8 +504,8 @@ install_base_rhel()
 	sudo dnf install -y libgomp
 
 	if [[ "${OSVERSION}" == "8" ]]; then
-		sudo dnf install -y gcc-toolset-9 
-		source /opt/rh/gcc-toolset-9/enable
+		sudo dnf install -y gcc-toolset-11 
+		source /opt/rh/gcc-toolset-11/enable
 	else
 		sudo dnf install -y perl-FindBin
 	fi

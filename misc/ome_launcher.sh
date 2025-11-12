@@ -71,7 +71,7 @@ export LD_PRELOAD=""
 check_xilinx_driver
 check_nvidia_driver
 
-export LD_LIBRARY_PATH=${PREFIX}/lib:${PREFIX}/lib/stubs
+export LD_LIBRARY_PATH=${PREFIX}/lib:${PREFIX}/lib64:${PREFIX}/lib/stubs
 
 echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
 echo "LD_PRELOAD: $LD_PRELOAD"
