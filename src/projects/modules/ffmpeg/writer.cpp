@@ -70,6 +70,10 @@ namespace ffmpeg
 				return 1;
 			}
 		}
+		else if(writer->GetState() == WriterStateClosing)
+		{
+			// In closing state, Ignore interrupt to finish flushing and closing properly.
+		}
 
 		return 0;
 	}
@@ -312,7 +316,11 @@ namespace ffmpeg
 
 	bool Writer::Stop()
 	{
+		// Added a state to ignore interrupts during closing.
+		SetState(WriterStateClosing);
+
 		ReleaseAVFormatContext();
+		
 		SetState(WriterStateClosed);
 				
 		return true;
@@ -550,14 +558,17 @@ namespace ffmpeg
 
 			if (need_to_flush)
 			{
+				logtw("Flushing AVFormatContext packets before releasing.");
 				av_write_trailer(av_format_ptr);
 			}
 
 			if (need_to_close && av_format_ptr->pb != nullptr)
 			{
+				logtw("Closing AVFormatContext IO before releasing.");
 				avio_closep(&av_format_ptr->pb);
 			}
 			
+			logtw("Freeing AVFormatContext.");
 			avformat_free_context(av_format_ptr);
 		});
 

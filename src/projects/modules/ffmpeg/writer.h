@@ -25,8 +25,9 @@ namespace ffmpeg
 			WriterStateNone = 0,
 			WriterStateConnecting = 1,
 			WriterStateConnected = 2,
-			WriterStateError = 3,
-			WriterStateClosed = 4
+			WriterStateClosing = 3,
+			WriterStateClosed = 4,
+			WriterStateError = 5
 		};
 
 		static const char* WriterStateToString(WriterState state)
@@ -36,8 +37,9 @@ namespace ffmpeg
 				case WriterStateNone: return "None";
 				case WriterStateConnecting: return "Connecting";
 				case WriterStateConnected: return "Connected";
-				case WriterStateError: return "Error";
+				case WriterStateClosing: return "Closing";
 				case WriterStateClosed: return "Closed";
+				case WriterStateError: return "Error";					
 				default: return "Unknown";
 			}
 		}
