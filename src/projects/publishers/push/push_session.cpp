@@ -82,10 +82,17 @@ namespace pub
 
 			return false;
 		}
-	
-		// RTMP, SRT, MPEG-TS Pushing uses passthrough timestamp mode.
-		// The policy has been changed to use the same timestamp as the input stream.
-		writer->SetTimestampMode(ffmpeg::Writer::TIMESTAMP_PASSTHROUGH_MODE);
+
+		// RTMP, SRT, MPEG-TS Pushing uses different timestamp modes. default is zerobased.
+		if (GetPush()->GetTimestampMode() == TimestampMode::Original)
+		{
+			writer->SetTimestampMode(ffmpeg::Writer::TIMESTAMP_PASSTHROUGH_MODE);
+		}
+		else
+		{
+			// Default TimestampMode is ZeroBased
+			writer->SetTimestampMode(ffmpeg::Writer::TIMESTAMP_STARTZERO_MODE);
+		}
 
 		for (auto &[track_id, track] : GetStream()->GetTracks())
 		{

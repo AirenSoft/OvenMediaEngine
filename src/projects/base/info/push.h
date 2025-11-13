@@ -62,6 +62,9 @@ namespace info
 		const std::vector<uint32_t>& GetTrackIds();
 		const std::vector<ov::String>& GetVariantNames();
 
+		void SetTimestampMode(TimestampMode mode);
+		TimestampMode GetTimestampMode();
+
 		void SetRemove(bool value);
 		bool GetRemove();
 
@@ -130,6 +133,11 @@ namespace info
 		// The stream target for the Outbound that you want to record
 		std::vector<uint32_t> _selected_track_ids;
 		std::vector<ov::String> _selected_variant_names;
+
+		// Timestamp Rules for Push Stream
+		//  zerobased - The start of the pushed stream PTS begins with zero.
+		//  original - The pushed stream uses the same PTS as the original source stream.
+		TimestampMode _timestamp_mode;
 
 		ov::String _protocol;
 		ov::String _url;

@@ -18,7 +18,8 @@ namespace info
 		_stream_name = "";
 		_selected_track_ids.clear();
 		_selected_variant_names.clear();
-
+		_timestamp_mode = TimestampMode::ZeroBased;
+		
 		_protocol = "";
 		_url = "";
 		_stream_key = "";
@@ -124,6 +125,16 @@ namespace info
 	bool Push::GetRemove()
 	{
 		return _remove;
+	}
+
+	void Push::SetTimestampMode(TimestampMode mode)
+	{
+		_timestamp_mode = mode;
+	}
+
+	TimestampMode Push::GetTimestampMode()
+	{
+		return _timestamp_mode;
 	}
 
 	void Push::SetSessionId(session_id_t id)
