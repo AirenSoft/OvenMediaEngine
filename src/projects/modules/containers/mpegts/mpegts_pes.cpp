@@ -57,8 +57,8 @@ namespace mpegts
 		pes->_pcr = (pes->_dts/*- PCR_OFFSET*/) * 300;
 
 		// maximum timestamp is 0x1FFFFFFFF
-		pes->_pts = pes->_pts % 0x1FFFFFFFF;
-		pes->_dts = pes->_dts % 0x1FFFFFFFF;
+		pes->_pts = pes->_pts & 0x1FFFFFFFF;
+		pes->_dts = pes->_dts & 0x1FFFFFFFF;
 
 		pes->_pes_packet_length = 0; // later it will be updated
 

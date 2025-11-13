@@ -27,7 +27,7 @@ namespace mpegts
 		_splice_time._time_specified_flag = 1;
 
 		// pts_time: 33bits, 90kHz / max : 0x1FFFFFFFF
-		_splice_time._pts_time = pts < 0 ? 0 : pts % 0x1FFFFFFFF;
+		_splice_time._pts_time = pts < 0 ? 0 : pts & 0x1FFFFFFFF;
 	}
 
 	void SpliceInsert::SetDuration(uint64_t duration)
