@@ -104,7 +104,11 @@ bool RtspMessage::ParseHeader(const char *string, size_t string_len)
 	// Elemenates last '\r\n\r\n'
 	ov::String header(string, string_len - 4);
 
-	auto lines = header.Split("\r\n");
+	// Normalize line endings: replace lone \n with \r\n
+	ov::String normalized_header = header;
+	normalized_header.Replace("\n", "\r\n");
+
+	auto lines = normalized_header.Split("\r\n");
 	bool first = true;
 	for(const auto &line : lines)
 	{
