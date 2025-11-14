@@ -308,10 +308,10 @@ namespace info
 			{
 				_public_label_map.emplace(label, track->GetId());
 			}
-			else
-			{
-				logw("DEBUG", "Public label '%s' already exists for track ID %d", label.CStr(), track->GetId());
-			}
+			// else
+			// {
+			// 	logw("DEBUG", "Public label '%s' already exists for track ID %d", label.CStr(), track->GetId());
+			// }
 		}
 
 		return true;
