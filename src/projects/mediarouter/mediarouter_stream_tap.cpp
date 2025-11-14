@@ -54,11 +54,11 @@ bool MediaRouterStreamTap::DoesNeedPastData() const
 void MediaRouterStreamTap::Start()
 {
     _is_started = true;
+	_buffer.Start();
 }
 
 void MediaRouterStreamTap::Stop()
 {
-	SetState(State::UnTapped);
     _is_started = false;
 	_buffer.Stop();
     _buffer.Clear();

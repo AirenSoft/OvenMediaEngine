@@ -267,6 +267,13 @@ namespace ov
 			return _stop;
 		}
 
+		void Start()
+		{
+			auto lock_guard = std::lock_guard(_mutex);
+
+			_stop = false;
+		}
+
 		void Stop()
 		{
 			auto lock_guard = std::lock_guard(_mutex);
