@@ -1,5 +1,6 @@
 #include "rtsp_message.h"
 #include "header_fields/rtsp_header_field_parser.h"
+#include "header_fields/rtsp_header_authenticate.h"
 
 #define OV_LOG_TAG "RtspMessage"
 
@@ -227,10 +228,41 @@ RtspMessage::RtspMessage(uint32_t status_code, uint32_t cseq, ov::String reason_
 // For example, currently only the first of WWW-Authenticate is processed.
 bool RtspMessage::AddHeaderField(const std::shared_ptr<RtspHeaderField> &field)
 {
-	_header_fields.emplace(field->GetName().UpperCaseString(), field);
-	_is_header_data_uptodate = false;
+    auto key = field->GetName().UpperCaseString();
 
-	return true;
+    // Prefer Digest over Basic for WWW-Authenticate if multiple are present
+    if (key == RtspHeaderField::FieldTypeToString(RtspHeaderFieldType::WWWAuthenticate).UpperCaseString())
+    {
+        auto it = _header_fields.find(key);
+        if (it != _header_fields.end())
+        {
+            auto existing = std::dynamic_pointer_cast<RtspHeaderWWWAuthenticateField>(it->second);
+            auto incoming = std::dynamic_pointer_cast<RtspHeaderWWWAuthenticateField>(field);
+            if (existing != nullptr && incoming != nullptr)
+            {
+                // If existing is Digest, keep it. If incoming is Digest, replace existing.
+                if (existing->GetScheme() != RtspHeaderWWWAuthenticateField::Scheme::Digest &&
+                    incoming->GetScheme() == RtspHeaderWWWAuthenticateField::Scheme::Digest)
+                {
+                    it->second = field;
+                }
+                // else keep existing (either already Digest or both Basic/Unknown)
+            }
+            // If casting failed for some reason, keep the existing behavior (keep the first)
+        }
+        else
+        {
+            _header_fields.emplace(key, field);
+        }
+    }
+    else
+    {
+        _header_fields.emplace(key, field);
+    }
+
+    _is_header_data_uptodate = false;
+
+    return true;
 }
 
 std::shared_ptr<RtspHeaderField> RtspMessage::GetHeaderField(ov::String field_name) const
