@@ -1628,7 +1628,12 @@ void TranscoderStream::UpdateOutputTrack(std::shared_ptr<MediaFrame> buffer)
 
 void TranscoderStream::ProcessPacket(const std::shared_ptr<MediaPacket> &packet)
 {
-	if (_input_stream->GetMsid() != packet->GetMsid() || packet == nullptr)
+	if (packet == nullptr)
+	{
+		return;
+	}
+	
+	if (_input_stream->GetMsid() != packet->GetMsid() && packet->GetMediaType() != cmn::MediaType::Data)
 	{
 		return;
 	}
