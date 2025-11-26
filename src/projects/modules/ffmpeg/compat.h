@@ -325,15 +325,16 @@ namespace ffmpeg
 				src->pts,
 				src->dts,
 				src->duration,
-				(src->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
+				(src->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag,
+				format,
+				packet_type
+			);
 
 			if (packet_buffer == nullptr)
 			{
 				return nullptr;
 			}
 
-			packet_buffer->SetBitstreamFormat(format);
-			packet_buffer->SetPacketType(packet_type);
 
 			return packet_buffer;
 		}
@@ -349,15 +350,15 @@ namespace ffmpeg
 				src->pts,
 				src->dts,
 				src->duration,
-				(src->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag);
+				(src->flags & AV_PKT_FLAG_KEY) ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag,
+				format,
+				packet_type);
 
 			if (packet_buffer == nullptr)
 			{
 				return nullptr;
 			}
 
-			packet_buffer->SetBitstreamFormat(format);
-			packet_buffer->SetPacketType(packet_type);
 
 			return packet_buffer;
 		}

@@ -282,6 +282,8 @@ namespace pvd
 					std::make_shared<ov::Data>(stream->codecpar->extradata, stream->codecpar->extradata_size),
 					0,
 					0,
+					-1LL,
+					MediaPacketFlag::Unknown,
 					cmn::BitstreamFormat::H264_AVCC,
 					cmn::PacketType::SEQUENCE_HEADER);
 
@@ -297,6 +299,8 @@ namespace pvd
 					std::make_shared<ov::Data>(stream->codecpar->extradata, stream->codecpar->extradata_size),
 					0,
 					0,
+					-1LL,
+					MediaPacketFlag::Unknown,
 					cmn::BitstreamFormat::AAC_RAW,
 					cmn::PacketType::SEQUENCE_HEADER);
 

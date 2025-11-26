@@ -149,11 +149,15 @@ bool OvtDepacketizer::AppendMediaPacket(const std::shared_ptr<OvtPacket> &packet
 		}
 
 		auto media_packet = std::make_shared<MediaPacket>(
-														0,
-														media_type, track_id,
-														_media_packet_buffer.Subdata(MEDIA_PACKET_HEADER_SIZE),
-														pts, dts, bitstream_format, packet_type);
-		
+			0,
+			media_type, track_id,
+			_media_packet_buffer.Subdata(MEDIA_PACKET_HEADER_SIZE),
+			pts, dts,
+			-1LL,
+			MediaPacketFlag::Unknown,
+			bitstream_format,
+			packet_type);
+
 		media_packet->SetFlag(media_flag);
 		media_packet->SetDuration(duration);
 

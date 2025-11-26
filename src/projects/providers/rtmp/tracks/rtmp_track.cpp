@@ -54,6 +54,8 @@ namespace pvd::rtmp
 			payload,
 			pts,
 			dts,
+			-1LL,
+			MediaPacketFlag::Unknown,
 			_bitstream_format,
 			packet_type);
 

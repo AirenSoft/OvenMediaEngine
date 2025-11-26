@@ -110,7 +110,7 @@ namespace pvd
 		return _last_media_timestamp_ms + _elapsed_from_last_media_timestamp.Elapsed();
 	}
 
-	bool Stream::SendDataFrame(int64_t timestamp_in_ms, int64_t duration, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent, const MediaPacketFlag packet_flag)
+	bool Stream::SendDataFrame(int64_t timestamp_in_ms, int64_t duration, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent, bool internal, const MediaPacketFlag packet_flag)
 	{
 		if (frame == nullptr)
 		{
@@ -163,18 +163,22 @@ namespace pvd
 															frame, 
 															timestamp_in_tb,
 															timestamp_in_tb,
+															duration,
+															packet_flag,
 															format,
 															packet_type);
-		event_message->SetFlag(packet_flag);
 		event_message->SetHighPriority(urgent);
-		event_message->SetDuration(duration);
 
+		// Mark as internal created packet
+		// stream_actions.controller, mediarouter_event_generator, etc use this flag to identify internally created packets.
+		event_message->SetInternalCreated(internal);
+		
 		return SendFrame(event_message);
 	}
 
-	bool Stream::SendDataFrame(int64_t timestamp, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent, const MediaPacketFlag packet_flag)
+	bool Stream::SendDataFrame(int64_t timestamp, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent, bool internal, const MediaPacketFlag packet_flag)
 	{
-		return SendDataFrame(timestamp, -1, format, packet_type, frame, urgent, packet_flag);
+		return SendDataFrame(timestamp, -1, format, packet_type, frame, urgent, internal, packet_flag);
 	}
 
 	bool Stream::SendSubtitleFrame(const ov::String &label, int64_t timestamp_in_ms, int64_t duration_ms, const cmn::BitstreamFormat &format, const std::shared_ptr<ov::Data> &frame, bool urgent)

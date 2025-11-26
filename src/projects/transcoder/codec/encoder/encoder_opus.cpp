@@ -285,9 +285,17 @@ void EncoderOPUS::CodecThread()
 
 		int64_t duration = _frame_size;
 
-		auto packet_buffer = std::make_shared<MediaPacket>(0, cmn::MediaType::Audio, 0, encoded, _current_pts, _current_pts, duration, MediaPacketFlag::Key);
-		packet_buffer->SetBitstreamFormat(cmn::BitstreamFormat::OPUS);
-		packet_buffer->SetPacketType(cmn::PacketType::RAW);
+		auto packet_buffer = std::make_shared<MediaPacket>(
+			0,
+			cmn::MediaType::Audio,
+			0,
+			encoded,
+			_current_pts,
+			_current_pts,
+			duration,
+			MediaPacketFlag::Key,
+			cmn::BitstreamFormat::OPUS,
+			cmn::PacketType::RAW);
 
 		_current_pts += duration;
 

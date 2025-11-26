@@ -150,6 +150,8 @@ namespace pvd
 																	  data,
 																	  pts,
 																	  dts,
+																	  -1LL,
+																	  MediaPacketFlag::Unknown,
 																	  bitstream,
 																	  packet_type);
 					SendFrame(media_packet);
@@ -166,6 +168,8 @@ namespace pvd
 																	  data,
 																	  pts,
 																	  dts,
+																	  -1LL,
+																	  MediaPacketFlag::Unknown,
 																	  cmn::BitstreamFormat::AAC_ADTS,
 																	  cmn::PacketType::RAW);
 					SendFrame(media_packet);

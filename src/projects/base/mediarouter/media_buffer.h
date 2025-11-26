@@ -40,17 +40,9 @@ static ov::String GetMediaPacketFlagString(const MediaPacketFlag flag)
 class MediaPacket
 {
 public:
-	// Provider must inform the bitstream format so that MediaRouter can handle it.
-	// This constructor is usually used by the Provider to send media packets to the MediaRouter.
-	MediaPacket(uint32_t msid, cmn::MediaType media_type, uint32_t track_id, const std::shared_ptr<const ov::Data> &data, int64_t pts, int64_t dts, cmn::BitstreamFormat bitstream_format, cmn::PacketType packet_type)
-		: MediaPacket(msid, media_type, track_id, data, pts, dts, -1LL, MediaPacketFlag::Unknown)
-	{
-		_bitstream_format = bitstream_format;
-		_packet_type = packet_type;
-	}
-
-	// This constructor is usually used by the MediaRouter to send media packets to the publishers.
-	MediaPacket(uint32_t msid, cmn::MediaType media_type, uint32_t track_id, const std::shared_ptr<const ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag, cmn::BitstreamFormat bitstream_format, cmn::PacketType packet_type)
+	MediaPacket(uint32_t msid, cmn::MediaType media_type, uint32_t track_id,
+				const std::shared_ptr<const ov::Data> &data,
+				int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag, cmn::BitstreamFormat bitstream_format, cmn::PacketType packet_type)
 		: _msid(msid),
 		  _media_type(media_type),
 		  _track_id(track_id),
@@ -61,44 +53,13 @@ public:
 		  _flag(flag),
 		  _bitstream_format(bitstream_format),
 		  _packet_type(packet_type)
-
 	{
 	}
 
-	// This constructor is usually used by the MediaRouter to send media packets to the publishers.
-	MediaPacket(uint32_t msid, cmn::MediaType media_type, uint32_t track_id, const std::shared_ptr<const ov::Data> &data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
-		: _msid(msid),
-		  _media_type(media_type),
-		  _track_id(track_id),
-		  _data(data),
-		  _pts(pts),
-		  _dts(dts),
-		  _duration(duration),
-		  _flag(flag)
-	{
-	}
-
-	MediaPacket(uint32_t msid, cmn::MediaType media_type, uint32_t track_id, const ov::Data *data, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
-		: _msid(msid),
-		  _media_type(media_type),
-		  _track_id(track_id),
-		  _pts(pts),
-		  _dts(dts),
-		  _duration(duration),
-		  _flag(flag)
-	{
-		if (data != nullptr)
-		{
-			_data = data->Clone();
-		}
-		else
-		{
-			_data = std::make_shared<ov::Data>();
-		}
-	}
-
-	MediaPacket(uint32_t msid, cmn::MediaType media_type, uint32_t track_id, const void *data, int32_t data_size, int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag)
-		: MediaPacket(msid, media_type, track_id, nullptr, pts, dts, duration, flag)
+	MediaPacket(uint32_t msid, cmn::MediaType media_type, uint32_t track_id,
+				const void *data, int32_t data_size,
+				int64_t pts, int64_t dts, int64_t duration, MediaPacketFlag flag, cmn::BitstreamFormat bitstream_format, cmn::PacketType packet_type)
+		: MediaPacket(msid, media_type, track_id, nullptr, pts, dts, duration, flag, bitstream_format, packet_type)
 	{
 		_data = std::make_shared<ov::Data>(data, data_size);
 	}
@@ -240,6 +201,16 @@ public:
 		return _high_priority;
 	}
 
+	void SetInternalCreated(bool is_internal_created)
+	{
+		_is_internal_created = is_internal_created;
+	}
+
+	bool IsInternalCreated() const
+	{
+		return _is_internal_created;
+	}
+
 	std::shared_ptr<MediaPacket> ClonePacket() const
 	{
 		auto packet = std::make_shared<MediaPacket>(
@@ -256,6 +227,7 @@ public:
 
 		packet->_frag_hdr = _frag_hdr;
 		packet->_high_priority = _high_priority;
+		packet->_is_internal_created = _is_internal_created;
 
 		return packet;
 	}
@@ -271,6 +243,7 @@ public:
 		info.AppendFormat("Flag(%s) ", GetMediaPacketFlagString(GetFlag()).CStr());
 		info.AppendFormat("BitstreamFormat(%s) ", GetBitstreamFormatString(GetBitstreamFormat()));
 		info.AppendFormat("PacketType(%s) ", GetMediaPacketTypeString(GetPacketType()));
+		info.AppendFormat("InternalCreated(%s) ", IsInternalCreated() ? "true" : "false");
 		info.AppendFormat("DataLength(%zu) ", GetDataLength());
 
 		return info;
@@ -299,6 +272,10 @@ protected:
 
 	// This flag is used to indicate that this packet should be sent with high priority.
 	bool _high_priority = false; 
+
+	// This flag is used to identify data manually created by the user, 
+	// such as through the SendEvent API or EventGenerator XML configuration.
+	bool _is_internal_created = false;
 
 	// creation timepoint
 	std::chrono::time_point<std::chrono::system_clock> _creation_time = std::chrono::system_clock::now();

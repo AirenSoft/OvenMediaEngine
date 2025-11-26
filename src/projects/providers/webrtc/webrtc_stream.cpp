@@ -576,6 +576,8 @@ namespace pvd
 												   bitstream,
 												   adjusted_timestamp,
 												   dts,
+												   -1LL,
+												   MediaPacketFlag::Unknown,
 												   bitstream_format,
 												   packet_type);
 
@@ -639,6 +641,8 @@ namespace pvd
 																	_h26x_extradata_nalu[track->GetId()],
 																	media_packet->GetPts(),
 																	media_packet->GetDts(),
+																	-1LL,
+																	MediaPacketFlag::Unknown,
 																	bitstream_format,
 																	cmn::PacketType::NALU);
 				SendFrame(sps_pps_packet);

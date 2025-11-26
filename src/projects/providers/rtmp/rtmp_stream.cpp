@@ -1694,6 +1694,8 @@ namespace pvd
 															 data,
 															 pts,
 															 dts,
+															 -1LL,
+															 MediaPacketFlag::Unknown,
 															 cmn::BitstreamFormat::H264_AVCC,  // RTMP's packet type is AVCC
 															 packet_type);
 
@@ -1879,6 +1881,8 @@ namespace pvd
 													   data,
 													   pts,
 													   dts,
+													   -1LL,
+													   MediaPacketFlag::Unknown,
 													   cmn::BitstreamFormat::AAC_RAW,
 													   packet_type);
 

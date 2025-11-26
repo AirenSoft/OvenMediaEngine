@@ -1096,6 +1096,8 @@ namespace pvd
 												   bitstream,
 												   adjusted_timestamp,
 												   adjusted_timestamp,
+												   -1LL,
+												   MediaPacketFlag::Unknown,
 												   bitstream_format,
 												   packet_type);
 
@@ -1110,6 +1112,8 @@ namespace pvd
 															  _h264_extradata_nalu,
 															  adjusted_timestamp,
 															  adjusted_timestamp,
+															  -1LL,
+															  MediaPacketFlag::Unknown,
 															  cmn::BitstreamFormat::H264_ANNEXB,
 															  cmn::PacketType::NALU);
 			SendFrame(media_packet);
@@ -1124,6 +1128,8 @@ namespace pvd
 															  _h265_extradata_nalu,
 															  adjusted_timestamp,
 															  adjusted_timestamp,
+															  -1LL,
+															  MediaPacketFlag::Unknown,
 															  cmn::BitstreamFormat::H265_ANNEXB,
 															  cmn::PacketType::NALU);
 			SendFrame(media_packet);

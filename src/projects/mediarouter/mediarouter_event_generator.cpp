@@ -143,7 +143,14 @@ void MediaRouterEventGenerator::MakeEvents(const std::shared_ptr<info::Stream> &
 			return;
 		}
 
-		if (!stream->SendDataFrame(-1, event->_event_format, event->_event_type, event_data, event->_urgent, event->_keyframe_only ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag))
+		if (!stream->SendDataFrame(
+				-1,
+				event->_event_format,
+				event->_event_type,
+				event_data,
+				event->_urgent,
+				true,
+				event->_keyframe_only ? MediaPacketFlag::Key : MediaPacketFlag::NoFlag))
 		{
 			logte("%s | Failed to send event data", stream_info->GetName().CStr());
 		}

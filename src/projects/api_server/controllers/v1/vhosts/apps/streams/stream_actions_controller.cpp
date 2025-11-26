@@ -402,7 +402,7 @@ namespace api
 				urgent = request_body["urgent"].asBool();
 			}
 
-			if (source_stream->SendDataFrame(timestamp, event_format, event_type, events_data, urgent) == false)
+			if (source_stream->SendDataFrame(timestamp, event_format, event_type, events_data, urgent, true) == false)
 			{
 				throw http::HttpError(http::StatusCode::InternalServerError,
 									  "Internal Server Error - Could not inject event: [%s/%s/%s]",
