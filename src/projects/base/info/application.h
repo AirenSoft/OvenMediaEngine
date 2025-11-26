@@ -13,6 +13,7 @@
 #include "audio_map_item.h"
 #include "config/items/virtual_hosts/applications/providers/track_map/audio_map.h"
 #include "vhost_app_name.h"
+#include "event_forward.h"
 
 // Forward declaration
 namespace ocst
@@ -124,5 +125,12 @@ namespace info
 		void AddAudioMapItem(const std::shared_ptr<AudioMapItem> &audio_map_item);
 
 		std::vector<std::shared_ptr<AudioMapItem>> _audio_map_items;
+
+	public:
+		void SetEventForwardPolicy(const std::shared_ptr<info::EventForward> &event_forward_policy);
+		std::shared_ptr<info::EventForward> GetEventForwardPolicy() const;
+
+	private:
+		std::shared_ptr<info::EventForward> _event_forward_policy = nullptr;		
 	};
 }  // namespace info

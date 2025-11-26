@@ -1,3 +1,4 @@
+
 //==============================================================================
 //
 //  OvenMediaEngine
@@ -127,6 +128,16 @@ namespace info
 		}
 
 		return _audio_map_items[index];
+	}
+
+	void Application::SetEventForwardPolicy(const std::shared_ptr<info::EventForward> &event_forward_policy)
+	{
+		_event_forward_policy = event_forward_policy;
+	}
+
+	std::shared_ptr<info::EventForward> Application::GetEventForwardPolicy() const
+	{
+		return _event_forward_policy;
 	}
 
 }  // namespace info

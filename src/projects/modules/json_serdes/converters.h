@@ -18,3 +18,4 @@
 #include "./dump.h"
 #include "./overlay.h"
 #include "./codec.h"
+#include "./event_forward.h"
