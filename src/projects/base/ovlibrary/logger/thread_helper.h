@@ -9,6 +9,7 @@
 #include <pthread.h>
 
 #include <cstddef>
+#include <memory>
 #include <shared_mutex>
 #include <unordered_map>
 
@@ -27,7 +28,7 @@ namespace ov::logger
 	class ThreadHelper
 	{
 		friend class Helper;
-		
+
 	public:
 		ThreadHelper();
 		~ThreadHelper();
