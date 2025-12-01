@@ -532,15 +532,8 @@ std::shared_ptr<LLHlsMasterPlaylist> LLHlsStream::CreateMasterPlaylist(const std
 		}
 		auto video_track = GetTrackByVariant(rendition->GetVideoVariantName(), video_index_hint);
 
-		// Note: Using audio_index_hint may affect LLHLS multilingual support
-		// Only use this when you need explicit audio track selection
-		auto audio_index_hint = rendition->GetAudioIndexHint();
-		if (audio_index_hint < 0)
-		{
-			audio_index_hint = 0;
-		}
-		
-		auto audio_track = GetTrackByVariant(rendition->GetAudioVariantName(), audio_index_hint);
+		// LLHLS Audio does not use audio_index_hint because it has multilingual support
+		auto audio_track = GetFirstTrackByVariant(rendition->GetAudioVariantName());
 
 		if ((video_track != nullptr && IsSupportedMediaCodec(video_track->GetCodecId()) == false) ||
 			(audio_track != nullptr && IsSupportedMediaCodec(audio_track->GetCodecId()) == false))
