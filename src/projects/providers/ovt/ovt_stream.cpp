@@ -52,9 +52,10 @@ namespace pvd
 
 	void OvtStream::Release()
 	{
-		if (_client_socket != nullptr)
+		auto client_socket = _client_socket;
+		if (client_socket != nullptr)
 		{
-			_client_socket->Close();
+			client_socket->Close();
 		}
 
 		_curr_url = nullptr;
@@ -184,31 +185,31 @@ namespace pvd
 
 		auto socket_address = ov::SocketAddress::CreateAndGetFirst(_curr_url->Host(), _curr_url->Port());
 
-		_client_socket = pool->AllocSocket(socket_address.GetFamily());
+		auto client_socket = pool->AllocSocket(socket_address.GetFamily());
 
-		if (_client_socket == nullptr)
+		if (client_socket == nullptr)
 		{
 			SetState(State::ERROR);
 			logte("To create client socket is failed.");
-
-			_client_socket = nullptr;
 			return false;
 		}
 
-		_client_socket->SetSockOpt<int>(IPPROTO_TCP, TCP_NODELAY, 1);
-		_client_socket->SetSockOpt<int>(IPPROTO_TCP, TCP_QUICKACK, 1);
-		_client_socket->MakeBlocking();
+		client_socket->SetSockOpt<int>(IPPROTO_TCP, TCP_NODELAY, 1);
+		client_socket->SetSockOpt<int>(IPPROTO_TCP, TCP_QUICKACK, 1);
+		client_socket->MakeBlocking();
 
 		struct timeval tv = {1, 500000};  // 1.5 sec
-		_client_socket->SetRecvTimeout(tv);
+		client_socket->SetRecvTimeout(tv);
 
-		auto error = _client_socket->Connect(socket_address, 1500);
+		auto error = client_socket->Connect(socket_address, 1500);
 		if (error != nullptr)
 		{
 			SetState(State::ERROR);
 			logte("Cannot connect to origin server (%s) : (%s)", error->GetMessage().CStr(), socket_address.ToString().CStr());
 			return false;
 		}
+
+		_client_socket = client_socket;
 
 		SetState(State::CONNECTED);
 
@@ -607,7 +608,15 @@ namespace pvd
 
 	bool OvtStream::OnOvtPacketized(std::shared_ptr<OvtPacket> &packet)
 	{
-		if (_client_socket->Send(packet->GetData()) == false)
+		auto client_socket = _client_socket;
+		if (client_socket == nullptr)
+		{
+			SetState(State::ERROR);
+			logte("Could not send message : socket is null");
+			return false;
+		}
+
+		if (client_socket->Send(packet->GetData()) == false)
 		{
 			SetState(State::ERROR);
 			logte("Could not send message");
@@ -644,13 +653,21 @@ namespace pvd
 		uint8_t buffer[65535];
 		size_t read_bytes = 0ULL;
 
-		auto error = _client_socket->Recv(buffer, 65535, &read_bytes, non_block);
+		auto client_socket = _client_socket;
+		if (client_socket == nullptr)
+		{
+			logte("[%s/%s] Could not receive packet : socket is null", GetApplicationName(), GetName().CStr());
+			SetState(State::ERROR);
+			return false;
+		}
+
+		auto error = client_socket->Recv(buffer, 65535, &read_bytes, non_block);
 		if (read_bytes == 0)
 		{
 			if (error != nullptr)
 			{
 				logte("[%s/%s] An error occurred while receiving packet: %s", GetApplicationName(), GetName().CStr(), error->What());
-				_client_socket->Close();
+				client_socket->Close();
 				SetState(State::ERROR);
 				return false;
 			}
@@ -680,7 +697,12 @@ namespace pvd
 
 	int OvtStream::GetFileDescriptorForDetectingEvent()
 	{
-		return _client_socket->GetNativeHandle();
+		auto client_socket = _client_socket;
+		if (client_socket == nullptr)
+		{
+			return -1;
+		}
+		return client_socket->GetNativeHandle();
 	}
 
 	PullStream::ProcessMediaResult OvtStream::ProcessMediaPacket()
