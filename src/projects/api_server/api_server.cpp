@@ -295,14 +295,14 @@ namespace api
 	{
 		if (_host_config.has_value() == false)
 		{
-			return http::HttpError::CreateError(http::StatusCode::BadRequest, "TLS is not enabled for API Server");
+			return http::HttpError::CreateError(http::StatusCode::BadRequest, "TLS is not enabled for the API Server");
 		}
 
 		auto certificate = CreateCertificate();
 
 		if (certificate == nullptr)
 		{
-			return http::HttpError::CreateError(http::StatusCode::InternalServerError, "Failed to create a certificate for API Server");
+			return http::HttpError::CreateError(http::StatusCode::InternalServerError, "Failed to create a certificate for the API Server");
 		}
 
 		std::shared_ptr<const http::HttpError> first_error;
