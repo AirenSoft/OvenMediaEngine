@@ -293,7 +293,9 @@ namespace api
 
 	std::shared_ptr<const http::HttpError> Server::ReloadCertificate()
 	{
-		if (_host_config.has_value() == false)
+		if (
+			(_host_config.has_value() == false) ||
+			(_host_config->GetTls().IsParsed() == false))
 		{
 			return http::HttpError::CreateError(http::StatusCode::BadRequest, "TLS is not enabled for the API Server");
 		}
