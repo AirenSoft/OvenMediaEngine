@@ -423,7 +423,7 @@ namespace ffmpeg
 					AmfDocument document;
 					if (document.Decode(byte_stream) == true)
 					{
-						logtd("AMF Event: %s", document.ToString().CStr());
+						logti("Inserted AMF Event: %s, PTS: %lld", document.ToString().CStr(), packet->GetPts());
 					}
 				}
 				break;
