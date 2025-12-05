@@ -1210,7 +1210,7 @@ namespace pvd
 
 			if (property == nullptr)
 			{
-				logtw("The message (type: %d) was ignored - the name does not exist", property->GetType());
+				logtw("The message was ignored - the name does not exist");
 				return true;
 			}
 
