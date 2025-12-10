@@ -21,6 +21,7 @@
 #include "modules/bitstream/nalu/nal_unit_splitter.h"
 #include "modules/containers/mpegts/mpegts_packet.h"
 #include "mpegts_provider_private.h"
+#include "base/modules/data_format/scte35_event/scte35_event.h"
 
 namespace pvd
 {
