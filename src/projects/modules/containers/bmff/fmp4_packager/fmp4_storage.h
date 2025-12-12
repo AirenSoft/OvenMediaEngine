@@ -87,6 +87,7 @@ namespace bmff
 			// Get total number of segments
 			uint32_t GetTotalSegmentCount() const
 			{
+				std::shared_lock<std::shared_mutex> lock(_segments_lock);
 				return _segments.size();
 			}
 
@@ -149,7 +150,13 @@ namespace bmff
 					return {0, 0, 0};
 				}
 
-				return _segments[segment_number - _first_segment_number];
+				auto index = segment_number - _first_segment_number;
+				if (index >= _segments.size())
+				{
+					return {0, 0, 0};
+				}
+
+				return _segments[index];
 			}
 
 		private:
