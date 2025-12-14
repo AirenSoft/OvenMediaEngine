@@ -134,10 +134,16 @@ void DecoderOPUS::CodecThread()
 					{
 						// Nothing to do here, just continue
 					}
+					else if (ret == AVERROR_INVALIDDATA)
+					{
+						// Invalid data, skip this packet
+					}
 					else if (ret < 0)
 					{
 						_cur_data = nullptr;
 						logte("Error error occurred while sending a packet for decoding. reason(%s)", ffmpeg::compat::AVErrorToString(ret).CStr());
+
+						Complete(TranscodeResult::DataError, nullptr);
 					}
 
 					// Save first pakcet's PTS
@@ -169,6 +175,9 @@ void DecoderOPUS::CodecThread()
 		else if (ret < 0)
 		{
 			logte("Error receiving a packet for decoding. reason(%s)", ffmpeg::compat::AVErrorToString(ret).CStr());
+
+			Complete(TranscodeResult::DataError, nullptr);
+
 			continue;
 		}
 		else

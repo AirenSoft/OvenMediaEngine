@@ -181,6 +181,9 @@ void DecoderVP8::CodecThread()
 				else if (ret < 0)
 				{
 					logte("Error error occurred while sending a packet for decoding. reason(%s)", ffmpeg::compat::AVErrorToString(ret).CStr());
+
+					Complete(TranscodeResult::DataError, nullptr);
+
 					break;
 				}
 			}
@@ -197,10 +200,13 @@ void DecoderVP8::CodecThread()
 			{
 				break;
 			}
-			else if (ret == AVERROR_EOF || ret < 0)
+			else if (ret < 0)
 			{
 				logte("Error receiving a packet for decoding : %d", ret);
-				break;
+
+				Complete(TranscodeResult::DataError, nullptr);
+
+				continue;
 			}
 			else
 			{

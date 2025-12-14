@@ -25,13 +25,15 @@
 #include "transcoder_stream_internal.h"
 #include "transcoder_events.h"
 #include "transcoder_overlays.h"
+#include "transcoder_alert.h"
 
 class TranscodeApplication;
 
 class TranscoderStream : public ov::EnableSharedFromThis<TranscoderStream>,
 						 public TranscoderStreamInternal,
 						 public TranscoderEvents,
-						 public TranscoderOverlays
+						 public TranscoderOverlays,
+						 public TranscoderAlerts
 {
 public:
 	class CompositeContext
@@ -239,6 +241,7 @@ private:
 
 private:
 	std::shared_ptr<MediaTrack> GetInputTrack(MediaTrackId track_id);
+	std::shared_ptr<MediaTrack> GetInputTrackByOutputTrackId(MediaTrackId output_track_id);
 	std::shared_ptr<info::Stream> GetInputStream();
 	std::shared_ptr<info::Stream> GetOutputStreamByTrackId(MediaTrackId output_track_id);
 
@@ -302,14 +305,14 @@ private:
 	// Step 2: Filter (resample/rescale the decoded frame)
 	void SpreadToFilters(MediaTrackId decoder_id, std::shared_ptr<MediaFrame> frame);
 	TranscodeResult PreFilterFrame(MediaTrackId track_id, std::shared_ptr<MediaFrame> frame);
-	void OnPreFilteredFrame(MediaTrackId filter_id, std::shared_ptr<MediaFrame> decoded_frame);
+	void OnPreFilteredFrame(TranscodeResult result, MediaTrackId filter_id, std::shared_ptr<MediaFrame> decoded_frame);
 
 	TranscodeResult PostFilterFrame(std::shared_ptr<MediaFrame> frame);
-	void OnPostFilteredFrame(MediaTrackId filter_id, std::shared_ptr<MediaFrame> decoded_frame);
+	void OnPostFilteredFrame(TranscodeResult result, MediaTrackId filter_id, std::shared_ptr<MediaFrame> decoded_frame);
 
 	// Step 3: Encode (Encode the filtered frame to packets)
 	TranscodeResult EncodeFrame(std::shared_ptr<const MediaFrame> frame);
-	void OnEncodedPacket(MediaTrackId encoder_id, std::shared_ptr<MediaPacket> encoded_packet);
+	void OnEncodedPacket(TranscodeResult result, MediaTrackId encoder_id, std::shared_ptr<MediaPacket> encoded_packet);
 
 	std::vector<std::shared_ptr<MediaTrack>> GetOutputTracksByEncoderId(MediaTrackId encoder_id);
 

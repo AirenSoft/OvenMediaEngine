@@ -177,11 +177,10 @@ namespace mon::alrt
 				continue;
 			}
 
-			auto code				= stream_event->_code;
-			auto stream_metric		= stream_event->_metric;
-			auto parent_source_info = stream_event->_parent_source_info;
-			auto output_profile		= stream_event->_output_profile;
-			auto codec_modules		= stream_event->_codec_modules;
+			auto code				  = stream_event->_code;
+			auto stream_metric		  = stream_event->_metric;
+			auto parent_stream_metric = stream_event->_parent_stream_metric;
+			auto extra				  = stream_event->_extra;
 
 			ov::String description	= Message::DescriptionFromMessageCode(code);
 			auto message			= Message::CreateMessage(code, description);
@@ -193,9 +192,9 @@ namespace mon::alrt
 			{
 				messages_key = stream_metric->GetUri();
 			}
-			else if (parent_source_info)
+			else if (parent_stream_metric)
 			{
-				messages_key = parent_source_info->GetUri();
+				messages_key = parent_stream_metric->GetUri();
 			}
 			else
 			{
@@ -215,19 +214,14 @@ namespace mon::alrt
 					data.SetSourceUri(stream_metric->GetUri());
 				}
 
-				if (parent_source_info != nullptr)
+				if (parent_stream_metric != nullptr)
 				{
-					data.SetParentSourceInfo(parent_source_info);
+					data.SetParentStreamMetric(parent_stream_metric);
 				}
 
-				if (output_profile != nullptr)
+				if(extra != nullptr)
 				{
-					data.SetOutputProfile(output_profile);
-				}
-
-				if (!codec_modules.empty())
-				{
-					data.SetCodecModules(codec_modules);
+					data.SetExtra(extra);
 				}
 
 				SendNotification(data);
@@ -247,7 +241,7 @@ namespace mon::alrt
 		}
 	}
 
-	void Alert::SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric, const std::shared_ptr<StreamMetrics> &parent_source_info, const std::shared_ptr<cfg::vhost::app::oprf::OutputProfile> &output_profile, const std::vector<std::shared_ptr<info::CodecModule>> &codec_modules)
+	void Alert::SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric, const std::shared_ptr<StreamMetrics> &parent_stream_metric, const std::shared_ptr<ExtraData> &extra)
 	{
 		if (_stop_thread_flag)
 		{
@@ -261,7 +255,7 @@ namespace mon::alrt
 			return;
 		}
 
-		_stream_event_queue.Enqueue(std::make_shared<StreamEvent>(code, stream_metric, parent_source_info, output_profile, codec_modules));
+		_stream_event_queue.Enqueue(std::make_shared<StreamEvent>(code, stream_metric, parent_stream_metric, extra));
 		_queue_event.Notify();
 	}
 

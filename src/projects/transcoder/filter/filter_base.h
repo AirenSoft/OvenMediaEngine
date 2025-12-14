@@ -35,7 +35,7 @@ public:
 		ERROR
 	};
 
-	typedef std::function<void(std::shared_ptr<MediaFrame>)> CompleteHandler;
+	typedef std::function<void(TranscodeResult, std::shared_ptr<MediaFrame>)> CompleteHandler;
 	FilterBase() = default;
 	virtual ~FilterBase() = default;
 
@@ -107,11 +107,11 @@ public:
 		return false;
 	}
 
-	void Complete(std::shared_ptr<MediaFrame> buffer)
+	void Complete(TranscodeResult result, std::shared_ptr<MediaFrame> buffer)
 	{
 		if (_complete_handler != nullptr && _kill_flag == false)
 		{
-			_complete_handler(std::move(buffer));
+			_complete_handler(result, std::move(buffer));
 		}
 	}
 

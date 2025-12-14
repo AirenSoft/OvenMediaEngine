@@ -148,6 +148,9 @@ void DecoderHEVCxQSV::CodecThread()
 				else if (ret < 0)
 				{
 					logte("Error error occurred while sending a packet for decoding. reason(%s)", ffmpeg::compat::AVErrorToString(ret).CStr());
+
+					Complete(TranscodeResult::DataError, nullptr);
+
 					break;
 				}
 			}
@@ -168,6 +171,9 @@ void DecoderHEVCxQSV::CodecThread()
 			else if (ret < 0)
 			{
 				logte("Error receiving a packet for decoding. reason(%s)", ffmpeg::compat::AVErrorToString(ret).CStr());
+
+				Complete(TranscodeResult::DataError, nullptr);
+
 				continue;
 			}
 			else

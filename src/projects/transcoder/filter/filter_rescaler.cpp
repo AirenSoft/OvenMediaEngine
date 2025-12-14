@@ -507,6 +507,8 @@ bool FilterRescaler::PushProcess(std::shared_ptr<MediaFrame> media_frame)
 
 		SetState(State::ERROR);
 
+		Complete(TranscodeResult::DataError, nullptr);
+
 		return false;
 	}
 
@@ -555,6 +557,8 @@ bool FilterRescaler::PopProcess(bool is_flush)
 			logte("Error receiving filtered frame. error(%s)", ffmpeg::compat::AVErrorToString(ret).CStr());
 			SetState(State::ERROR);
 
+			Complete(TranscodeResult::DataError, nullptr);
+
 			return false;
 		}
 		else
@@ -571,7 +575,7 @@ bool FilterRescaler::PopProcess(bool is_flush)
 			output_frame->SetDuration((int64_t)((double)output_frame->GetDuration() * _input_track->GetTimeBase().GetExpr() / _output_track->GetTimeBase().GetExpr()));
 			output_frame->SetSourceId(_source_id);
 
-			Complete(std::move(output_frame));
+			Complete(TranscodeResult::DataReady, std::move(output_frame));
 		}
 	}
 

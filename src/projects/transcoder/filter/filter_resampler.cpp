@@ -276,6 +276,8 @@ void FilterResampler::WorkerThread()
 			logte("An error occurred while feeding the audio filtergraph: pts: %lld, linesize: %d, srate: %d, channels: %d, format: %d",
 				  av_frame->pts, av_frame->linesize[0], av_frame->sample_rate, av_frame->ch_layout.nb_channels, av_frame->format);
 
+			Complete(TranscodeResult::DataError, nullptr);
+			
 			continue;
 		}
 
@@ -301,6 +303,8 @@ void FilterResampler::WorkerThread()
 
 				SetState(State::ERROR);
 
+				Complete(TranscodeResult::DataError, nullptr);
+
 				break;
 			}
 			else
@@ -317,7 +321,7 @@ void FilterResampler::WorkerThread()
 
 				output_frame->SetSourceId(_source_id);
 
-				Complete(std::move(output_frame));
+				Complete(TranscodeResult::DataReady, std::move(output_frame));
 			}
 		}
 	}

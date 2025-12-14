@@ -21,7 +21,7 @@ enum class TranscodeFilterType : int8_t
 class TranscodeFilter
 {
 public:
-	typedef std::function<void(int32_t, std::shared_ptr<MediaFrame>)> CompleteHandler;
+	typedef std::function<void(TranscodeResult, int32_t, std::shared_ptr<MediaFrame>)> CompleteHandler;
 
 	static std::shared_ptr<TranscodeFilter> Create(
 		int32_t filter_id,
@@ -52,7 +52,7 @@ public:
 	std::shared_ptr<MediaTrack> &GetOutputTrack(); 
 
 	void SetCompleteHandler(CompleteHandler complete_handler);
-	void OnComplete(std::shared_ptr<MediaFrame> frame);
+	void OnComplete(TranscodeResult result, std::shared_ptr<MediaFrame> frame);
 
 private:
 	bool CreateInternal();

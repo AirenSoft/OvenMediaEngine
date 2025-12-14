@@ -229,6 +229,9 @@ void DecoderHEVCxNV::CodecThread()
 			else if (ret < 0)
 			{
 				logte("Error receiving a packet for decoding. reason(%s)", ffmpeg::compat::AVErrorToString(ret).CStr());
+
+				Complete(TranscodeResult::DataError, nullptr);
+
 				continue;
 			}
 			else
