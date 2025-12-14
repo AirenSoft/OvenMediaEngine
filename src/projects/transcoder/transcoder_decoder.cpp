@@ -24,6 +24,7 @@
 #include "codec/decoder/decoder_vp8.h"
 #include "transcoder_gpu.h"
 #include "transcoder_modules.h"
+#include "transcoder_fault_injector.h"
 #include "transcoder_private.h"
 
 // Default is 300 (about 10 seconds for 30fps)
@@ -245,6 +246,21 @@ std::shared_ptr<TranscodeDecoder> TranscodeDecoder::Create(
 done:
 	if (decoder != nullptr)
 	{
+		// Fault Injection for testing
+		if (TranscodeFaultInjector::GetInstance()->IsEnabled())
+		{
+			if (TranscodeFaultInjector::GetInstance()->IsTriggered(
+					TranscodeFaultInjector::ComponentType::DecoderComponent,
+					TranscodeFaultInjector::IssueType::InitFailed,
+					cur_candidate->GetModuleId(),
+					cur_candidate->GetDeviceId()) == true)
+			{
+				decoder->Stop();
+				decoder = nullptr;
+				return nullptr;
+			}
+		}
+
 		logtd("The decoder has been created. track(#%d) codec(%s), module(%s:%d)",
 			  track->GetId(),
 			  cmn::GetCodecIdString(track->GetCodecId()),
@@ -370,14 +386,39 @@ void TranscodeDecoder::SetCompleteHandler(CompleteHandler complete_handler)
 
 void TranscodeDecoder::Complete(TranscodeResult result, std::shared_ptr<MediaFrame> frame)
 {
-	// Invoke callback function when encoding/decoding is completed.
-	if (_complete_handler)
+	// Fault Injection for testing
+	if (TranscodeFaultInjector::GetInstance()->IsEnabled())
 	{
-		if (frame != nullptr)
+		if (TranscodeFaultInjector::GetInstance()->IsTriggered(
+				TranscodeFaultInjector::ComponentType::DecoderComponent,
+				TranscodeFaultInjector::IssueType::ProcessFailed,
+				GetModuleID(),
+				GetDeviceID()) == true)
 		{
-			frame->SetTrackId(_decoder_id);
+			result = TranscodeResult::DataError;
+			frame  = nullptr;
 		}
-		
-		_complete_handler(result, _decoder_id, std::move(frame));
+
+		if (TranscodeFaultInjector::GetInstance()->IsTriggered(
+				TranscodeFaultInjector::ComponentType::DecoderComponent,
+				TranscodeFaultInjector::IssueType::Lagging,
+				GetModuleID(),
+				GetDeviceID()) == true)
+		{
+			usleep(300 * 1000);	 // 300ms
+		}
 	}
+
+	// Invoke callback function when encoding/decoding is completed.
+	if (!_complete_handler)
+	{
+		return;
+	}
+
+	if (frame != nullptr)
+	{
+		frame->SetTrackId(_decoder_id);
+	}
+
+	_complete_handler(result, _decoder_id, std::move(frame));
 }

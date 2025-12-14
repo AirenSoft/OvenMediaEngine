@@ -3,6 +3,7 @@
 #include "filter/filter_resampler.h"
 #include "filter/filter_rescaler.h"
 #include "transcoder_gpu.h"
+#include "transcoder_fault_injector.h"
 #include "transcoder_private.h"
 
 using namespace cmn;
@@ -96,9 +97,22 @@ bool TranscodeFilter::CreateInternal()
 		name.LowerCaseString());
 	_internal->SetQueueUrn(urn);
 	_internal->SetQueuePolicy(ENABLE_QUEUE_EXCEED_WAIT, MAX_QUEUE_SIZE);
-	_internal->SetCompleteHandler(bind(&TranscodeFilter::OnComplete, this, std::placeholders::_1));
+	_internal->SetCompleteHandler(bind(&TranscodeFilter::OnComplete, this, std::placeholders::_1, std::placeholders::_2));
 	_internal->SetInputTrack(GetInputTrack());
 	_internal->SetOutputTrack(GetOutputTrack());
+
+	// Fault Injection for testing
+	if (TranscodeFaultInjector::GetInstance()->IsEnabled() && (_input_stream_info != _output_stream_info))
+	{
+		if (TranscodeFaultInjector::GetInstance()->IsTriggered(
+				TranscodeFaultInjector::ComponentType::FilterComponent,
+				TranscodeFaultInjector::IssueType::InitFailed,
+				GetOutputTrack()->GetCodecModuleId(),
+				GetOutputTrack()->GetCodecDeviceId()) == true)
+		{
+			return false;
+		}
+	}
 
 	return _internal->Start();
 }
@@ -207,17 +221,46 @@ void TranscodeFilter::SetCompleteHandler(CompleteHandler complete_handler)
 	_complete_handler = std::move(complete_handler);
 }
 
-void TranscodeFilter::OnComplete(std::shared_ptr<MediaFrame> frame)
+void TranscodeFilter::OnComplete(TranscodeResult result, std::shared_ptr<MediaFrame> frame)
 {
-	if (_complete_handler)
+
+	// Fault Injection for testing
+	if (TranscodeFaultInjector::GetInstance()->IsEnabled())
 	{
-		// Set the codec module and device ID of the output track.
-		// This is used when encoding with hardware acceleration.
+		if (TranscodeFaultInjector::GetInstance()->IsTriggered(
+				TranscodeFaultInjector::ComponentType::FilterComponent,
+				TranscodeFaultInjector::IssueType::ProcessFailed,
+				GetOutputTrack()->GetCodecModuleId(),
+				GetOutputTrack()->GetCodecDeviceId()) == true)
+		{
+			result = TranscodeResult::DataError;
+			frame  = nullptr;
+		}
+
+		if (TranscodeFaultInjector::GetInstance()->IsTriggered(
+				TranscodeFaultInjector::ComponentType::FilterComponent,
+				TranscodeFaultInjector::IssueType::Lagging,
+				GetOutputTrack()->GetCodecModuleId(),
+				GetOutputTrack()->GetCodecDeviceId()) == true)
+		{
+			usleep(300 * 1000);	 // 300ms
+		}
+	}
+
+	if (!_complete_handler)
+	{
+		return;
+	}
+
+	// Set the codec module and device ID of the output track.
+	// This is used when encoding with hardware acceleration.
+	if (frame)
+	{
 		frame->SetCodecModuleId(GetOutputTrack()->GetCodecModuleId());
 		frame->SetCodecDeviceId(GetOutputTrack()->GetCodecDeviceId());
-
-		_complete_handler(_id, frame);
 	}
+
+	_complete_handler(result, _id, frame);
 }
 
 cmn::Timebase TranscodeFilter::GetInputTimebase() const

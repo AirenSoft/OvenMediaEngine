@@ -10,17 +10,17 @@
 
 #include <utility>
 
-#include "codec/encoder/encoder_avc_x264.h"
 #include "codec/encoder/encoder_aac.h"
+#include "codec/encoder/encoder_avc_nilogan.h"
 #include "codec/encoder/encoder_avc_nv.h"
 #include "codec/encoder/encoder_avc_openh264.h"
 #include "codec/encoder/encoder_avc_qsv.h"
-#include "codec/encoder/encoder_avc_nilogan.h"
+#include "codec/encoder/encoder_avc_x264.h"
 #include "codec/encoder/encoder_avc_xma.h"
 #include "codec/encoder/encoder_ffopus.h"
+#include "codec/encoder/encoder_hevc_nilogan.h"
 #include "codec/encoder/encoder_hevc_nv.h"
 #include "codec/encoder/encoder_hevc_qsv.h"
-#include "codec/encoder/encoder_hevc_nilogan.h"
 #include "codec/encoder/encoder_hevc_xma.h"
 #include "codec/encoder/encoder_jpeg.h"
 #include "codec/encoder/encoder_opus.h"
@@ -28,7 +28,7 @@
 #include "codec/encoder/encoder_vp8.h"
 #include "codec/encoder/encoder_webp.h"
 #include "codec/encoder/encoder_whisper.h"
-
+#include "transcoder_fault_injector.h"
 #include "transcoder_gpu.h"
 #include "transcoder_modules.h"
 #include "transcoder_private.h"
@@ -306,11 +306,26 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 done:
 	if (encoder)
 	{
+		// Fault Injection for testing
+		if (TranscodeFaultInjector::GetInstance()->IsEnabled())
+		{
+			if (TranscodeFaultInjector::GetInstance()->IsTriggered(
+					TranscodeFaultInjector::ComponentType::EncoderComponent,
+					TranscodeFaultInjector::IssueType::InitFailed,
+					cur_candidate->GetModuleId(),
+					cur_candidate->GetDeviceId()) == true)
+			{
+				encoder->Stop();
+				encoder = nullptr;
+				return nullptr;
+			}
+		}
+
 		logtd("The encoder has been created. track(#%d), codec(%s), module(%s:%d)",
-			track->GetId(),
-			cmn::GetCodecIdString(track->GetCodecId()),
-			cmn::GetCodecModuleIdString(track->GetCodecModuleId()),
-			track->GetCodecDeviceId());		
+			  track->GetId(),
+			  cmn::GetCodecIdString(track->GetCodecId()),
+			  cmn::GetCodecModuleIdString(track->GetCodecModuleId()),
+			  track->GetCodecDeviceId());
 	}
 
 	return encoder;
@@ -406,14 +421,37 @@ void TranscodeEncoder::SetCompleteHandler(CompleteHandler complete_handler)
 	_complete_handler = std::move(complete_handler);
 }
 
-void TranscodeEncoder::Complete(std::shared_ptr<MediaPacket> packet)
+void TranscodeEncoder::Complete(TranscodeResult result, std::shared_ptr<MediaPacket> packet)
 {
+	// Fault Injection for testing
+	if (TranscodeFaultInjector::GetInstance()->IsEnabled())
+	{
+		if (TranscodeFaultInjector::GetInstance()->IsTriggered(
+				TranscodeFaultInjector::ComponentType::EncoderComponent,
+				TranscodeFaultInjector::IssueType::ProcessFailed,
+				GetModuleID(),
+				GetDeviceID()) == true)
+		{
+			result = TranscodeResult::DataError;
+			packet = nullptr;
+		}
+
+		if (TranscodeFaultInjector::GetInstance()->IsTriggered(
+				TranscodeFaultInjector::ComponentType::EncoderComponent,
+				TranscodeFaultInjector::IssueType::Lagging,
+				GetModuleID(),
+				GetDeviceID()) == true)
+		{
+			usleep(300 * 1000);	 // 300ms
+		}
+	}
+
 	if (!_complete_handler)
 	{
 		return;
 	}
 
-	_complete_handler(_encoder_id, std::move(packet));
+	_complete_handler(result, _encoder_id, std::move(packet));
 }
 
 void TranscodeEncoder::Stop()
@@ -470,6 +508,7 @@ bool TranscodeEncoder::PushProcess(std::shared_ptr<const MediaFrame> media_frame
 		if (ret < 0)
 		{
 			logte("Error sending a frame for encoding : %d", ret);
+			
 			return false;
 		}
 
@@ -506,6 +545,9 @@ bool TranscodeEncoder::PushProcess(std::shared_ptr<const MediaFrame> media_frame
 	if (ret < 0)
 	{
 		logte("Error sending a frame for encoding : %d", ret);
+
+		Complete(TranscodeResult::DataError, nullptr);
+
 		return false;
 	}
 
@@ -524,17 +566,24 @@ bool TranscodeEncoder::PopProcess()
 	}
 	else if (ret < 0)
 	{
-		logte("Error receiving a packet for decoding : %s", ffmpeg::compat::AVErrorToString(ret).CStr());
+		logte("Error receiving a packet for encoding : %s", ffmpeg::compat::AVErrorToString(ret).CStr());
+
+		Complete(TranscodeResult::DataError, nullptr);
+
 		return false;
 	}
 
 	auto media_packet = ffmpeg::compat::ToMediaPacket(_packet, GetRefTrack()->GetMediaType(), _bitstream_format, _packet_type);
+	::av_packet_unref(_packet);
 	if (media_packet == nullptr)
 	{
 		logte("Could not allocate the media packet");
+
+		Complete(TranscodeResult::DataError, nullptr);
+
 		return false;
 	}
-	::av_packet_unref(_packet);
+
 
 	if (GetRefTrack()->GetMediaType() == cmn::MediaType::Audio)
 	{
@@ -546,7 +595,7 @@ bool TranscodeEncoder::PopProcess()
 	}
 	
 	// Call the complete handler.
-	Complete(std::move(media_packet));
+	Complete(TranscodeResult::DataReady, std::move(media_packet));
 
 	return true;
 }
