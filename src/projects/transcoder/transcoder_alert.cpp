@@ -187,7 +187,7 @@ void TranscoderAlerts::UpdateErrorCountIfNeeded(
 	// Send alert
 	if (is_needed_alert == true)
 	{
-		loge("%s] Send transcoding errors to alert. errorType(%d), trackId(%u), elapse(%u), errorCount(%d)",
+		logte("%s] Send transcoding errors to alert. errorType(%d), trackId(%u), elapse(%u), errorCount(%d)",
 			  input_stream ? input_stream->GetUri().CStr() : output_stream ? output_stream->GetUri().CStr() : "UnknownStream",
 			  error_type,
 			  track_id,
