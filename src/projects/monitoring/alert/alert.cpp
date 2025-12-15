@@ -313,6 +313,12 @@ namespace mon::alrt
 
 			return true;
 		}
+		else if(OV_CHECK_FLAG(raw_code, Message::EGRESS_CODE_TRANSCODE_MASK))
+		{
+			auto egress = rules.GetEgress();
+
+			return egress.IsParsed() && egress.IsTranscodeStatus();
+		}
 
 		// Invalid message code for stream
 		logtw("Invalid message code: %s", Message::StringFromMessageCode(code));
