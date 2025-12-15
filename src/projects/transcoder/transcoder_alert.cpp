@@ -112,7 +112,7 @@ void TranscoderAlerts::UpdateErrorWithoutCount(
 								  .Build();
 
 			MonitorInstance->GetAlert()->SendStreamMessage(
-				mon::alrt::Message::Code::EGRESS_STREAM_CREATION_FAILED_DECODER,
+				mon::alrt::Message::Code::EGRESS_STREAM_CREATION_FAILED_ENCODER,
 				stream_metric,
 				parent_stream_metric,
 				extra_data);
