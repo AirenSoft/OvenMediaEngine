@@ -155,26 +155,39 @@ std::shared_ptr<std::vector<std::shared_ptr<info::CodecCandidate>>> TranscodeEnc
 	return candidate_modules;
 }
 
-#define CASE_CREATE_CODEC_IFNEED(MODULE_ID, CLS)           \
-	case cmn::MediaCodecModuleId::MODULE_ID:               \
-		encoder = std::make_shared<CLS>(*info);            \
-		if (encoder == nullptr)                            \
-		{                                                  \
-			break;                                         \
-		}                                                  \
-		encoder->SetDeviceID(candidate->GetDeviceId());    \
-		encoder->SetEncoderId(encoder_id);                 \
-		encoder->SetCompleteHandler(complete_handler);     \
-		track->SetCodecModuleId(encoder->GetModuleID());   \
-		track->SetCodecDeviceId(encoder->GetDeviceID());   \
-		if (encoder->Configure(track) == true)             \
-		{                                                  \
-			goto done;                                     \
-		}                                                  \
-		if (encoder != nullptr) {                          \
-			encoder->Stop();                               \
-			encoder = nullptr;                             \
-		}                                                  \
+#define CASE_CREATE_CODEC_IFNEED(MODULE_ID, CLS)                                 \
+	case cmn::MediaCodecModuleId::MODULE_ID:                                     \
+		encoder = std::make_shared<CLS>(*info);                                  \
+		if (encoder == nullptr)                                                  \
+		{                                                                        \
+			break;                                                               \
+		}                                                                        \
+		encoder->SetDeviceID(candidate->GetDeviceId());                          \
+		encoder->SetEncoderId(encoder_id);                                       \
+		encoder->SetCompleteHandler(complete_handler);                           \
+		track->SetCodecModuleId(encoder->GetModuleID());                         \
+		track->SetCodecDeviceId(encoder->GetDeviceID());                         \
+		if (encoder->Configure(track) == true)                                   \
+		{                                                                        \
+			if (TranscodeFaultInjector::GetInstance()->IsEnabled())              \
+			{                                                                    \
+				if (TranscodeFaultInjector::GetInstance()->IsTriggered(          \
+						TranscodeFaultInjector::ComponentType::EncoderComponent, \
+						TranscodeFaultInjector::IssueType::InitFailed,           \
+						encoder->GetModuleID(), encoder->GetDeviceID()) == true) \
+				{                                                                \
+					encoder->Stop();                                             \
+					encoder = nullptr;                                           \
+					break;                                                       \
+				}                                                                \
+			}                                                                    \
+			goto done;                                                           \
+		}                                                                        \
+		if (encoder != nullptr)                                                  \
+		{                                                                        \
+			encoder->Stop();                                                     \
+			encoder = nullptr;                                                   \
+		}                                                                        \
 		break;
 
 
@@ -306,20 +319,6 @@ std::shared_ptr<TranscodeEncoder> TranscodeEncoder::Create(
 done:
 	if (encoder)
 	{
-		// Fault Injection for testing
-		if (TranscodeFaultInjector::GetInstance()->IsEnabled())
-		{
-			if (TranscodeFaultInjector::GetInstance()->IsTriggered(
-					TranscodeFaultInjector::ComponentType::EncoderComponent,
-					TranscodeFaultInjector::IssueType::InitFailed,
-					cur_candidate->GetModuleId(),
-					cur_candidate->GetDeviceId()) == true)
-			{
-				encoder->Stop();
-				encoder = nullptr;
-				return nullptr;
-			}
-		}
 
 		logtd("The encoder has been created. track(#%d), codec(%s), module(%s:%d)",
 			  track->GetId(),

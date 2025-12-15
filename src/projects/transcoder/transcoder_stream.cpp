@@ -1983,8 +1983,6 @@ void TranscoderStream::OnPreFilteredFrame(TranscodeResult result, MediaTrackId f
 	if (result != TranscodeResult::DataReady || filtered_frame == nullptr)
 	{
 #if NOTIFICATION_ENABLED
-		logte("%s [ALERT] Invalid filtered frame. Encoder(%d)", _log_prefix.CStr(), filter_id);
-
 		auto it = _link_encoder_to_outputs.find(filter_id);
 		if (it == _link_encoder_to_outputs.end() || it->second.size() == 0)
 		{
