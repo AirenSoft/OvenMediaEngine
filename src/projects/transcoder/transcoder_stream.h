@@ -136,7 +136,7 @@ private:
 	void SetState(State state)
 	{
 		logd("Transcoder", "%s stream state changed: %s -> %s", _log_prefix.CStr(), GetStateString(_state), GetStateString(state));
-		_state = state;
+		_state.exchange(state);
 	}
 
 	State GetState() const
@@ -144,7 +144,7 @@ private:
 		return _state;
 	}
 
-	State _state = State::CREATED;
+	std::atomic<State> _state = State::CREATED;
 
 private:
 	ov::String _log_prefix;
@@ -322,6 +322,11 @@ private:
 	ov::String MakeRenditionName(const ov::String &name_template, const std::shared_ptr<info::Playlist> &playlist_info, const std::shared_ptr<MediaTrack> &video_track, const std::shared_ptr<MediaTrack> &audio_track);
 
 private:
+	// Async prepare handling
+	void PrepareAsync();
+	std::thread _prepare_thread;
+	std::atomic<bool> _prepare_thread_running = false;
+	
 	// Initial buffer for ready to stream
 	void BufferMediaPacketUntilReadyToPlay(const std::shared_ptr<MediaPacket> &media_packet);
 	bool SendBufferedPackets();

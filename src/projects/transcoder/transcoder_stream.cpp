@@ -85,40 +85,67 @@ bool TranscoderStream::Prepare(const std::shared_ptr<info::Stream> &stream)
 		return false;
 	}
 
+	// Start async preparation to avoid blocking
+	if (_prepare_thread_running.exchange(true))
+	{
+		logtw("%s Prepare thread is already running", _log_prefix.CStr());
+		return false;
+	}
+
+	try
+	{
+		_prepare_thread = std::thread(&TranscoderStream::PrepareAsync, this);
+		// Don't detach - keep the thread joinable so we can wait for it in Stop()
+	}
+	catch (const std::system_error &e)
+	{
+		logte("%s Failed to create prepare thread: %s", _log_prefix.CStr(), e.what());
+		SetState(State::ERROR);
+		_prepare_thread_running = false;
+		return false;
+	}
+
+	logti("%s stream preparation started asynchronously", _log_prefix.CStr());
+
+	return true;
+}
+
+void TranscoderStream::PrepareAsync()
+{
+	logti("%s Async preparation started", _log_prefix.CStr());
+
 	// Transcoder Webhook
 	_output_profiles_cfg = RequestWebhook();
 	if (_output_profiles_cfg == nullptr)
 	{
 		logtw("%s There is no output profiles", _log_prefix.CStr());
-
-		return false;
+		SetState(State::ERROR);
+		_prepare_thread_running = false;
+		return;
 	}
 
 	// Create Ouput Streams & Notify to create a new stream on the media router.
 	if (!StartInternal())
 	{
-		SetState(State::ERROR);
-
 		logte("%s Failed to create the stream", _log_prefix.CStr());
-
-		return false;
+		SetState(State::ERROR);
+		_prepare_thread_running = false;
+		return;
 	}
 
 	// Create Decoders
 	if(!PrepareInternal())
 	{
-		SetState(State::ERROR);
-
 		logte("%s Failed to prepare the stream", _log_prefix.CStr());
-
-		return false;
+		SetState(State::ERROR);
+		_prepare_thread_running = false;
+		return;
 	}
 
-	SetState(State::STARTED);
-	
 	logti("%s stream has been prepared", _log_prefix.CStr());
+	SetState(State::STARTED);
 
-	return true;
+	_prepare_thread_running = false;
 }
 
 bool TranscoderStream::Update(const std::shared_ptr<info::Stream> &stream)
@@ -140,6 +167,14 @@ bool TranscoderStream::Stop()
 	}
 
 	logtd("%s Wait for stream thread to terminated", _log_prefix.CStr());
+
+	// Wait for prepare thread to finish if it's running
+	if (_prepare_thread.joinable())
+	{
+		logtd("%s Waiting for prepare thread to complete", _log_prefix.CStr());
+		_prepare_thread.join();
+		logtd("%s Prepare thread joined", _log_prefix.CStr());
+	}
 
 	RemoveDecoders();
 	RemoveFilters();
