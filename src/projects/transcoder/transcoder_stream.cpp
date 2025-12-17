@@ -86,7 +86,7 @@ bool TranscoderStream::Prepare(const std::shared_ptr<info::Stream> &stream)
 	}
 
 	// Transcoder Webhook
-	_output_profiles_cfg = RequestWebhoook();
+	_output_profiles_cfg = RequestWebhook();
 	if (_output_profiles_cfg == nullptr)
 	{
 		logtw("%s There is no output profiles", _log_prefix.CStr());
@@ -170,8 +170,12 @@ bool TranscoderStream::Stop()
 	return true;
 }
 
-const cfg::vhost::app::oprf::OutputProfiles *TranscoderStream::RequestWebhoook()
+const cfg::vhost::app::oprf::OutputProfiles *TranscoderStream::RequestWebhook()
 {
+	// Measure response time of transcode webhook
+	ov::StopWatch response_time;
+	response_time.Start();
+
 	TranscodeWebhook webhook(_application_info);
 	auto policy = webhook.RequestOutputProfiles(*_input_stream, _remote_output_profiles);
 
@@ -187,7 +191,7 @@ const cfg::vhost::app::oprf::OutputProfiles *TranscoderStream::RequestWebhoook()
 		builder["indentation"] = "";
 		builder["emitUTF8"]	   = true;
 
-		logti("%s Using external output profiles by webhook", _log_prefix.CStr());
+		logti("%s Using external output profiles by webhook. Response time: %lld ms", _log_prefix.CStr(), response_time.Elapsed());
 		logti("%s OutputProfile: %s", _log_prefix.CStr(), Json::writeString(builder, _remote_output_profiles.ToJson()).c_str());
 		return &_remote_output_profiles;
 	}
@@ -197,11 +201,9 @@ const cfg::vhost::app::oprf::OutputProfiles *TranscoderStream::RequestWebhoook()
 		builder["indentation"] = "";
 		builder["emitUTF8"]	   = true;
 
-		logti("%s Using local output profiles by webhook", _log_prefix.CStr());
+		logti("%s Using local output profiles by webhook. Response time: %lld ms", _log_prefix.CStr(), response_time.Elapsed());
 		logtd("%s OutputProfile: %s", _log_prefix.CStr(), Json::writeString(builder, _application_info.GetConfig().GetOutputProfiles().ToJson()).c_str());
-
 		return &(_application_info.GetConfig().GetOutputProfiles());
-		;
 	}
 
 	return nullptr;

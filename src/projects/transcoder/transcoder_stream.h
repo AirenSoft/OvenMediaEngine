@@ -245,7 +245,7 @@ private:
 	std::shared_ptr<info::Stream> GetInputStream();
 	std::shared_ptr<info::Stream> GetOutputStreamByTrackId(MediaTrackId output_track_id);
 
-	const cfg::vhost::app::oprf::OutputProfiles* RequestWebhoook();
+	const cfg::vhost::app::oprf::OutputProfiles* RequestWebhook();
 	bool StartInternal();
 	bool PrepareInternal();
 	bool UpdateInternal(const std::shared_ptr<info::Stream> &stream);
