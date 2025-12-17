@@ -222,12 +222,6 @@ namespace pvd::rtmp
 
 	bool RtmpStreamV2::PostPublish(const modules::rtmp::AmfDocument &document)
 	{
-		if (_is_post_published)
-		{
-			logtw("PostPublish has already been called for stream: %s", GetName().CStr());
-			return true;
-		}
-
 		auto requested_url = GetRequestedUrl();
 
 		if (requested_url == nullptr)
