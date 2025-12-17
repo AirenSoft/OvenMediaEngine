@@ -52,6 +52,7 @@ TranscodeWebhook::Policy TranscodeWebhook::RequestOutputProfiles(const info::Str
     client->SetMethod(http::Method::Post);
 	client->SetBlockingMode(ov::BlockingMode::Blocking);
 	client->SetConnectionTimeout(timeout_msec);
+    client->SetRecvTimeout(timeout_msec);
 	client->SetRequestHeader("X-OME-Signature", signature_sha1_base64);
 	client->SetRequestHeader("Content-Type", "application/json");
 	client->SetRequestHeader("Accept", "application/json");
