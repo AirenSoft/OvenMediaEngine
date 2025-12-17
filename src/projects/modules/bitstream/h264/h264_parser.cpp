@@ -601,7 +601,9 @@ bool H264Parser::ParseVUI(NalUnitBitstreamParser &parser, H264SPS &sps)
 
 				if (fixed_frame_rate_flag)
 				{
-					sps._fps = time_scale / (2 * num_units_in_tick);
+					sps._fps = (num_units_in_tick != 0)
+								   ? (time_scale / (2 * num_units_in_tick))
+								   : 0;
 				}
 			}
 		}
