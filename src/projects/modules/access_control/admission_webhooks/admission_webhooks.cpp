@@ -268,6 +268,7 @@ void AdmissionWebhooks::Run()
 	client->SetMethod(http::Method::Post);
 	client->SetBlockingMode(ov::BlockingMode::Blocking);
 	client->SetConnectionTimeout(_timeout_msec);
+	client->SetRecvTimeout(_timeout_msec);
 	client->SetRequestHeader("X-OME-Signature", signature_sha1_base64);
 	client->SetRequestHeader("Content-Type", "application/json");
 	client->SetRequestHeader("Accept", "application/json");
