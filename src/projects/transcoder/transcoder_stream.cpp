@@ -170,10 +170,9 @@ bool TranscoderStream::Stop()
 	return true;
 }
 
-const cfg::vhost::app::oprf::OutputProfiles* TranscoderStream::RequestWebhoook()
+const cfg::vhost::app::oprf::OutputProfiles *TranscoderStream::RequestWebhoook()
 {
 	TranscodeWebhook webhook(_application_info);
-	
 	auto policy = webhook.RequestOutputProfiles(*_input_stream, _remote_output_profiles);
 
 	if (policy == TranscodeWebhook::Policy::DeleteStream)
@@ -181,19 +180,28 @@ const cfg::vhost::app::oprf::OutputProfiles* TranscoderStream::RequestWebhoook()
 		logtw("%s Delete a stream by transcode webhook", _log_prefix.CStr());
 		ocst::Orchestrator::GetInstance()->TerminateStream(_application_info.GetVHostAppName(), _input_stream->GetName());
 		return nullptr;
-	}		
+	}
 	else if (policy == TranscodeWebhook::Policy::CreateStream)
 	{
-		logti("%s Using external output profiles by webhook", _log_prefix.CStr());		
-		logti("%s OutputProfile\n%s", _log_prefix.CStr(), _remote_output_profiles.ToString().CStr());		
+		Json::StreamWriterBuilder builder;
+		builder["indentation"] = "";
+		builder["emitUTF8"]	   = true;
+
+		logti("%s Using external output profiles by webhook", _log_prefix.CStr());
+		logti("%s OutputProfile: %s", _log_prefix.CStr(), Json::writeString(builder, _remote_output_profiles.ToJson()).c_str());
 		return &_remote_output_profiles;
 	}
 	else if (policy == TranscodeWebhook::Policy::UseLocalProfiles)
 	{
-		logti("%s Using local output profiles by webhook", _log_prefix.CStr());		
-		logtd("%s OutputProfile \n%s", _log_prefix.CStr(), _application_info.GetConfig().GetOutputProfiles().ToString().CStr());		
+		Json::StreamWriterBuilder builder;
+		builder["indentation"] = "";
+		builder["emitUTF8"]	   = true;
 
-		return &(_application_info.GetConfig().GetOutputProfiles());;
+		logti("%s Using local output profiles by webhook", _log_prefix.CStr());
+		logtd("%s OutputProfile: %s", _log_prefix.CStr(), Json::writeString(builder, _application_info.GetConfig().GetOutputProfiles().ToJson()).c_str());
+
+		return &(_application_info.GetConfig().GetOutputProfiles());
+		;
 	}
 
 	return nullptr;
