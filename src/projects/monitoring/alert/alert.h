@@ -30,8 +30,33 @@ namespace mon::alrt
 		void SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric);
 
 	private:
+		struct StreamEvent
+		{
+			StreamEvent(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric, const std::shared_ptr<StreamMetrics> &parent_stream_metric, const std::shared_ptr<ExtraData> &extra)
+			{
+				_code = code;
+				_metric = stream_metric;
+				_parent_stream_metric = parent_stream_metric;
+				_extra = extra;
+			}
+
+			StreamEvent(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric, const std::shared_ptr<ExtraData> &extra = nullptr)
+			{
+				_code	= code;
+				_metric = stream_metric;
+				_extra	= extra;
+			}
+
+			Message::Code _code;
+			std::shared_ptr<StreamMetrics> _metric;
+			std::shared_ptr<StreamMetrics> _parent_stream_metric = nullptr;
+			std::shared_ptr<ExtraData> _extra = nullptr;
+		};
+
 		void MetricWorkerThread();
-		void EventWorkerThread();
+		void SendNotificationThread();
+
+		void SendStreamMessage(const std::shared_ptr<StreamEvent> &stream_event);
 
 		bool VerifyStreamEventRule(const cfg::alrt::rule::Rules &rules, Message::Code code);
 
@@ -41,7 +66,6 @@ namespace mon::alrt
 		void VerifyAudioIngressRules(const cfg::alrt::rule::Ingress &ingress, const std::shared_ptr<MediaTrack> &audio_track, std::vector<std::shared_ptr<Message>> &message_list);
 
 		bool IsAlertNeeded(const ov::String &messages_key, const std::vector<std::shared_ptr<Message>> &message_list);
-		void SendNotification(const NotificationData &notificationData);
 		void SendNotification(const NotificationData::Type &type, const std::vector<std::shared_ptr<Message>> &message_list, const ov::String &source_uri, const std::shared_ptr<StreamMetrics> &stream_metric);
 		void SendNotification(const NotificationData::Type &type, const std::vector<std::shared_ptr<Message>> &message_list, const std::map<uint32_t, std::shared_ptr<QueueMetrics>> &queue_metric_list);
 
@@ -57,35 +81,12 @@ namespace mon::alrt
 
 		ov::DelayQueue _timer{"MonAlert"};
 
-		struct StreamEvent
-		{
-			StreamEvent(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric, const std::shared_ptr<StreamMetrics> &parent_stream_metric, const std::shared_ptr<ExtraData> &extra)
-			{
-				_code				  = code;
-				_metric				  = stream_metric;
-				_parent_stream_metric = parent_stream_metric;
-				_extra				  = extra;
-			}
+		ov::Semaphore _queue_notification;
 
-			StreamEvent(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric, const std::shared_ptr<ExtraData> &extra = nullptr)
-			{
-				_code	= code;
-				_metric = stream_metric;
-				_extra	= extra;
-			}
-
-			Message::Code _code;
-			std::shared_ptr<StreamMetrics> _metric;
-			std::shared_ptr<StreamMetrics> _parent_stream_metric = nullptr;
-			std::shared_ptr<ExtraData> _extra					 = nullptr;
-		};
-
-		ov::Semaphore _queue_event;
-
-		std::shared_ptr<StreamEvent> PopStreamEvent();
-		ov::Queue<std::shared_ptr<StreamEvent>> _stream_event_queue;
+		std::shared_ptr<NotificationData> PopNotificationData();
+		ov::Queue<std::shared_ptr<NotificationData>> _notification_queue;
 
 		std::atomic<bool> _stop_thread_flag{true};
-		std::thread _event_worker_thread;
+		std::thread _notification_thread;
 	};
 }  // namespace mon::alrt
