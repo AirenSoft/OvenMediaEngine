@@ -13,6 +13,7 @@
 #include "notification.h"
 
 #define LONG_KEY_FRAME_INTERVAL_SIZE 4.0
+#define NOTIFICATION_MAX_RETRY_COUNT 2
 
 namespace mon::alrt
 {
@@ -548,19 +549,36 @@ namespace mon::alrt
 			return;
 		}
 
-		// Notification
-		auto notification_server_url						= ov::Url::Parse(alert.GetUrl());
-		std::shared_ptr<Notification> notification_response = Notification::Query(notification_server_url, alert.GetTimeoutMsec(), alert.GetSecretKey(), message_body);
-		if (notification_response == nullptr)
-		{
-			// Probably this doesn't happen
-			logte("Could not load Notification");
-			return;
-		}
+		int retry_count = 0;
 
-		if (notification_response->GetStatusCode() != Notification::StatusCode::OK)
+		while (true)
 		{
-			logte("%s", notification_response->GetErrorReason().CStr());
+			// Notification
+			auto notification_server_url						= ov::Url::Parse(alert.GetUrl());
+			std::shared_ptr<Notification> notification_response = Notification::Query(notification_server_url, alert.GetTimeoutMsec(), alert.GetSecretKey(), message_body);
+			if (notification_response == nullptr)
+			{
+				// Probably this doesn't happen
+				logte("Could not load Notification");
+				return;
+			}
+
+			if (notification_response->GetStatusCode() == Notification::StatusCode::INTERNAL_ERROR)
+			{
+				retry_count++;
+
+				if (NOTIFICATION_MAX_RETRY_COUNT < retry_count)
+				{
+					break;
+				}
+				else
+				{
+					logte("Notification internal error occurred. Retrying... [%d / %d]", retry_count, NOTIFICATION_MAX_RETRY_COUNT);
+					continue;
+				}
+			}
+
+			break;
 		}
 	}
 
