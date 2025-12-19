@@ -88,6 +88,7 @@ namespace ov
 
 		void ConvertSrtEventToEpollEvent(const SRT_EPOLL_EVENT &srt_event, epoll_event *event);
 
+		void AddToConnectionTimedOutQueue(const std::shared_ptr<Socket> &socket);
 		void EnqueueToDispatchLater(const std::shared_ptr<Socket> &socket);
 		void EnqueueToCloseCallbackLater(const std::shared_ptr<Socket> &socket, std::shared_ptr<SocketAsyncInterface> callback);
 		void EnqueueToCheckConnectionTimeOut(const std::shared_ptr<Socket> &socket, int timeout_msec);
@@ -119,7 +120,9 @@ namespace ov
 		std::map<int, std::shared_ptr<Socket>> _gc_candidates;
 
 		// A queue for handling errors such as connection timeout in nonblocking mode.
+		inline static std::mutex _connection_callback_queue_mutex;
 		inline static DelayQueue _connection_callback_queue{"ConnectionCB"};
+		inline static bool _is_first_connection_callback_queue_start = true;
 		std::mutex _connection_timed_out_queue_mutex;
 		std::deque<std::shared_ptr<Socket>> _connection_timed_out_queue;
 

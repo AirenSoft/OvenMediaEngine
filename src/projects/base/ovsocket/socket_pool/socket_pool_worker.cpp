@@ -71,8 +71,6 @@ namespace ov
 			return false;
 		}
 
-		_connection_callback_queue.Clear();
-
 		_stop_epoll_thread = true;
 
 		if (_epoll_thread.joinable())
@@ -215,7 +213,6 @@ namespace ov
 				// Sockets that have failed to send data for a long time are forced to shut down
 				logaw("Failed to send data for %dms - This socket is going to be garbage collected (%s)", OV_SOCKET_EXPIRE_TIMEOUT, socket->ToString().CStr());
 
-				DeleteFromEpoll(socket);
 				socket->CloseImmediatelyWithState(SocketState::Disconnected);
 
 				candidate = _gc_candidates.erase(candidate);
@@ -259,7 +256,17 @@ namespace ov
 	{
 		logger::ThreadHelper thread_helper;
 
-		_connection_callback_queue.Start();
+		if (_is_first_connection_callback_queue_start == false)
+		{
+			std::lock_guard lock(_connection_callback_queue_mutex);
+
+			if (_is_first_connection_callback_queue_start == false)
+			{
+				_is_first_connection_callback_queue_start = true;
+
+				_connection_callback_queue.Start();
+			}
+		}
 
 		_gc_interval.Start();
 
@@ -466,7 +473,6 @@ namespace ov
 					{
 						_gc_candidates.erase(socket->GetNativeHandle());
 
-						DeleteFromEpoll(socket);
 						logad("CloseImmediatelyWithState(%s) for %s", StringFromSocketState(new_state), socket->ToString().CStr());
 						socket->CloseImmediatelyWithState(new_state);
 					}
@@ -479,8 +485,6 @@ namespace ov
 
 			MergeSocketList();
 		}
-
-		_connection_callback_queue.Stop();
 
 		// Clean up all sockets
 		decltype(_socket_map) socket_map;
@@ -731,12 +735,25 @@ namespace ov
 		}
 	}
 
+	void SocketPoolWorker::AddToConnectionTimedOutQueue(const std::shared_ptr<Socket> &socket)
+	{
+		std::lock_guard lock_guard(_connection_timed_out_queue_mutex);
+		_connection_timed_out_queue.push_back(socket);
+	}
+
 	void SocketPoolWorker::EnqueueToCheckConnectionTimeOut(const std::shared_ptr<Socket> &socket, int timeout_msec)
 	{
+		std::weak_ptr<SocketPoolWorker> weak_this = GetSharedPtr();
+
 		_connection_callback_queue.Push(
-			[=](void *parameter) -> DelayQueueAction {
-				std::lock_guard lock_guard(_connection_timed_out_queue_mutex);
-				_connection_timed_out_queue.push_back(socket);
+			[weak_this, socket](void *parameter) -> DelayQueueAction {
+				auto shared_this = weak_this.lock();
+
+				if (shared_this != nullptr)
+				{
+					shared_this->AddToConnectionTimedOutQueue(socket);
+				}
+
 				return DelayQueueAction::Stop;
 			},
 			nullptr,
