@@ -58,23 +58,31 @@ namespace ov
 
 			_timer.Push(
 				[this](void *parameter) -> ov::DelayQueueAction {
-					std::lock_guard lock_guard(_worker_list_mutex);
+					decltype(_worker_list) release_worker_list;
 
-					for (auto iterator = _worker_list.begin(); iterator != _worker_list.end();)
 					{
-						auto worker = *iterator;
+						std::lock_guard lock_guard(_worker_list_mutex);
 
-						if (worker->_socket_count == 0)
+						for (auto iterator = _worker_list.begin(); iterator != _worker_list.end();)
 						{
-							logad("Releasing idle worker: %s", worker->ToString().CStr());
-							worker->Uninitialize();
+							auto worker = *iterator;
 
-							iterator = _worker_list.erase(iterator);
+							if (worker->_socket_count == 0)
+							{
+								release_worker_list.push_back(worker);
+								iterator = _worker_list.erase(iterator);
+							}
+							else
+							{
+								++iterator;
+							}
 						}
-						else
-						{
-							++iterator;
-						}
+					}
+
+					for (auto worker : release_worker_list)
+					{
+						logad("Releasing idle worker: %s", worker->ToString().CStr());
+						worker->Uninitialize();
 					}
 
 					return ov::DelayQueueAction::Repeat;
