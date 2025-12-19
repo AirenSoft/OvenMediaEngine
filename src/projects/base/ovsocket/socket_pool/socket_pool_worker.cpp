@@ -86,7 +86,6 @@ namespace ov
 			_socket_map.clear();
 
 			decltype(_sockets_to_insert)().swap(_sockets_to_insert);
-			decltype(_sockets_to_delete)().swap(_sockets_to_delete);
 		}
 
 		{
@@ -188,22 +187,13 @@ namespace ov
 		std::lock_guard lock_guard(_socket_map_mutex);
 
 		decltype(_sockets_to_insert) insert_queue;
-		decltype(_sockets_to_insert) delete_queue;
 
 		std::swap(insert_queue, _sockets_to_insert);
-		std::swap(delete_queue, _sockets_to_delete);
 		while (insert_queue.empty() == false)
 		{
 			auto socket = insert_queue.front();
 			insert_queue.pop();
 			_socket_map[socket->GetNativeHandle()] = socket;
-		}
-
-		while (delete_queue.empty() == false)
-		{
-			auto socket = delete_queue.front();
-			delete_queue.pop();
-			_socket_map.erase(socket->GetNativeHandle());
 		}
 	}
 
@@ -328,7 +318,7 @@ namespace ov
 							socket->SetFirstEpollEventReceived();
 
 							// EPOLLOUT events might occur immediately after added to epoll
-							logad("EPOLLOUT is ignored - this event might occurs immediately after added to epoll");
+							logad("EPOLLOUT is ignored for #%d - this event might occurs immediately after added to epoll", socket->GetNativeHandle());
 
 							continue;
 						}
@@ -493,7 +483,13 @@ namespace ov
 		_connection_callback_queue.Stop();
 
 		// Clean up all sockets
-		for (auto &socket_item : _socket_map)
+		decltype(_socket_map) socket_map;
+		{
+			std::lock_guard lock_guard(_socket_map_mutex);
+			socket_map = std::move(_socket_map);
+		}
+
+		for (auto &socket_item : socket_map)
 		{
 			auto socket = socket_item.second;
 
@@ -865,18 +861,23 @@ namespace ov
 		}
 		else
 		{
-			if (error->GetCode() == EBADF)
+			switch (error->GetCode())
 			{
-				// Socket is closed somewhere in OME
+				case EBADF:
+					// Socket is closed somewhere in OME
 
-				// Do not print 'Bad file descriptor' error log
-			}
-			else
-			{
-				logae("Could not delete the socket #%d from epoll: %s\n%s",
-					  native_handle,
-					  error->What(),
-					  StackTrace::GetStackTrace().CStr());
+					// Do not print 'Bad file descriptor' error log
+					break;
+
+				case ENOENT:
+					// In some cases, such as when an error occurs while the socket is connecting
+					break;
+
+				default:
+					logaw("Could not delete the socket #%d from epoll: %s\n%s",
+						  native_handle,
+						  error->What(),
+						  StackTrace::GetStackTrace().CStr());
 			}
 		}
 
@@ -903,10 +904,11 @@ namespace ov
 	{
 		String description;
 
+		std::lock_guard lock_guard(_socket_map_mutex);
 		description.AppendFormat(
-			"<SocketPoolWorker: %p, socket_map: %zu, insert queue: %zu, delete queue: %zu, connection queue: %zu>",
+			"<SocketPoolWorker: %p, socket_map: %zu, insert queue: %zu, connection queue: %zu>",
 			this, _socket_map.size(),
-			_sockets_to_insert.size(), _sockets_to_delete.size(),
+			_sockets_to_insert.size(),
 			_connection_timed_out_queue.size());
 
 		return description;

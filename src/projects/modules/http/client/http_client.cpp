@@ -87,15 +87,6 @@ namespace http
 				return;
 			}
 
-#if DEBUG
-			auto iterator = _request_header.find(key);
-
-			if (iterator != _request_header.end())
-			{
-				logtw("Old value found: %s for key: %s", iterator->second.CStr(), key.CStr());
-			}
-#endif	// DEBUG
-
 			_request_header[key] = value;
 		}
 

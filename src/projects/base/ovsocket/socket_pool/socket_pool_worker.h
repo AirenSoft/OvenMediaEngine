@@ -109,11 +109,10 @@ namespace ov
 		// Since there is no longer a reference to std::shared_ptr<Socket>, the socket will be released,
 		// and after EpollWait() code will refer to the released socket.
 		// To avoid this issue, _socket_map must ensure that it is modified only in the last part of ThreadProc().
-		std::mutex _socket_map_mutex;
+		mutable std::mutex _socket_map_mutex;
 		// key: native handle of SocketWrapper
 		std::map<int, std::shared_ptr<Socket>> _socket_map;
 		std::queue<std::shared_ptr<Socket>> _sockets_to_insert;
-		std::queue<std::shared_ptr<Socket>> _sockets_to_delete;
 
 		// Socket failed to send data for too long must be forced to shut down in the future
 		StopWatch _gc_interval;
