@@ -188,8 +188,7 @@ namespace ov
 	{
 		if (_socket.IsValid() == false)
 		{
-			logae("Could not make %s socket (Invalid socket)", StringFromBlockingMode(mode));
-			OV_ASSERT2(_socket.IsValid());
+			// In case an error occurs during the connection process, the socket may be in a closed state.
 			return false;
 		}
 
@@ -273,33 +272,58 @@ namespace ov
 
 	bool Socket::AddToWorker(bool need_to_wait_first_epoll_event)
 	{
-		if (GetType() == SocketType::Srt)
 		{
-			// SRT doesn't generates any epoll events after ::srt_epoll_add_usock()
-			need_to_wait_first_epoll_event = false;
+			std::lock_guard lock_guard(_worker_mutex);
+
+			if (_added_to_worker)
+			{
+				// `DeleteFromWorker()` can be called multiple times due to timing,
+				// but `AddToWorker()` must not be called redundantly.
+				OV_ASSERT2(false);
+				return true;
+			}
+
+			if (GetType() == SocketType::Srt)
+			{
+				// SRT doesn't generates any epoll events after ::srt_epoll_add_usock()
+				need_to_wait_first_epoll_event = false;
+			}
+
+			if (need_to_wait_first_epoll_event)
+			{
+				ResetFirstEpollEventReceived();
+			}
+
+			if (_worker->AddToEpoll(GetSharedPtr()) == false)
+			{
+				return false;
+			}
+
+			_added_to_worker = true;
 		}
 
 		if (need_to_wait_first_epoll_event)
 		{
-			ResetFirstEpollEventReceived();
+			return WaitForFirstEpollEvent();
 		}
 
-		if (_worker->AddToEpoll(GetSharedPtr()))
-		{
-			if (need_to_wait_first_epoll_event)
-			{
-				return WaitForFirstEpollEvent();
-			}
-
-			return true;
-		}
-
-		return false;
+		return true;
 	}
 
 	bool Socket::DeleteFromWorker()
 	{
-		return _worker->DeleteFromEpoll(GetSharedPtr());
+		std::lock_guard lock_guard(_worker_mutex);
+
+		if (_added_to_worker)
+		{
+			if (_worker->DeleteFromEpoll(GetSharedPtr()))
+			{
+				_added_to_worker = false;
+				return true;
+			}
+		}
+
+		return true;
 	}
 
 	bool Socket::MakeBlocking()
@@ -864,16 +888,7 @@ namespace ov
 			case DispatchCommand::Type::Close: {
 				logad("Trying to close the socket...");
 
-				// Remove the socket from epoll
-				auto result = _worker->DeleteFromEpoll(this->GetSharedPtr());
-
 				CloseInternal(command.new_state);
-
-				if (result == false)
-				{
-					SetState(SocketState::Error);
-					return DispatchResult::Error;
-				}
 
 				SetState(command.new_state);
 				return DispatchResult::Dispatched;
@@ -1873,7 +1888,7 @@ namespace ov
 	{
 		CHECK_STATE(>= SocketState::Closed, false);
 
-		logad("Closing %s with state %s...",
+		logad("Closing [%s] with state %s...",
 			  (GetRemoteAddress() != nullptr)
 				  ? GetRemoteAddress()->ToString(false).CStr()
 				  : GetStreamId().CStr(),
@@ -2086,6 +2101,8 @@ namespace ov
 
 		if (_socket.IsValid())
 		{
+			DeleteFromWorker();
+			
 			switch (GetType())
 			{
 				case SocketType::Tcp:

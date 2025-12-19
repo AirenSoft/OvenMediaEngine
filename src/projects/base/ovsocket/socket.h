@@ -517,6 +517,9 @@ namespace ov
 
 		BlockingMode _blocking_mode = BlockingMode::Blocking;
 
+		std::mutex _worker_mutex;
+		bool _added_to_worker = false;
+
 		std::atomic<bool> _need_to_wait_first_epoll_event{true};
 		Event _first_epoll_event_received{true};
 
