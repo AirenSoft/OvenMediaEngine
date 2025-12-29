@@ -128,7 +128,7 @@ namespace pub
 		{
 			SetState(SessionState::Error);
 			record->SetState(info::Record::RecordState::Error);
-
+			logte("Failed to create writer. %s", record->GetInfoString().CStr());
 			return false;
 		}
 
@@ -136,7 +136,7 @@ namespace pub
 		{
 			SetState(SessionState::Error);
 			record->SetState(info::Record::RecordState::Error);
-
+			logte("Failed to set URL. Reason(%s), %s", writer->GetErrorMessage().CStr(), record->GetInfoString().CStr());
 			return false;
 		}
 
@@ -180,7 +180,7 @@ namespace pub
 		{
 			SetState(SessionState::Error);
 			record->SetState(info::Record::RecordState::Error);
-
+			logte("Failed to start writer. Reason(%s), %s", writer->GetErrorMessage().CStr(), record->GetInfoString().CStr());
 			return false;
 		}
 
@@ -411,7 +411,7 @@ namespace pub
 			{
 				SetState(SessionState::Error);
 				record->SetState(info::Record::RecordState::Error);
-
+				logte("Failed to write packet. Reason(%s), %s", writer->GetErrorMessage().CStr(), record->GetInfoString().CStr());
 				DestoryWriter();
 
 				return;

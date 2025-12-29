@@ -71,7 +71,7 @@ namespace pub
 		{
 			SetState(SessionState::Error);
 			GetPush()->SetState(info::Push::PushState::Error);
-
+			logte("Failed to create session. %s", _push->GetInfoString().CStr());
 			return false;
 		}
 
@@ -79,7 +79,7 @@ namespace pub
 		{
 			SetState(SessionState::Error);
 			GetPush()->SetState(info::Push::PushState::Error);
-
+			logte("Failed to set URL. Reason(%s), %s", writer->GetErrorMessage().CStr(), _push->GetInfoString().CStr());
 			return false;
 		}
 
@@ -122,12 +122,15 @@ namespace pub
 			}
 		}
 
+		writer->SetConnectionTimeout(GetPush()->GetConnectionTimeout());
+		writer->SetSendTimeout(GetPush()->GetSendTimeout());
+
 		// Notice: If there are more than one video track, RTMP Push is not created and returns an error. You must use 1 video track.
 		if (writer->Start() == false)
 		{
 			SetState(SessionState::Error);
 			GetPush()->SetState(info::Push::PushState::Error);
-
+			logte("Failed to start session. Reason(%s), %s", writer->GetErrorMessage().CStr(), _push->GetInfoString().CStr());
 			return false;
 		}
 
@@ -201,7 +204,7 @@ namespace pub
 		bool ret = writer->SendPacket(session_packet, &sent_bytes);
 		if (ret == false)
 		{
-			logte("Failed to send packet");
+			logte("Failed to send packet. session will be terminated. Reason(%s), %s", writer->GetErrorMessage().CStr(), _push->GetInfoString().CStr());
 
 			writer->Stop();
 

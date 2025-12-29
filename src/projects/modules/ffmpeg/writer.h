@@ -62,6 +62,12 @@ namespace ffmpeg
 		bool Start();
 		bool Stop();
 
+		void SetConnectionTimeout(int32_t timeout_ms);
+		int32_t GetConnectionTimeout() const;
+		
+		void SetSendTimeout(int32_t timeout_ms);
+		int32_t GetSendTimeout() const;
+				
 		bool AddTrack(const std::shared_ptr<MediaTrack> &media_track);
 		bool SendPacket(const std::shared_ptr<MediaPacket> &packet, uint64_t *sent_bytes = nullptr);
 		
@@ -73,6 +79,9 @@ namespace ffmpeg
 		void SetState(WriterState state);
 		WriterState GetState();
 		
+		void SetErrorMessage(const ov::String &message);
+		ov::String GetErrorMessage() const;
+
 	private:
 		std::shared_ptr<AVFormatContext> GetAVFormatContext() const;
 		void SetAVFormatContext(AVFormatContext* av_format);
@@ -105,7 +114,9 @@ namespace ffmpeg
 		ov::String _output_format_name;
 		AVIOInterruptCB _interrupt_cb;
 		std::chrono::high_resolution_clock::time_point _last_packet_sent_time;
-		int32_t _connection_timeout = 5000;	// 5s
-		int32_t _send_timeout 		= 2000;	// 2s
+		int32_t _connection_timeout = 5000;	// Default 5s
+		int32_t _send_timeout 		= 2000;	// Default 2s
+
+		ov::String _error_message;
 	};
 }  // namespace ffmpeg
