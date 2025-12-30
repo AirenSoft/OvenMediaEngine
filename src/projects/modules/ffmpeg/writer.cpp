@@ -447,10 +447,13 @@ namespace ffmpeg
 					// Related to 'com.youtube.cuepoint', 'textdata' event message
 					ov::ByteStream byte_stream(packet->GetData());
 					AmfDocument document;
-					if (document.Decode(byte_stream) == true)
+					if (document.Decode(byte_stream) == false)
 					{
-						logti("Inserted AMF Event. PTS: %lld, %s", packet->GetPts(), document.ToString().CStr());
+						loge(OV_LOG_TAG".Events","Failed to decode AMF Event");
+						return true;
 					}
+
+					logi(OV_LOG_TAG".Events","Inserted AMF Event. PTS: %lld, %s", packet->GetPts(), document.ToString().Replace("\n", " ").CStr());
 				}
 				break;
 				default:
@@ -542,6 +545,23 @@ namespace ffmpeg
 
 		std::unique_lock<std::shared_mutex> mlock(_av_format_lock);
 
+		// Check DTS monotonicity. if not, drop the packet.
+		auto it = _track_last_dts_map.find(av_packet.stream_index);
+		if (it != _track_last_dts_map.end())
+		{
+			if (av_packet.dts < it->second)
+			{
+				logtw("To avoid non-monotonic DTS, the packet is dropped. track:%d, pts:%lld, dts:%lld, last_dts:%lld",
+					  media_track->GetId(),
+					  av_packet.pts,
+					  av_packet.dts,
+					  it->second);
+				av_packet_unref(&av_packet);
+				return true;
+			}
+		}
+
+		// Write packet
 		int error = ::av_write_frame(av_format.get(), &av_packet);
 		if (error != 0)
 		{
@@ -551,6 +571,9 @@ namespace ffmpeg
 
 			return false;
 		}
+
+		// Update last DTS for the track to handle DTS monotonicity
+		_track_last_dts_map[av_packet.stream_index] = av_packet.dts;
 
 		mlock.unlock();
 

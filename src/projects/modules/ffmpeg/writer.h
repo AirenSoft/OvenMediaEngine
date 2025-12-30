@@ -117,6 +117,9 @@ namespace ffmpeg
 		int32_t _connection_timeout = 5000;	// Default 5s
 		int32_t _send_timeout 		= 2000;	// Default 2s
 
+		// For tracking last DTS per track to handle DTS monotonicity
+		std::map<int32_t, int64_t> _track_last_dts_map;
+
 		ov::String _error_message;
 	};
 }  // namespace ffmpeg
