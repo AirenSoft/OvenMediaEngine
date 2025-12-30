@@ -590,7 +590,7 @@ namespace ov
 						_last_logging_time = 0;
 
 						auto shared_lock = std::shared_lock(_name_mutex);
-						logw(LOG_TAG, "[%u] %s has exceeded the threshold and increased peak. size: %zu, threshold: %zu, peak: %zu", GetId(), _urn->ToString().CStr(), _size, _threshold, _peak);
+						logw(LOG_TAG, "[%u] %s has exceeded the threshold and increased peak. size: %zu, threshold: %zu, peak: %zu, imps: %zu, omps: %zu", GetId(), _urn->ToString().CStr(), _size, _threshold, _peak, _input_message_per_second, _output_message_per_second);
 
 						_last_logged_peak = _peak;
 					}
