@@ -104,10 +104,22 @@ namespace pvd
 		// Not yet started
 		if (_last_media_timestamp_ms == -1)
 		{
+			_max_generated_timestamp_ms = -1;
 			return -1;
 		}
-		
-		return _last_media_timestamp_ms + _elapsed_from_last_media_timestamp.Elapsed();
+
+		int64_t current_estimated_ts = _last_media_timestamp_ms + _elapsed_from_last_media_timestamp.Elapsed();
+		if (current_estimated_ts <= _max_generated_timestamp_ms)
+		{
+			current_estimated_ts = _max_generated_timestamp_ms + 1;
+			logti("%s/%s(%u) Adjust current estimated timestamp to avoid going backward - last_media_timestamp_ms: %lld, elapsed_from_last_media_timestamp: %lld, adjusted_timestamp: %lld ms",
+			GetApplicationName(), GetName().CStr(), GetId(),
+			_last_media_timestamp_ms, _elapsed_from_last_media_timestamp.Elapsed(), current_estimated_ts);
+		}
+
+		_max_generated_timestamp_ms = current_estimated_ts;
+
+		return _max_generated_timestamp_ms;
 	}
 
 	bool Stream::SendDataFrame(int64_t timestamp_in_ms, int64_t duration, const cmn::BitstreamFormat &format, const cmn::PacketType &packet_type, const std::shared_ptr<ov::Data> &frame, bool urgent, bool internal, const MediaPacketFlag packet_flag)
@@ -327,8 +339,17 @@ namespace pvd
 
 		_last_pkt_received_time = std::chrono::system_clock::now();
 
-		_last_media_timestamp_ms = packet->GetPts() / GetTrack(packet->GetTrackId())->GetTimeBase().GetTimescale() * 1000.0;
-		_elapsed_from_last_media_timestamp.Restart();
+		auto master_clock_track = GetMediaTrackByOrder(cmn::MediaType::Video, 0);
+		if (master_clock_track == nullptr)
+		{
+			master_clock_track = GetMediaTrackByOrder(cmn::MediaType::Audio, 0);
+		}
+
+		if (master_clock_track != nullptr && packet->GetTrackId() == master_clock_track->GetId())
+		{
+			_last_media_timestamp_ms = packet->GetPts() / GetTrack(packet->GetTrackId())->GetTimeBase().GetTimescale() * 1000.0;
+			_elapsed_from_last_media_timestamp.Restart();
+		}
 
 		return _application->SendFrame(GetSharedPtr(), packet);
 	}
