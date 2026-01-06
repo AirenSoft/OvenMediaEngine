@@ -433,8 +433,14 @@ namespace http
 					}
 					else if (process_data->GetLength() == 0)
 					{
-						// Need more data
-						return;
+						if (_blocking_mode == ov::BlockingMode::NonBlocking)
+						{
+							// Need more data
+							return;
+						}
+
+						// Connection has been closed
+						error = ov::Error::CreateError("HTTP", "Connection closed by the server");
 					}
 				}
 				else
