@@ -340,6 +340,7 @@ ov::String MediaTrack::GetInfoString()
 				"Codec(%d,%s,%s:%d) "
 				"BSF(%s) "
 				"Resolution(%dx%d) "
+				"MaxResolution(%dx%d) "
 				"Framerate(%.2f) "
 				"KeyInterval(%.2f/%s) "
 				"SkipFrames(%d) "
@@ -349,6 +350,7 @@ ov::String MediaTrack::GetInfoString()
 				GetCodecId(), cmn::GetCodecIdString(GetCodecId()), IsBypass()?"Passthrough":cmn::GetCodecModuleIdString(GetCodecModuleId()), GetCodecDeviceId(),
 				GetBitstreamFormatString(GetOriginBitstream()),
 				GetWidth(), GetHeight(),
+				GetMaxWidth(), GetMaxHeight(),
 				GetFrameRate(),
 				GetKeyFrameInterval(),
 				cmn::GetKeyFrameIntervalTypeToString(GetKeyFrameIntervalTypeByConfig()).LowerCaseString().CStr(),

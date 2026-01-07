@@ -33,12 +33,14 @@ public:
 
 	void SetWidth(int32_t width);
 	int32_t GetWidth() const;
+	int32_t GetMaxWidth() const;
 
 	void SetWidthByConfig(int32_t width);
 	int32_t GetWidthByConfig() const;
 
 	void SetHeight(int32_t height);
 	int32_t GetHeight() const;
+	int32_t GetMaxHeight() const;
 
 	void SetHeightByConfig(int32_t height);
 	int32_t GetHeightByConfig() const;
@@ -107,12 +109,14 @@ protected:
 	double _video_timescale;
 	
 	// Resolution
-	int32_t _width;
-	int32_t _height;
+	int32_t _width = 0;
+	int32_t _height = 0;
+	int32_t _max_width = 0;
+	int32_t _max_height = 0;
 
 	// Resolution (set by user)
-	int32_t _width_conf;
-	int32_t _height_conf;
+	int32_t _width_conf = 0;
+	int32_t _height_conf = 0;
 
 	// Key Frame Interval Avg (measurement)
 	double _key_frame_interval = 0;
@@ -124,7 +128,7 @@ protected:
 	int32_t _delta_frame_count_since_last_key_frame = 0;
 
 	// Key Frame Interval Type (set by user)
-	cmn::KeyFrameIntervalType _key_frame_interval_type_conf;
+	cmn::KeyFrameIntervalType _key_frame_interval_type_conf = cmn::KeyFrameIntervalType::FRAME;
 
 	// Number of B-frame (set by user)
 	int32_t _b_frames = 0;
@@ -134,7 +138,7 @@ protected:
 
 	// Colorspace of video
 	// This variable is temporarily used in the Pixel Format defined by FFMPEG.
-	cmn::VideoPixelFormatId _colorspace;	
+	cmn::VideoPixelFormatId _colorspace = cmn::VideoPixelFormatId::None;	
 
 	// Preset for encoder (set by user)
 	ov::String _preset;
@@ -143,7 +147,7 @@ protected:
 	ov::String _profile;
 	
 	// Thread count of codec (set by user)
-	int _thread_count;	
+	int _thread_count = 0;	
 
 	// Skip frames (set by user)
 	// If the set value is greater than or equal to 0, the skip frame is automatically calculated. 

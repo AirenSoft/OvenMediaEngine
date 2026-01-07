@@ -38,6 +38,11 @@ VideoTrack::VideoTrack()
 void VideoTrack::SetWidth(int32_t width)
 {
 	_width = width;
+
+	if (width > _max_width)
+	{
+		_max_width = width;
+	}
 }
 
 int32_t VideoTrack::GetWidth() const
@@ -45,14 +50,29 @@ int32_t VideoTrack::GetWidth() const
 	return _width;
 }
 
+int32_t VideoTrack::GetMaxWidth() const
+{
+	return _max_width;
+}
+
 void VideoTrack::SetHeight(int32_t height)
 {
 	_height = height;
+
+	if (height > _max_height)
+	{
+		_max_height = height;
+	}
 }
 
 int32_t VideoTrack::GetHeight() const
 {
 	return _height;
+}
+
+int32_t VideoTrack::GetMaxHeight() const
+{
+	return _max_height;
 }
 
 void VideoTrack::SetVideoTimestampScale(double scale)
