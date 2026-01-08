@@ -765,7 +765,8 @@ namespace pvd
 			logte("Could not create %s stream in %s application", final_stream_name.CStr(), final_vhost_app_name.CStr());
 			return {http::StatusCode::InternalServerError, "Could not create stream"};
 		}
-
+	
+		stream->SetOvenCapabilities(request->GetHeader("Oven-Capabilities"));	
 		stream->SetMediaSource(request->GetRemote()->GetRemoteAddressAsUrl());
 		stream->SetRequestedUrl(requested_url);
 		stream->SetFinalUrl(final_url);

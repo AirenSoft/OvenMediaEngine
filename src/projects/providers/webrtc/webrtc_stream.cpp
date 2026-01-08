@@ -349,6 +349,48 @@ namespace pvd
 		return _session_key;
 	}
 
+	void WebRTCStream::SetOvenCapabilities(const ov::String &capabilities)
+	{
+		_oven_capabilities = capabilities;
+
+		// 26.01.08
+		// Oven-Capabilities: max_width=1920, max_height=1080
+
+		// Parse and apply capabilities
+		logtd("%s - Set Oven-Capabilities: %s", GetName().CStr(), capabilities.CStr());
+
+		auto params = ov::String::Split(capabilities.CStr(), ",");
+		for (const auto &param : params)
+		{
+			auto key_value = ov::String::Split(param.CStr(), "=");
+			if (key_value.size() != 2)
+			{
+				continue;
+			}
+
+			auto key = key_value[0].Trim().LowerCaseString();
+			auto value = key_value[1].Trim();
+			if (key == "max_width")
+			{
+				auto first_video_track = GetFirstTrackByType(cmn::MediaType::Video);
+				if (first_video_track != nullptr)
+				{
+					first_video_track->SetWidth(static_cast<uint32_t>(std::atoi(value.CStr())));
+					logtd("%s - Set max width: %u", GetName().CStr(), first_video_track->GetMaxWidth());
+				}
+			}
+			else if (key == "max_height")
+			{
+				auto first_video_track = GetFirstTrackByType(cmn::MediaType::Video);
+				if (first_video_track != nullptr)
+				{
+					first_video_track->SetHeight(static_cast<uint32_t>(std::atoi(value.CStr())));
+					logtd("%s - Set max height: %u", GetName().CStr(), first_video_track->GetMaxHeight());
+				}
+			}
+		}
+	}
+
 	bool WebRTCStream::AddDepacketizer(uint32_t track_id)
 	{
 		auto track = GetTrack(track_id);
