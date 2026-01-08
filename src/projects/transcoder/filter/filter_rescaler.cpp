@@ -319,19 +319,25 @@ bool FilterRescaler::Configure(const std::shared_ptr<MediaTrack> &input_track, c
 
 	_input_track = input_track;
 	_output_track = output_track;
+
+	// Initialize source parameters
 	_src_width = _input_track->GetWidth();
 	_src_height = _input_track->GetHeight();
 	_src_pixfmt = ffmpeg::compat::ToAVPixelFormat(_input_track->GetColorspace());
 
-	// Initialize Constant Framerate & Skip Frames Filter
+	// Initialize Framerate & Skip Frames Filter
 	_fps_filter.SetInputTimebase(_input_track->GetTimeBase());
 	_fps_filter.SetInputFrameRate(_input_track->GetFrameRate());
-	
-	// If the user is not the set output Framerate, use the measured Framerate
-	_fps_filter.SetOutputFrameRate(_output_track->GetFrameRateByConfig() > 0 ? _output_track->GetFrameRateByConfig() : _output_track->GetFrameRateByMeasured());
-	_fps_filter.SetSkipFrames(_output_track->GetSkipFramesByConfig() >= 0 ? _output_track->GetSkipFramesByConfig() : 0);
-	
-	// Set the threshold of the input buffer
+#if _SKIP_FRAMES_ENABLED
+	_fps_filter.SetSkipFrames(_output_track->GetSkipFramesByConfig() >= 0 ? _output_track->GetSkipFramesByConfig() : -1);
+	// If SkipFrames is enabled, set it to be the same as the output framerate of the FPS filter so that it works only with skip frames.
+	_fps_filter.SetOutputFrameRate((_fps_filter.GetSkipFrames() >= 0) ? _input_track->GetFrameRate() : _output_track->GetFrameRate());
+#else
+	_fps_filter.SetSkipFrames(-1);	// Disable 
+	_fps_filter.SetOutputFrameRate(_output_track->GetFrameRate());
+#endif
+
+	// Initialize input buffer queue
 	_input_buffer.SetThreshold(MAX_QUEUE_SIZE);
 
 	// Initialize the av filter graph

@@ -181,10 +181,43 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(
 		output_track->SetKeyFrameIntervalTypeByConfig(cmn::GetKeyFrameIntervalTypeByName(profile.GetKeyFrameIntervalType()));
 	}
 
+	// If SkipFrames is enabled, it affects the output track's framerate and keyframe interval.
 	profile.GetSkipFrames(&is_parsed);
 	if (is_parsed == true)
 	{
-		output_track->SetSkipFramesByConfig(profile.GetSkipFrames());
+		auto skip_frames = profile.GetSkipFrames();
+
+		// Set ouput framerate according to the skip frames.
+		if (skip_frames >= 0)
+		{
+			output_track->SetSkipFramesByConfig(skip_frames);
+
+			// Adjust the framerate according to the skip frames. 
+			// When skipFrames is enabled, the user-set framerate is ignored, and the input framerate is adjusted by applying skipFrames.
+			// Round adjusted_frame_rate to 2 decimal places
+			auto adjusted_frame_rate = ::round(input_track->GetFrameRate() / (skip_frames + 1) * 100.0) / 100.0;
+
+			logtd("Adjust the output framerate %.02f -> %.02f according to the skip frames %d",
+				  input_track->GetFrameRate(),
+				  adjusted_frame_rate,
+				  skip_frames);
+			output_track->SetFrameRateByConfig(adjusted_frame_rate);
+
+#if 0 // This feature needs more consideration. It may confuse to users.
+			// Set keyframe interval according to the skip frames.
+			//  If the keyframe interval is not set, it will be automatically adjusted by the encoder.
+			if (output_track->GetKeyFrameIntervalByConfig() > 0)
+			{
+				auto adjusted_key_frame_interval = ::round(output_track->GetKeyFrameIntervalByConfig() / (skip_frames + 1));
+				logtd("Adjust the output key_frame_interval %.02f -> %.02f according to the skip frames %d",
+					  output_track->GetKeyFrameIntervalByConfig(),
+					  adjusted_key_frame_interval,
+					  skip_frames);
+
+				output_track->SetKeyFrameIntervalByConfig(adjusted_key_frame_interval);
+			}
+#endif
+		}
 	}
 
 	profile.GetLookahead(&is_parsed);
@@ -386,10 +419,43 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 		output_track->SetFrameRateByConfig(profile.GetFramerate());
 	}
 
+	// If SkipFrames is enabled, it affects the output track's framerate and keyframe interval.
 	profile.GetSkipFrames(&is_parsed);
 	if (is_parsed == true)
 	{
-		output_track->SetSkipFramesByConfig(profile.GetSkipFrames());
+		auto skip_frames = profile.GetSkipFrames();
+
+		// Set ouput framerate according to the skip frames.
+		if (skip_frames >= 0)
+		{
+			output_track->SetSkipFramesByConfig(skip_frames);
+
+			// Adjust the framerate according to the skip frames. 
+			// When skipFrames is enabled, the user-set framerate is ignored, and the input framerate is adjusted by applying skipFrames.
+			// Round adjusted_frame_rate to 2 decimal places
+			auto adjusted_frame_rate = ::round(input_track->GetFrameRate() / (skip_frames + 1) * 100.0) / 100.0;
+
+			logtd("Adjust the output framerate %.02f -> %.02f according to the skip frames %d",
+				  input_track->GetFrameRate(),
+				  adjusted_frame_rate,
+				  skip_frames);
+			output_track->SetFrameRateByConfig(adjusted_frame_rate);
+
+#if 0 // This feature needs more consideration. It may confuse to users.
+			// Set keyframe interval according to the skip frames.
+			//  If the keyframe interval is not set, it will be automatically adjusted by the encoder.
+			if (output_track->GetKeyFrameIntervalByConfig() > 0)
+			{
+				auto adjusted_key_frame_interval = ::round(output_track->GetKeyFrameIntervalByConfig() / (skip_frames + 1));
+				logtd("Adjust the output key_frame_interval %.02f -> %.02f according to the skip frames %d",
+					  output_track->GetKeyFrameIntervalByConfig(),
+					  adjusted_key_frame_interval,
+					  skip_frames);
+
+				output_track->SetKeyFrameIntervalByConfig(adjusted_key_frame_interval);
+			}
+#endif
+		}
 	}
 
 	output_track->SetPublicName(input_track->GetPublicName());
