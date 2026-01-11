@@ -28,23 +28,31 @@ ov::String TranscoderStreamInternal::ProfileToSerialize(const uint32_t track_id,
 		return ov::String::FormatString("I=T%d,O=bypass", track_id);
 	}
 
-	auto unique_profile_name = ov::String::FormatString("I=%d,O=%s:%d:%.02f:%d:%d:%d",
+	auto unique_profile_name = ov::String::FormatString("I=%d,O=%s:%d:%d:%d:%.02f:%d:%d:%d:%d",
 									track_id,
 									profile.GetCodec().CStr(),
 									profile.GetBitrate(),
-									profile.GetFramerate(),
-									profile.GetSkipFrames(),
 									profile.GetWidth(),
-									profile.GetHeight());
+									profile.GetHeight(),
+									profile.GetFramerate(),
+									profile.GetKeyFrameInterval(),
+									profile.GetBFrames(),
+									profile.GetSkipFrames(),
+									profile.GetLookahead());
 
-	if(profile.GetPreset().IsEmpty() == false)
+	if (profile.GetProfile().IsEmpty() == false)
 	{
-		unique_profile_name +=  ov::String::FormatString(":%s", profile.GetPreset().CStr());
+		unique_profile_name += ov::String::FormatString(":%s", profile.GetProfile().CStr());
+	}
+	
+	if (profile.GetPreset().IsEmpty() == false)
+	{
+		unique_profile_name += ov::String::FormatString(":%s", profile.GetPreset().CStr());
 	}
 
-	if(profile.GetProfile().IsEmpty() == false)
+	if (profile.GetModules().IsEmpty() == false)
 	{
-		unique_profile_name +=  ov::String::FormatString(":%s", profile.GetProfile().CStr());
+		unique_profile_name += ov::String::FormatString(":%s", profile.GetModules().CStr());
 	}
 
 	return unique_profile_name;
