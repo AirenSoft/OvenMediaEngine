@@ -167,6 +167,7 @@ std::shared_ptr<std::vector<std::shared_ptr<info::CodecCandidate>>> TranscodeEnc
 		encoder->SetCompleteHandler(complete_handler);                           \
 		track->SetCodecModuleId(encoder->GetModuleID());                         \
 		track->SetCodecDeviceId(encoder->GetDeviceID());                         \
+		track->SetOriginBitstream(encoder->GetBitstreamFormat());                \
 		if (encoder->Configure(track) == true)                                   \
 		{                                                                        \
 			if (TranscodeFaultInjector::GetInstance()->IsEnabled())              \
@@ -372,7 +373,6 @@ bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track)
 bool TranscodeEncoder::Configure(std::shared_ptr<MediaTrack> output_track, size_t max_queue_size)
 {
 	_track = output_track;	
-	_track->SetOriginBitstream(GetBitstreamFormat());
 
 	auto name = ov::String::FormatString("enc_%s_t%d", cmn::GetCodecIdString(GetCodecID()), _track->GetId());
 	auto urn = std::make_shared<info::ManagedQueue::URN>(_stream_info.GetApplicationInfo().GetVHostAppName(), _stream_info.GetName(), "trs", name);

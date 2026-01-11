@@ -1312,52 +1312,69 @@ bool TranscoderStream::CreateEncoders(std::shared_ptr<MediaFrame> buffer)
 	return true;
 }
 
+#define UPDATE_OUTPUT_TRACK_CODEC_INFO(track, encoder)                      \
+	do                                                                      \
+	{                                                                       \
+		track->SetCodecModuleId(encoder->GetModuleID());                    \
+		track->SetCodecDeviceId(encoder->GetDeviceID());                    \
+		track->SetOriginBitstream(encoder->GetBitstreamFormat());           \
+		if (track->GetMediaType() == cmn::MediaType::Video)                 \
+		{                                                                   \
+			track->SetColorspace(encoder->GetSupportVideoFormat());         \
+		}                                                                   \
+		else if (track->GetMediaType() == cmn::MediaType::Audio)            \
+		{                                                                   \
+			track->GetSample().SetFormat(encoder->GetSupportAudioFormat()); \
+		}                                                                   \
+	} while (0)
+
 bool TranscoderStream::CreateEncoder(MediaTrackId encoder_id, std::shared_ptr<info::Stream> output_stream, std::shared_ptr<MediaTrack> output_track)
 {
-	if (GetEncoder(encoder_id))
+	// Check if an identical encoder already exists.
+	if (auto encoder = GetEncoder(encoder_id); encoder != nullptr)
 	{
-		logtd("%s Encoder already exists. Encoder(%d)", _log_prefix.CStr(), encoder_id);
+		logtd("%s Identical encoder already exists; reusing existing instance. Encoder(%d) -> OutputTrack(%d)", _log_prefix.CStr(), encoder_id, output_track->GetId());
+
+		// This track reuses an identical encoder that was previously created.
+		// No new encoder is created; only encoder-related information is updated on the track
+		UPDATE_OUTPUT_TRACK_CODEC_INFO(output_track, encoder);
+
 		return true;
 	}
 
+	// Get a list of available encoder candidates(modules)
 	auto hwaccels_enable = GetOutputProfilesCfg()->GetHWAccels().GetEncoder().IsEnable() ||
 						   GetOutputProfilesCfg()->IsHardwareAcceleration();  // Deprecated
-
 	auto hwaccels_modules = GetOutputProfilesCfg()->GetHWAccels().GetEncoder().GetModules();
 
-	// Get a list of available encoder candidates.
-	auto candidates = TranscodeEncoder::GetCandidates(hwaccels_enable, hwaccels_modules, output_track);
+	auto candidates		  = TranscodeEncoder::GetCandidates(hwaccels_enable, hwaccels_modules, output_track);
 	if (candidates == nullptr)
 	{
-		logte("%s Decoder candidates are not found. InputTrack(%d)", _log_prefix.CStr(), output_track->GetId());
+		logte("%s Encoder candidates are not found. OutputTrack(%d)", _log_prefix.CStr(), output_track->GetId());
 		return false;
 	}
 
 	// Create Encoder
-	auto encoder = TranscodeEncoder::Create(encoder_id, output_stream, output_track, candidates,
-											bind(&TranscoderStream::OnEncodedPacket, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	auto encoder = TranscodeEncoder::Create(
+		encoder_id, output_stream, output_track, candidates,
+		bind(&TranscoderStream::OnEncodedPacket, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	if (encoder == nullptr)
 	{
 		return false;
 	}
 
-	// Set the sample format and color space supported by the encoder to the output track.
-	// These values are used in the Resampler/Rescaler filter.
-	if (output_track->GetMediaType() == cmn::MediaType::Video)
-	{
-		output_track->SetColorspace(encoder->GetSupportVideoFormat());
-	}
-	else if (output_track->GetMediaType() == cmn::MediaType::Audio)
-	{
-		output_track->GetSample().SetFormat(encoder->GetSupportAudioFormat());
-	}
+	// Set the codec module id and device id used by the encoder to the output track.
+	// Although the encoder updates the output track information when it is created, we update it again here just in case.
+	UPDATE_OUTPUT_TRACK_CODEC_INFO(output_track, encoder);
 
-	// Create Paired Filter
+	// Create a paired post-processing filter only for audio.
+	// It is used to fill in any dropped audio so that the bitstream is generated continuously.
 	std::shared_ptr<TranscodeFilter> post_filter = nullptr;
-	if(output_track->GetMediaType() == cmn::MediaType::Audio)
+	if (output_track->GetMediaType() == cmn::MediaType::Audio)
 	{
-		post_filter = TranscodeFilter::Create(encoder_id, output_stream, output_track,
-										 bind(&TranscoderStream::OnPostFilteredFrame, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+		post_filter = TranscodeFilter::Create(
+			encoder_id, output_stream, output_track,
+			bind(&TranscoderStream::OnPostFilteredFrame, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 		if (post_filter == nullptr)
 		{
 			// Stop & Release Encoder
@@ -1368,7 +1385,7 @@ bool TranscoderStream::CreateEncoder(MediaTrackId encoder_id, std::shared_ptr<in
 		}
 	}
 
-	SetPostFilterAndEncoder(encoder_id, post_filter, encoder);
+	SetEncoderWithFilter(encoder_id, post_filter, encoder);
 
 	logtd("%s Created encoder. Encoder(%d) -> OutputTrack(%d)", _log_prefix.CStr(), encoder_id, output_track->GetId());
 
@@ -1408,7 +1425,7 @@ std::shared_ptr<TranscodeEncoder> TranscoderStream::GetEncoder(MediaTrackId enco
 	return _encoders[encoder_id].second;
 }
 
-void TranscoderStream::SetPostFilterAndEncoder(MediaTrackId encoder_id, std::shared_ptr<TranscodeFilter> filter, std::shared_ptr<TranscodeEncoder> encoder)
+void TranscoderStream::SetEncoderWithFilter(MediaTrackId encoder_id, std::shared_ptr<TranscodeFilter> filter, std::shared_ptr<TranscodeEncoder> encoder)
 {
 	std::unique_lock<std::shared_mutex> encoder_lock(_encoder_map_mutex);
 

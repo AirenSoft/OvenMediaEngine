@@ -337,7 +337,7 @@ ov::String MediaTrack::GetInfoString()
 				"Public Name(%s) "
 				"Variant Name(%s) "
 				"Bitrate(%s) "
-				"Codec(%d,%s,%s:%d) "
+				"Codec(%s,%s:%d) "
 				"BSF(%s) "
 				"Resolution(%dx%d) "
 				"MaxResolution(%dx%d) "
@@ -347,7 +347,7 @@ ov::String MediaTrack::GetInfoString()
 				"BFrames(%d) ",
 				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
 				ov::Converter::BitToString(GetBitrate()).CStr(),
-				GetCodecId(), cmn::GetCodecIdString(GetCodecId()), IsBypass()?"Passthrough":cmn::GetCodecModuleIdString(GetCodecModuleId()), GetCodecDeviceId(),
+				cmn::GetCodecIdString(GetCodecId()), IsBypass()?"Passthrough":cmn::GetCodecModuleIdString(GetCodecModuleId()), GetCodecDeviceId(),
 				GetBitstreamFormatString(GetOriginBitstream()),
 				GetWidth(), GetHeight(),
 				GetMaxWidth(), GetMaxHeight(),
@@ -364,14 +364,14 @@ ov::String MediaTrack::GetInfoString()
 				"Public Name(%s) "
 				"Variant Name(%s) "
 				"Bitrate(%s) "
-				"Codec(%d,%s,%s) "
+				"Codec(%s,%s:%d) "
 				"BSF(%s) "
 				"Samplerate(%s) "
 				"Format(%s) "
 				"Channel(%s) ",
 				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
 				ov::Converter::BitToString(GetBitrate()).CStr(),
-				GetCodecId(), cmn::GetCodecIdString(GetCodecId()), IsBypass()?"Passthrough":cmn::GetCodecModuleIdString(GetCodecModuleId()),
+				cmn::GetCodecIdString(GetCodecId()), IsBypass()?"Passthrough":cmn::GetCodecModuleIdString(GetCodecModuleId()), GetCodecDeviceId(),
 				GetBitstreamFormatString(GetOriginBitstream()),
 				ov::Converter::ToSiString(GetSampleRate(), 1).CStr(),
 				GetSample().GetName(),
@@ -382,10 +382,10 @@ ov::String MediaTrack::GetInfoString()
 				"Data  Track #%d: "
 				"Public Name(%s) "
 				"Variant Name(%s) "
-				"Codec(%d,%s,%s) "
+				"Codec(%s,%s) "
 				"BSF(%s) ",
 				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
-				GetCodecId(), cmn::GetCodecIdString(GetCodecId()), IsBypass()?"Passthrough":cmn::GetCodecModuleIdString(GetCodecModuleId()),
+				cmn::GetCodecIdString(GetCodecId()), IsBypass()?"Passthrough":cmn::GetCodecModuleIdString(GetCodecModuleId()),
 				GetBitstreamFormatString(GetOriginBitstream()));
 			break;
 		case MediaType::Subtitle:
@@ -393,10 +393,10 @@ ov::String MediaTrack::GetInfoString()
 				"Subtitle Track #%d: "
 				"Public Name(%s) "
 				"Variant Name(%s) "
-				"Codec(%d,%s,%s) "
+				"Codec(%s,%s:%d) "
 				"BSF(%s) ",
 				GetId(), GetPublicName().CStr(), GetVariantName().CStr(),
-				GetCodecId(), cmn::GetCodecIdString(GetCodecId()), IsBypass()?"Passthrough":cmn::GetCodecModuleIdString(GetCodecModuleId()),
+				cmn::GetCodecIdString(GetCodecId()), IsBypass()?"Passthrough":cmn::GetCodecModuleIdString(GetCodecModuleId()), GetCodecDeviceId(),
 				GetBitstreamFormatString(GetOriginBitstream()));
 			break;
 
