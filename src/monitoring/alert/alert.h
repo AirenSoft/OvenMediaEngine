@@ -30,6 +30,13 @@ namespace mon::alrt
 		void SendStreamMessage(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric);
 
 	private:
+		struct WebhookInfo
+		{
+			std::shared_ptr<ov::Url> url = nullptr;
+			ov::String secret_key;
+			uint32_t timeout_msec = 0;
+		};
+
 		struct StreamEvent
 		{
 			StreamEvent(Message::Code code, const std::shared_ptr<StreamMetrics> &stream_metric, const std::shared_ptr<StreamMetrics> &parent_stream_metric, const std::shared_ptr<ExtraData> &extra)
@@ -73,12 +80,15 @@ namespace mon::alrt
 		bool PutVerifiedMessages(const ov::String &messages_key, std::vector<std::shared_ptr<Message>> &message_list);
 		std::vector<std::shared_ptr<Message>> GetVerifiedMessages(const ov::String &messages_key);
 
-		std::shared_ptr<const cfg::Server> _server_config = nullptr;
 		std::shared_ptr<AlertRulesUpdater> _rules_updater = nullptr;
 
 		// Identifies which server sent the notification. Built once in Start() and
 		// read-only afterwards, so it is accessed without a lock.
 		Json::Value _server_info;
+
+		// Webhooks to which notifications are sent. Built once in Start() and
+		// read-only afterwards, so it is accessed without a lock.
+		std::vector<WebhookInfo> _webhook_list;
 
 		// Accessed by both the metric worker thread (via _timer) and the threads calling
 		// SendStreamMessage(), so it must be guarded by _last_verified_messages_mutex.

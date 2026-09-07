@@ -107,7 +107,7 @@ namespace mon::alrt
 				}
 				else
 				{
-					SetStatus(StatusCode::INVALID_STATUS_CODE, ov::String::FormatString("Control server responded with %d status code.", static_cast<uint16_t>(status_code)));
+					SetStatus(StatusCode::INVALID_STATUS_CODE, ov::String::FormatString("Webhook server responded with %d status code.", static_cast<uint16_t>(status_code)));
 					return;
 				}
 			}

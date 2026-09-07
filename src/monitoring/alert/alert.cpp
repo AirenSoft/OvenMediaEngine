@@ -18,6 +18,7 @@
 
 #define LONG_KEY_FRAME_INTERVAL_SIZE 4.0
 #define NOTIFICATION_MAX_RETRY_COUNT 2
+#define WEBHOOK_COUNT_WARNING_THRESHOLD 10
 
 namespace mon::alrt
 {
@@ -91,15 +92,58 @@ namespace mon::alrt
 			return false;
 		}
 
-		auto notification_server_url = ov::Url::Parse(alert.GetUrl());
-		if (notification_server_url == nullptr)
+		// Build the webhook list.
+		std::vector<WebhookInfo> webhook_list;
+
+		for (const auto &webhook_config : alert.GetWebhooks().GetWebhookList())
 		{
-			logte("Could not parse notification url: %s", alert.GetUrl().CStr());
+			WebhookInfo webhook;
+
+			webhook.url = ov::Url::Parse(webhook_config.GetUrl());
+			if (webhook.url == nullptr)
+			{
+				logte("Could not parse notification url: %s", webhook_config.GetUrl().CStr());
+				return false;
+			}
+
+			webhook.secret_key	 = webhook_config.GetSecretKey();
+			webhook.timeout_msec = webhook_config.GetTimeoutMsec();
+
+			webhook_list.push_back(webhook);
+		}
+
+		// Deprecated: the legacy <Url>/<SecretKey>/<Timeout> settings are still
+		// honored as a single webhook during the deprecation period.
+		if (alert.GetUrl().IsEmpty() == false)
+		{
+			WebhookInfo webhook;
+
+			webhook.url = ov::Url::Parse(alert.GetUrl());
+			if (webhook.url == nullptr)
+			{
+				logte("Could not parse notification url: %s", alert.GetUrl().CStr());
+				return false;
+			}
+
+			webhook.secret_key	 = alert.GetSecretKey();
+			webhook.timeout_msec = alert.GetTimeoutMsec();
+
+			webhook_list.push_back(webhook);
+		}
+
+		if (webhook_list.empty())
+		{
+			logte("Alert is enabled but no webhook is configured. Set <Alert><Webhooks>");
 			return false;
 		}
 
-		_server_config = server_config;
-		_server_info   = MakeServerInfo(server_config);
+		if (webhook_list.size() > WEBHOOK_COUNT_WARNING_THRESHOLD)
+		{
+			logtw("%zu webhooks are configured. Notifications are sent to each webhook sequentially, so slow or unreachable webhooks can delay alert delivery to the others.", webhook_list.size());
+		}
+
+		_webhook_list = std::move(webhook_list);
+		_server_info  = MakeServerInfo(server_config);
 
 		_rules_updater = std::make_shared<AlertRulesUpdater>(alert);
 		_rules_updater->UpdateIfNeeded();
@@ -179,6 +223,13 @@ namespace mon::alrt
 
 			for (const auto &[queue_key, queue_metric] : queue_metric_list)
 			{
+				// Bail out mid-pass while stopping, so that Stop() doesn't wait
+				// for a full sweep over every queue and stream.
+				if (_stop_thread_flag)
+				{
+					return;
+				}
+
 				// Build source URI from URN: #VhostName#AppName[/StreamName]
 				ov::String source_uri;
 				auto urn = queue_metric->GetUrn();
@@ -217,6 +268,11 @@ namespace mon::alrt
 			// Fire an alert per source URI (same pattern as stream-metric alerts)
 			for (auto &[source_uri, msgs] : per_source_messages)
 			{
+				if (_stop_thread_flag)
+				{
+					return;
+				}
+
 				messages_key = MakeMessagesKey(type, source_uri);
 				new_messages_keys.push_back(messages_key);
 
@@ -246,6 +302,11 @@ namespace mon::alrt
 				{
 					for (const auto &[stream_key, stream_metric] : app_metric->GetStreamMetricsMap())
 					{
+						if (_stop_thread_flag)
+						{
+							return;
+						}
+
 						message_list.clear();
 
 						if (stream_metric->IsInputStream())
@@ -269,6 +330,12 @@ namespace mon::alrt
 			}
 		}
 
+		if (_stop_thread_flag)
+		{
+			// Skip the cleanup and the rules file check while stopping
+			return;
+		}
+
 		CleanupReleasedMessages(new_messages_keys);
 
 		_rules_updater->UpdateIfNeeded();
@@ -288,8 +355,6 @@ namespace mon::alrt
 				continue;
 			}
 
-			auto alert		  = _server_config->GetAlert();
-
 			auto message_body = notification_data->ToJsonString(_server_info);
 			if (message_body.IsEmpty())
 			{
@@ -297,36 +362,47 @@ namespace mon::alrt
 				continue;
 			}
 
-			int retry_count = 0;
-
-			while (true)
+			// Send the notification to every webhook. Each webhook retries
+			// independently so that a failing server doesn't block the others.
+			for (const auto &webhook : _webhook_list)
 			{
-				// Notification
-				auto notification_server_url = ov::Url::Parse(alert.GetUrl());
-				std::shared_ptr<Notification> notification_response = Notification::Query(notification_server_url, alert.GetTimeoutMsec(), alert.GetSecretKey(), message_body);
-				if (notification_response == nullptr)
+				// Do not start sending to the next webhook while stopping, so that
+				// Stop() doesn't wait for the whole broadcast to complete.
+				if (_stop_thread_flag)
 				{
-					// Probably this doesn't happen
-					logte("Could not load Notification");
 					break;
 				}
 
-				if (notification_response->GetStatusCode() == Notification::StatusCode::INTERNAL_ERROR)
-				{
-					retry_count++;
+				int retry_count = 0;
 
-					if (NOTIFICATION_MAX_RETRY_COUNT < retry_count)
+				while (true)
+				{
+					// Notification
+					std::shared_ptr<Notification> notification_response = Notification::Query(webhook.url, webhook.timeout_msec, webhook.secret_key, message_body);
+					if (notification_response == nullptr)
 					{
+						// Probably this doesn't happen
+						logte("Could not load Notification");
 						break;
 					}
-					else
-					{
-						logte("Notification internal error occurred. Retrying... [%d / %d]", retry_count, NOTIFICATION_MAX_RETRY_COUNT);
-						continue;
-					}
-				}
 
-				break;
+					if (notification_response->GetStatusCode() == Notification::StatusCode::INTERNAL_ERROR)
+					{
+						retry_count++;
+
+						if ((NOTIFICATION_MAX_RETRY_COUNT < retry_count) || _stop_thread_flag)
+						{
+							break;
+						}
+						else
+						{
+							logte("Notification internal error occurred. Retrying... [%d / %d] (webhook: %s)", retry_count, NOTIFICATION_MAX_RETRY_COUNT, webhook.url->ToUrlString(false).CStr());
+							continue;
+						}
+					}
+
+					break;
+				}
 			}
 		}
 	}
