@@ -29,7 +29,14 @@ namespace cfg
 			{
 				Register("Url", &_url);
 				Register<Optional>("SecretKey", &_secret_key);
-				Register<Optional>("Timeout", &_timeout_msec);
+				Register<Optional>("Timeout", &_timeout_msec, nullptr,
+								   [=]() -> std::shared_ptr<ConfigError> {
+									   if (_timeout_msec < 0)
+									   {
+										   return CreateConfigErrorPtr("Timeout must not be negative: %d", _timeout_msec);
+									   }
+									   return nullptr;
+								   });
 			}
 		};
 	}  // namespace alrt

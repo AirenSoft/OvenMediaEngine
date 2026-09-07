@@ -53,7 +53,14 @@ namespace cfg
 									   return nullptr;
 								   });
 				Register<Optional>("SecretKey", &_secret_key);
-				Register<Optional>("Timeout", &_timeout_msec);
+				Register<Optional>("Timeout", &_timeout_msec, nullptr,
+								   [=]() -> std::shared_ptr<ConfigError> {
+									   if (_timeout_msec < 0)
+									   {
+										   return CreateConfigErrorPtr("Timeout must not be negative: %d", _timeout_msec);
+									   }
+									   return nullptr;
+								   });
 				Register<Optional, ResolvePath>("RulesFile", &_rules_file);
 				Register<Optional>("Rules", &_rules);
 			}

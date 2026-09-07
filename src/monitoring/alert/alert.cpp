@@ -396,7 +396,8 @@ namespace mon::alrt
 						}
 						else
 						{
-							logte("Notification internal error occurred. Retrying... [%d / %d] (webhook: %s)", retry_count, NOTIFICATION_MAX_RETRY_COUNT, webhook.url->ToUrlString(false).CStr());
+							// Log only host:port - the full URL can contain credentials or secret path tokens
+							logte("Notification internal error occurred. Retrying... [%d / %d] (webhook: %s:%u)", retry_count, NOTIFICATION_MAX_RETRY_COUNT, webhook.url->Host().CStr(), webhook.url->Port());
 							continue;
 						}
 					}
