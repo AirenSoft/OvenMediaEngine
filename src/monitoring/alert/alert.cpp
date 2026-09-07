@@ -72,6 +72,30 @@ namespace mon::alrt
 		return server_info;
 	}
 
+	// Validates that the URL is a parsable http(s) URL and fills in the default port,
+	// so that logs based on Host()/Port() always identify the actual endpoint.
+	static std::shared_ptr<ov::Url> ParseWebhookUrl(const ov::String &url_string)
+	{
+		auto url = ov::Url::Parse(url_string);
+		if (url == nullptr)
+		{
+			return nullptr;
+		}
+
+		auto scheme = url->Scheme().UpperCaseString();
+		if ((scheme != "HTTP") && (scheme != "HTTPS"))
+		{
+			return nullptr;
+		}
+
+		if (url->Port() == 0)
+		{
+			url->SetPort((scheme == "HTTPS") ? 443 : 80);
+		}
+
+		return url;
+	}
+
 	bool Alert::Start(const std::shared_ptr<const cfg::Server> &server_config)
 	{
 		if (!_stop_thread_flag)
@@ -93,16 +117,21 @@ namespace mon::alrt
 		}
 
 		// Build the webhook list.
+		// The configured URLs are not logged on error - a webhook URL can carry
+		// credentials or secret path tokens.
 		std::vector<WebhookInfo> webhook_list;
 
+		size_t webhook_index = 0;
 		for (const auto &webhook_config : alert.GetWebhooks().GetWebhookList())
 		{
+			webhook_index++;
+
 			WebhookInfo webhook;
 
-			webhook.url = ov::Url::Parse(webhook_config.GetUrl());
+			webhook.url = ParseWebhookUrl(webhook_config.GetUrl());
 			if (webhook.url == nullptr)
 			{
-				logte("Could not parse notification url: %s", webhook_config.GetUrl().CStr());
+				logte("The url of <Alert><Webhooks><Webhook> #%zu is invalid. It must be a valid http(s) url", webhook_index);
 				return false;
 			}
 
@@ -118,10 +147,10 @@ namespace mon::alrt
 		{
 			WebhookInfo webhook;
 
-			webhook.url = ov::Url::Parse(alert.GetUrl());
+			webhook.url = ParseWebhookUrl(alert.GetUrl());
 			if (webhook.url == nullptr)
 			{
-				logte("Could not parse notification url: %s", alert.GetUrl().CStr());
+				logte("The url of <Alert><Url> is invalid. It must be a valid http(s) url");
 				return false;
 			}
 
