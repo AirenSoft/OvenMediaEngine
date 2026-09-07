@@ -191,9 +191,15 @@
 	<!--
 		Refer https://airensoft.gitbook.io/ovenmediaengine/alert
 	<Alert>
-		<Url></Url>
-		<SecretKey></SecretKey>
-		<Timeout>3000</Timeout>
+		Notifications are sent to every <Webhook>.
+		<SecretKey> and <Timeout> of each <Webhook> are optional. (Timeout default: 3000)
+		<Webhooks>
+			<Webhook>
+				<Url></Url>
+				<SecretKey></SecretKey>
+				<Timeout>3000</Timeout>
+			</Webhook>
+		</Webhooks>
 		<Rules>
 			<Ingress>
 				<MinBitrate></MinBitrate>

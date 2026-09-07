@@ -15,9 +15,17 @@ Alert can be set up on `<Server>`, as shown below.
 ```xml
 <Server version="8">
 	<Alert>
-		<Url>http://192.168.0.161:9595/alert/notification</Url>
-		<SecretKey>1234</SecretKey>
-		<Timeout>3000</Timeout>
+		<Webhooks>
+			<Webhook>
+				<Url>http://192.168.0.161:9595/alert/notification</Url>
+				<SecretKey>1234</SecretKey>
+				<Timeout>3000</Timeout>
+			</Webhook>
+			<Webhook>
+				<Url>http://192.168.0.162:9595/alert/notification</Url>
+				<SecretKey>5678</SecretKey>
+			</Webhook>
+		</Webhooks>
 		<Rules>
 			<Ingress>
 				<MinBitrate>2000000</MinBitrate>
@@ -38,12 +46,29 @@ Alert can be set up on `<Server>`, as shown below.
 </Server>
 ```
 
-| Key       | Description                                                                                                                  |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Url       | The HTTP Server to receive the notification. HTTP and HTTPS are available.                                                   |
-| Secretkey | The secret key used when encrypting with HMAC-SHA1<br />For more information, see <a href="alert.md#security">Security</a>.  |
-| Timeout   | Time to wait for a response after request. (in milliseconds)                                                                 |
-| Rules     | Defines anomalies and patterns of interest to be detected.                                                                   |
+| Key      | Description                                                                                       |
+| -------- | --------------------------------------------------------------------------------------------------- |
+| Webhooks | A list of webhooks to receive the notifications. Notifications are sent to every `<Webhook>`.     |
+| Rules    | Defines anomalies and patterns of interest to be detected.                                        |
+
+### Webhook
+
+| Key       | Description                                                                                                                              |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Url       | The HTTP Server to receive the notification. HTTP and HTTPS are available.                                                               |
+| SecretKey | (Optional) The secret key used when encrypting with HMAC-SHA1<br />For more information, see <a href="alert.md#security">Security</a>.   |
+| Timeout   | (Optional, Default: 3000) Time to wait for a response after request. (in milliseconds)                                                   |
+
+:::warning
+`<Url>`, `<SecretKey>` and `<Timeout>` set directly under `<Alert>` are deprecated and will be removed in a future release. During the deprecation period they still work as a single webhook. Please use `<Webhooks>` instead.
+:::
+
+:::info
+Notifications are sent to each webhook sequentially, and a request that fails at the connection level (e.g. connection timeout or network error) is retried up to 2 times. An HTTP error response (a status code other than 200) is not retried. A webhook that responds slowly or is unreachable therefore delays delivery to the webhooks after it. To keep alert delivery healthy:
+
+* Prefer an IP address for `<Url>`, or a hostname whose DNS server is reliable — the hostname is resolved on every request and DNS resolution is not covered by `<Timeout>`.
+* Do not set `<Timeout>` to `0`, which means waiting for a response indefinitely.
+:::
 
 ### Rules
 
