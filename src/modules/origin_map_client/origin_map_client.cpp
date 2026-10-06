@@ -32,6 +32,14 @@ OriginMapClient::OriginMapClient(const ov::String &redis_host, const ov::String 
 	_redis_connection_options.keep_alive = true;
 	_redis_connection_options.tls.enabled = _redis_tls_enabled;
 	_redis_connection_options.tls.sni = _redis_ip.CStr();
+	// Pinned hiredis 1.0.2's redisCreateSSLContext() only loads a trust store when
+	// cacert/capath is given -- unlike newer hiredis, it has no fallback to the
+	// system default verify paths. Leaving cacert empty builds an SSL_CTX with no
+	// trust anchors, so verify_mode's default REDIS_SSL_VERIFY_PEER can never
+	// succeed and every handshake to a TLS-enabled Redis (e.g. ElastiCache
+	// Serverless) fails. Point at the system CA bundle, present on the Amazon
+	// Linux 2023 AMI this is built for.
+	_redis_connection_options.tls.cacert = "/etc/ssl/certs/ca-certificates.crt";
 
 	_update_timer.Push(
 		[this](void *paramter) -> ov::DelayQueueAction {
