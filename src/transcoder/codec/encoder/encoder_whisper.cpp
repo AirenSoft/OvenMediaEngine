@@ -354,6 +354,15 @@ bool EncoderWhisper::Configure(std::shared_ptr<MediaTrack> context)
 			  _stream_info.GetName().CStr(), context->GetId(), context->GetOutputTrackLabel().CStr());
 		_audio_context_ms = static_cast<int32_t>(min_context_ms);
 	}
+	else if (_audio_context_ms > WHISPER_CHUNK_SIZE * 1000)
+	{
+		// The encoder never sees more than Whisper's 30 s input, so a longer value means the
+		// full context; the log then shows the value actually used.
+		logtw("Whisper AudioContextMs %d ms is longer than Whisper's %d ms input; using %d ms. stream=%s, track_id=%d, label=%s",
+			  _audio_context_ms, WHISPER_CHUNK_SIZE * 1000, WHISPER_CHUNK_SIZE * 1000,
+			  _stream_info.GetName().CStr(), context->GetId(), context->GetOutputTrackLabel().CStr());
+		_audio_context_ms = WHISPER_CHUNK_SIZE * 1000;
+	}
 	// 0 is the model's full context (30 s); otherwise round up to whole positions.
 	_audio_ctx = (_audio_context_ms >= WHISPER_CHUNK_SIZE * 1000)
 					 ? 0
