@@ -41,6 +41,7 @@ public:
 	bool DetectPTSDiscontinuity(const std::shared_ptr<info::Stream> &stream_info, const std::shared_ptr<const MediaTrack> &media_track, const std::shared_ptr<MediaPacket> &media_packet);
 
 	// <TrackId, Values>
+	std::map<MediaTrackId, uint32_t> _last_track_version;
 	std::map<MediaTrackId, int64_t> _last_pts;
 	std::map<MediaTrackId, int64_t> _last_pts_ms;	
 };
