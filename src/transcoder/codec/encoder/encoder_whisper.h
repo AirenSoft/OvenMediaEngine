@@ -92,6 +92,11 @@ public:
 		return info;
 	}
 
+	// SourceLanguage as Whisper uses it: "auto", or the code of a language Whisper knows,
+	// given by code ("ko") or by name ("korean"), ignoring case and surrounding spaces.
+	// Returns "auto" with `supported` set to false for any other value.
+	static ov::String NormalizeSourceLanguage(const ov::String &language, bool *supported);
+
 private:
 	// ----- Internal helpers -----
 	bool SetCodecParams();	

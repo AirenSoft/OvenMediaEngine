@@ -241,6 +241,28 @@ bool EncoderWhisper::SetCodecParams()
 	return true;
 }
 
+ov::String EncoderWhisper::NormalizeSourceLanguage(const ov::String &language, bool *supported)
+{
+	// Whisper does not reject an unknown value: it logs an error on every call and decodes
+	// with an invalid language token, so the output language is unpredictable. An unknown
+	// value (including an empty one) becomes "auto", so subtitles keep coming.
+	const ov::String requested_language = language.Trim().LowerCaseString();
+	*supported = true;
+	if (requested_language == "auto")
+	{
+		return "auto";
+	}
+
+	const int language_id = whisper_lang_id(requested_language.CStr());
+	if (language_id < 0)
+	{
+		*supported = false;
+		return "auto";
+	}
+
+	return whisper_lang_str(language_id);
+}
+
 bool EncoderWhisper::Configure(std::shared_ptr<MediaTrack> context)
 {
 	auto parent_stream_info = _stream_info.GetLinkedInputStream();
@@ -378,24 +400,11 @@ bool EncoderWhisper::Configure(std::shared_ptr<MediaTrack> context)
 	_n_samples_length = (static_cast<double>(_length_ms) / 1000.0) * WHISPER_SAMPLE_RATE;
 	_n_samples_keep = (static_cast<double>(_keep_ms) / 1000.0) * WHISPER_SAMPLE_RATE;
 	
-	// SourceLanguage is "auto" or a language Whisper knows, by code ("ko") or by name
-	// ("korean"), stored as the code. Whisper does not reject an unknown value: it logs an
-	// error on every call and decodes with an invalid language token, so the output
-	// language is unpredictable. An unknown value (including an empty one) is replaced with "auto" and a
-	// warning, so subtitles keep coming. Case and surrounding spaces are ignored.
-	const ov::String requested_language = context->GetSourceLanguage().Trim().LowerCaseString();
-	const int requested_language_id = (requested_language == "auto") ? -1 : whisper_lang_id(requested_language.CStr());
-	ov::String source_language = "auto";
-	if (requested_language_id >= 0)
-	{
-		source_language = whisper_lang_str(requested_language_id);
-	}
-	else if (requested_language != "auto")
-	{
-		logtw("Unsupported SourceLanguage \"%s\"; using auto. stream=%s, track_id=%d, label=%s",
-			  context->GetSourceLanguage().CStr(),
-			  _stream_info.GetName().CStr(), context->GetId(), context->GetOutputTrackLabel().CStr());
-	}
+	// The STT profile already holds the normalized value (TranscoderStream, which also warns
+	// about an unsupported one), so the track in the stream info shows the language used
+	// here. Normalizing again keeps the encoder safe on its own.
+	bool supported_language = true;
+	const ov::String source_language = NormalizeSourceLanguage(context->GetSourceLanguage(), &supported_language);
 	{
 		ov::LockGuard lock(_source_language_mutex);
 		_source_language = source_language;
