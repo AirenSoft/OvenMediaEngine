@@ -46,6 +46,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetFIRInterval, _fir_interval)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetRtcpBasedTimestamp, _rtcp_based_timestamp)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetRtx, _rtx)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetStartBitrateHint, _start_bitrate_hint)
 
 				protected:
 					void MakeList() override
@@ -57,12 +58,23 @@ namespace cfg
 						Register<Optional>({"FIRInterval", "firInterval"}, &_fir_interval);
 						Register<Optional>("RtcpBasedTimestamp", &_rtcp_based_timestamp);
 						Register<Optional>("Rtx", &_rtx);
+						Register<Optional>("StartBitrateHint", &_start_bitrate_hint, nullptr,
+										   [=]() -> std::shared_ptr<ConfigError> {
+											   // `0` turns the hint off, a negative value has no meaning
+											   if (_start_bitrate_hint < 0)
+											   {
+												   return CreateConfigErrorPtr("StartBitrateHint must not be negative: %d", _start_bitrate_hint);
+											   }
+											   return nullptr;
+										   });
 					}
 
 					int _timeout = 30000;
 					int _fir_interval = 3000;
 					bool _rtcp_based_timestamp = false;
 					Rtx _rtx;
+					// Sent to the WebRTC sender as x-google-start-bitrate in the SDP, in kbps, 0 leaves it out
+					int _start_bitrate_hint = 1000;
 				};
 			}  // namespace pvd
 		}  // namespace app
