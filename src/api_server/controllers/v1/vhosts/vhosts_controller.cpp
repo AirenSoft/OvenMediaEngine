@@ -56,8 +56,7 @@ namespace api
 					_server->CreateVHost(vhost_config);
 
 					auto vhost		= GetVirtualHost(vhost_config.GetName());
-					auto vhost_json = vhost->ToJson();
-					vhost_json.removeMember("applications");
+					auto vhost_json = ::serdes::JsonFromVirtualHost(*vhost);
 
 					Json::Value response;
 					response["statusCode"] = static_cast<int>(http::StatusCode::OK);

@@ -185,7 +185,7 @@ Configure applications to be created in Json array format.&#x20;
 ]
     
 # name (required)
-    Application name to create
+    Application name to create. "*" is not allowed here because it is the dynamic application template. Put it in applications of POST /v1/vhosts instead.
     
 # type (required)
     live - currently only support live
@@ -309,7 +309,7 @@ It responds with **Json array** for each request.
 
 <summary><span class="http-method http-method-400">400</span> Bad Request</summary>
 
-Invalid request. Body is not a Json array or does not have a required value
+Invalid request. Body is not a Json array, does not have a required value, or the application name is "*"
 
 </details>
 

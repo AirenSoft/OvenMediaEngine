@@ -162,7 +162,43 @@ Configure virtual hosts to be created in Json array format.&#x20;
                 "auth": "!@#ovenmediaengine",
                 "host": "redis.server:6379"
             }
-        }
+        },
+
+        "applications": [
+            {
+                "name": "*",
+                "type": "live",
+                "outputProfiles": {
+                    "outputProfile": [
+                        {
+                            "name": "bypass",
+                            "outputStreamName": "${OriginStreamName}",
+                            "encodes": {
+                                "videos": [
+                                    {
+                                        "name": "bypass_video",
+                                        "bypass": true
+                                    }
+                                ],
+                                "audios": [
+                                    {
+                                        "name": "bypass_audio",
+                                        "bypass": true
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "providers": {
+                    "ovt": {}
+                },
+                "publishers": {
+                    "llhls": {},
+                    "webrtc": {}
+                }
+            }
+        ]
     },
     {
         "name": "vhost2",
@@ -199,6 +235,11 @@ Configure virtual hosts to be created in Json array format.&#x20;
 
 # originMapStore (optional)
     The OriginMapStore setting. Please refer to the manual for details.
+
+# applications (optional)
+    Applications to create together with the virtual host. Each entry has the same format as the body of POST /v1/vhosts/{vhost}/apps, but default values are not filled in here, so specify providers, publishers, and outputProfiles explicitly.
+    An entry named "*" is registered as the dynamic application template instead of an application, and the response returns it as dynamicApplicationTemplate. See the Origin-Edge Clustering chapter for details.
+    The template cannot be changed after the virtual host is created. Delete the virtual host and create it again to change the template.
 ```
 
 </details>
@@ -279,6 +320,39 @@ It responds with **Json array** for each request.
                     "auth": "!@#ovenmediaengine",
                     "host": "redis.server:6379"
                 }
+            },
+            "dynamicApplicationTemplate": {
+                "name": "*",
+                "type": "live",
+                "outputProfiles": {
+                    "outputProfile": [
+                        {
+                            "name": "bypass",
+                            "outputStreamName": "${OriginStreamName}",
+                            "encodes": {
+                                "videos": [
+                                    {
+                                        "name": "bypass_video",
+                                        "bypass": true
+                                    }
+                                ],
+                                "audios": [
+                                    {
+                                        "name": "bypass_audio",
+                                        "bypass": true
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "providers": {
+                    "ovt": {}
+                },
+                "publishers": {
+                    "llhls": {},
+                    "webrtc": {}
+                }
             }
         }
     },
@@ -306,7 +380,7 @@ It responds with **Json array** for each request.
 # message
 	A human-readable description of the response code
 # response
-	Created virtual host information
+	Created virtual host information. dynamicApplicationTemplate holds the dynamic application template ("*") when one is registered.
 ```
 
 </details>
@@ -497,6 +571,40 @@ Content-Type: application/json
                 "auth": "!@#ovenmediaengine",
                 "host": "redis.server:6379"
             }
+        },
+
+        "dynamicApplicationTemplate": {
+            "name": "*",
+            "type": "live",
+            "outputProfiles": {
+                "outputProfile": [
+                    {
+                        "name": "bypass",
+                        "outputStreamName": "${OriginStreamName}",
+                        "encodes": {
+                            "videos": [
+                                {
+                                    "name": "bypass_video",
+                                    "bypass": true
+                                }
+                            ],
+                            "audios": [
+                                {
+                                    "name": "bypass_audio",
+                                    "bypass": true
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "providers": {
+                "ovt": {}
+            },
+            "publishers": {
+                "llhls": {},
+                "webrtc": {}
+            }
         }
     }
 
@@ -505,7 +613,7 @@ Content-Type: application/json
 # message
 	A human-readable description of the response code
 # response
-	Virtual host information
+	Virtual host information. dynamicApplicationTemplate holds the dynamic application template ("*") when one is registered. Use GET /v1/vhosts/{vhost}/apps to list the applications.
 ```
 
 </details>

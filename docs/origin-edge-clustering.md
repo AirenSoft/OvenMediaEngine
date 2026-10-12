@@ -307,6 +307,8 @@ It is either impossible or very cumbersome for edge servers to pre-configure all
 </Applications>
 ```
 
+When a virtual host is created with the REST API, put the `*` application in `applications` of `POST /v1/vhosts`. The registered template is shown as `dynamicApplicationTemplate` in `GET /v1/vhosts/{vhost}`, and `POST /v1/vhosts/{vhost}/apps` rejects the name `*`.
+
 ## Load Balancer
 
 When you are configuring Load Balancer, you need to use third-party solutions such as L4 Switch, LVS, or GSLB, but we recommend using DNS Round Robin. Also, services such as cloud-based [AWS Route53](https://aws.amazon.com/route53/?nc1=h_ls), [Azure DNS](https://azure.microsoft.com/en-us/services/dns/), or [Google Cloud DNS](https://cloud.google.com/dns/) can be a good alternative.
