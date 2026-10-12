@@ -58,7 +58,15 @@ namespace cfg
 						Register<Optional>({"FIRInterval", "firInterval"}, &_fir_interval);
 						Register<Optional>("RtcpBasedTimestamp", &_rtcp_based_timestamp);
 						Register<Optional>("Rtx", &_rtx);
-						Register<Optional>("StartBitrateHint", &_start_bitrate_hint);
+						Register<Optional>("StartBitrateHint", &_start_bitrate_hint, nullptr,
+										   [=]() -> std::shared_ptr<ConfigError> {
+											   // `0` turns the hint off, a negative value has no meaning
+											   if (_start_bitrate_hint < 0)
+											   {
+												   return CreateConfigErrorPtr("StartBitrateHint must not be negative: %d", _start_bitrate_hint);
+											   }
+											   return nullptr;
+										   });
 					}
 
 					int _timeout = 30000;
