@@ -10,9 +10,11 @@
 #pragma once
 
 #include <base/common_types.h>
-
 #include <stdint.h>
+
+#include <array>
 #include <map>
+#include <optional>
 
 #include "media_type.h"
 
@@ -40,6 +42,32 @@ static ov::String GetMediaPacketFlagString(const MediaPacketFlag flag)
 
 class MediaPacket
 {
+public:
+	// Header bytes of the OVT media packet that carry an enum.
+	// A byte the OVT wire table has no entry for is kept here as received while the enum field stays
+	// `Unknown`, and is never cast into the enum, because the two number spaces differ.
+	// The kept byte is there for the cross-check. Whether it also reaches the next hop is per field.
+	enum class WireField : uint8_t
+	{
+		// Does not reach the next hop.
+		// The OVT provider drops a packet whose type differs from its registered track's, with a warning.
+		// On a track registered as `Unknown` the two agree, so the packet goes on to the publisher,
+		// where it matches no dispatch branch of `pub::ApplicationWorker::WorkerThread()` and is dropped without a log.
+		MediaType,
+		// Reaches the next hop. Nothing drops it, so `OvtPacketizer` writes the kept byte back out.
+		Flag,
+		// Does not reach the next hop, and is the only one of the four whose kept byte is logged,
+		// by `OvtStream::CheckWireFormat()` in the provider.
+		// MediaRouter refuses an inbound audio or video packet whose format is `Unknown`.
+		// A `Data` track returns before that check,
+		// but the OVT publisher drops every `Data` frame, so the byte reaches no OVT packetizer.
+		BitstreamFormat,
+		// Does not reach the next hop. The OVT provider overwrites it before the packet leaves.
+		PacketType,
+
+		Nb
+	};
+
 public:
 	MediaPacket(cmn::MediaType media_type, uint32_t track_id,
 				const std::shared_ptr<const ov::Data> &data,
@@ -180,6 +208,17 @@ public:
 		_packet_type = type;
 	}
 
+	// `nullopt` when the table had an entry for the byte, which is the normal case
+	void SetUnmappedWireValue(WireField field, std::optional<uint8_t> wire)
+	{
+		_unmapped_wire_values[static_cast<size_t>(field)] = wire;
+	}
+
+	std::optional<uint8_t> GetUnmappedWireValue(WireField field) const
+	{
+		return _unmapped_wire_values[static_cast<size_t>(field)];
+	}
+
 	void SetFragHeader(const FragmentationHeader *header)
 	{
 		_frag_hdr = *header;
@@ -229,6 +268,7 @@ public:
 			GetPacketType());
 
 		packet->_frag_hdr = _frag_hdr;
+		packet->_unmapped_wire_values = _unmapped_wire_values;
 		packet->_high_priority = _high_priority;
 		packet->_is_internal_created = _is_internal_created;
 		packet->_track = _track;
@@ -272,6 +312,7 @@ protected:
 	cmn::BitstreamFormat _bitstream_format = cmn::BitstreamFormat::Unknown;
 	cmn::PacketType _packet_type = cmn::PacketType::Unknown;
 	FragmentationHeader _frag_hdr;
+	std::array<std::optional<uint8_t>, static_cast<size_t>(WireField::Nb)> _unmapped_wire_values;
 
 	// This flag is used to indicate that this packet should be sent with high priority.
 	bool _high_priority = false; 

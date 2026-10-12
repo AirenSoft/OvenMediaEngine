@@ -23,6 +23,7 @@ MediaRouterAlert::MediaRouterAlert()
 
 MediaRouterAlert::~MediaRouterAlert()
 {
+	_last_track_version.clear();
 	_last_pts.clear();
 	_last_pts_ms.clear();
 }
@@ -86,6 +87,16 @@ bool MediaRouterAlert::DetectInvalidPacketDuration(const std::shared_ptr<info::S
 bool MediaRouterAlert::DetectBframes(const std::shared_ptr<info::Stream> &stream_info, const std::shared_ptr<const MediaTrack> &media_track, const std::shared_ptr<MediaPacket> &media_packet)
 {
 	const auto track_id = media_track->GetId();
+
+	// A replaced track starts its own timeline and may carry another timebase,
+	// so the PTS baseline is dropped with the track that set it.
+	auto &last_version = _last_track_version[track_id];
+	auto media_track_version = media_track->GetVersion();
+	if (last_version != media_track_version)
+	{
+		last_version = media_track_version;
+		_last_pts.erase(track_id);
+	}
 
 	switch (media_packet->GetBitstreamFormat())
 	{
