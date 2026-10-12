@@ -62,11 +62,76 @@ static constexpr int kRepeatLongPhraseWords = 3;
 static constexpr int kRepeatMinRepeatsLong = 3;   // phrases of kRepeatLongPhraseWords words or more
 static constexpr int kRepeatMinRepeatsShort = 5;  // shorter phrases
 
-static bool IsRepeatWordByte(unsigned char c)
+// Punctuation outside ASCII, which separates words like ASCII punctuation does.
+static bool IsRepeatPunctuation(uint32_t code_point)
 {
-	// ASCII letters, digits and apostrophes, or any byte of a multi-byte UTF-8 character,
-	// so words of every script are compared, not only Latin ones.
-	return (c >= 0x80) || ((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z')) || ((c >= '0') && (c <= '9')) || (c == '\'');
+	// General Punctuation ("…", "—", quotes), except the apostrophe "’"
+	return ((code_point >= 0x2000) && (code_point <= 0x206F) && (code_point != 0x2019)) ||
+		   // Ideographic space, "、", "。", "〃"
+		   ((code_point >= 0x3000) && (code_point <= 0x3003)) ||
+		   // CJK brackets and quotes ("「", "」", "【", "】", ...) and "〜"
+		   ((code_point >= 0x3008) && (code_point <= 0x3011)) ||
+		   ((code_point >= 0x3014) && (code_point <= 0x301F)) ||
+		   // Full-width ASCII punctuation ("！", "，", "：", "？", ...) and half-width "｡", "｢", "｣", "､", "･"
+		   ((code_point >= 0xFF01) && (code_point <= 0xFF0F)) ||
+		   ((code_point >= 0xFF1A) && (code_point <= 0xFF20)) ||
+		   ((code_point >= 0xFF3B) && (code_point <= 0xFF40)) ||
+		   ((code_point >= 0xFF5B) && (code_point <= 0xFF65));
+}
+
+// Whether the character at data[i] belongs to a word, with its length in bytes in
+// `char_length`. Words are ASCII letters, digits and apostrophes, and the characters of
+// other scripts except their punctuation, so words of every script are compared, not only
+// Latin ones. A byte that does not start a valid UTF-8 sequence counts as a one-byte word
+// character.
+static bool IsRepeatWordChar(const char *data, size_t length, size_t i, size_t *char_length)
+{
+	const auto c = static_cast<unsigned char>(data[i]);
+	*char_length = 1;
+	if (c < 0x80)
+	{
+		return ((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z')) || ((c >= '0') && (c <= '9')) || (c == '\'');
+	}
+
+	size_t sequence_length = 0;
+	uint32_t code_point = 0;
+	if ((c & 0xE0) == 0xC0)
+	{
+		sequence_length = 2;
+		code_point = c & 0x1F;
+	}
+	else if ((c & 0xF0) == 0xE0)
+	{
+		sequence_length = 3;
+		code_point = c & 0x0F;
+	}
+	else if ((c & 0xF8) == 0xF0)
+	{
+		sequence_length = 4;
+		code_point = c & 0x07;
+	}
+	else
+	{
+		return true;
+	}
+
+	if (i + sequence_length > length)
+	{
+		return true;
+	}
+
+	for (size_t k = 1; k < sequence_length; k++)
+	{
+		const auto next = static_cast<unsigned char>(data[i + k]);
+		if ((next & 0xC0) != 0x80)
+		{
+			return true;
+		}
+		code_point = (code_point << 6) | (next & 0x3F);
+	}
+
+	*char_length = sequence_length;
+	return IsRepeatPunctuation(code_point) == false;
 }
 
 // Returns `text` with every back-to-back repeated phrase collapsed to its first occurrence,
@@ -82,18 +147,26 @@ static ov::String CollapseRepeatedPhrases(const ov::String &text, int *runs)
 	std::vector<size_t> word_ends;
 	for (size_t i = 0; i < length;)
 	{
-		if (IsRepeatWordByte(static_cast<unsigned char>(data[i])) == false)
+		size_t char_length = 1;
+		if (IsRepeatWordChar(data, length, i, &char_length) == false)
 		{
-			i++;
+			i += char_length;
 			continue;
 		}
 
 		ov::String word;
-		while ((i < length) && IsRepeatWordByte(static_cast<unsigned char>(data[i])))
+		while ((i < length) && IsRepeatWordChar(data, length, i, &char_length))
 		{
 			const auto c = static_cast<unsigned char>(data[i]);
-			word.Append(static_cast<char>(((c >= 'A') && (c <= 'Z')) ? (c - 'A' + 'a') : c));
-			i++;
+			if ((c >= 'A') && (c <= 'Z'))
+			{
+				word.Append(static_cast<char>(c - 'A' + 'a'));
+			}
+			else
+			{
+				word.Append(data + i, char_length);
+			}
+			i += char_length;
 		}
 		words.push_back(std::move(word));
 		word_ends.push_back(i);

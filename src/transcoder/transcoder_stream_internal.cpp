@@ -91,14 +91,19 @@ ov::String TranscoderStreamInternal::ProfileToSerialize(const uint32_t track_id,
 
 ov::String TranscoderStreamInternal::ProfileToSerialize(const uint32_t track_id, const cfg::vhost::app::oprf::SpeechToTextProfile &profile)
 {
-	return ov::String::FormatString("I=%d,O=%s:%s:%d:%d:%s:%s",
+	return ov::String::FormatString("I=%d,O=%s:%s:%d:%d:%s:%s:%d:%d:%d:%d:%d",
 									track_id,
 									profile.GetEngine().CStr(),
 									profile.GetModel().CStr(),
 									profile.GetInputTrackId(),
 									profile.GetOutputTrackId(),
 									profile.GetSourceLanguage().CStr(),
-									profile.ShouldTranslate() ? "true" : "false");
+									profile.ShouldTranslate() ? "true" : "false",
+									profile.GetStepMs(),
+									profile.GetLengthMs(),
+									profile.GetKeepMs(),
+									profile.GetAudioContextMs(),
+									profile.GetThreadCount());
 }
 
 ov::String TranscoderStreamInternal::ProfileToSerialize(const uint32_t track_id)
