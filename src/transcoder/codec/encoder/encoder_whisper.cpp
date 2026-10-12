@@ -62,7 +62,11 @@ static constexpr int kRepeatLongPhraseWords = 3;
 static constexpr int kRepeatMinRepeatsLong = 3;   // phrases of kRepeatLongPhraseWords words or more
 static constexpr int kRepeatMinRepeatsShort = 5;  // shorter phrases
 
-// Punctuation outside ASCII, which separates words like ASCII punctuation does.
+// Punctuation outside ASCII, which separates words like ASCII punctuation does. Only
+// scripts written without spaces need it: in a script with spaces, a loop is already split
+// at the spaces, and a repeat that carries the same punctuation each time still matches.
+// So this covers the general punctuation and the punctuation of Chinese and Japanese. A
+// loop with neither spaces nor punctuation between its phrases is not collapsed.
 static bool IsRepeatPunctuation(uint32_t code_point)
 {
 	// General Punctuation ("…", "—", quotes), except the apostrophe "’"
@@ -72,6 +76,8 @@ static bool IsRepeatPunctuation(uint32_t code_point)
 		   // CJK brackets and quotes ("「", "」", "【", "】", ...) and "〜"
 		   ((code_point >= 0x3008) && (code_point <= 0x3011)) ||
 		   ((code_point >= 0x3014) && (code_point <= 0x301F)) ||
+		   // Japanese middle dot "・"
+		   (code_point == 0x30FB) ||
 		   // Full-width ASCII punctuation ("！", "，", "：", "？", ...) and half-width "｡", "｢", "｣", "､", "･"
 		   ((code_point >= 0xFF01) && (code_point <= 0xFF0F)) ||
 		   ((code_point >= 0xFF1A) && (code_point <= 0xFF20)) ||
