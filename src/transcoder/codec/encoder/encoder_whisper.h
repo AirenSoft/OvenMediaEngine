@@ -14,6 +14,7 @@
 #include <memory>
 
 #include <base/ovlibrary/interval_gate.h>
+#include <base/ovlibrary/ovlibrary.h>
 #include <base/provider/stream.h>
 #include "../../transcoder_encoder.h"
 
@@ -82,7 +83,11 @@ public:
 		EncoderInfo info = TranscodeEncoder::GetInfo();
 		info.properties["label"]       = _output_track_label;
 		info.properties["model"]       = _track ? _track->GetModel() : "";
-		info.properties["language"]    = _source_language;
+		{
+			// Called from the API thread while the encoder thread may update the language.
+			ov::LockGuard lock(_source_language_mutex);
+			info.properties["language"] = _source_language;
+		}
 		info.properties["translation"] = _translate ? "true" : "false";
 		return info;
 	}
@@ -105,6 +110,15 @@ private:
 	int32_t _step_ms = 2000;
 	int32_t _length_ms = 10000;
 	int32_t _keep_ms = 1500;
+	// Number of steps per sliding-window cycle; the window is cut back to KeepMs
+	// after this many inferences.
+	int32_t _n_new_lines = 4;
+	// Longest window ThreadLoop builds, in ms (computed and validated in Configure).
+	int32_t _max_window_ms = 9500;
+	// Encoder context: AudioContextMs (sized from the window or raised to cover it, in
+	// Configure) and the audio_ctx passed to every call (positions of 20 ms, 0 = full 30 s).
+	int32_t _audio_context_ms = -1;
+	int32_t _audio_ctx = 0;
         // Shared model weights: owned by WhisperModelRegistry, reference-counted here.
         std::shared_ptr<whisper_context> _whisper_ctx;
         // Per-instance inference state: isolates all mutable buffers from other instances.
@@ -128,8 +142,13 @@ private:
         int32_t _n_samples_step = 0;
         int32_t _n_samples_length = 0;
         int32_t _n_samples_keep = 0;
+        // Longest window that fits in the encoder context (audio_ctx), in samples.
+        int32_t _n_samples_context = 0;
 
 	ov::String _source_language = "auto";
+	// Guards writes of _source_language and its reads from other threads (GetInfo). The
+	// encoder thread is the only writer after Configure, so its own reads need no lock.
+	mutable ov::Mutex _source_language_mutex;
 	bool _translate = false;
 	ov::String _output_track_label;
 

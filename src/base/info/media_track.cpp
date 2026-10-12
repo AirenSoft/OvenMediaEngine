@@ -121,6 +121,7 @@ bool MediaTrack::Update(const MediaTrack &media_track)
 	_step_ms = media_track._step_ms.load();
 	_length_ms = media_track._length_ms.load();
 	_keep_ms = media_track._keep_ms.load();
+	_audio_context_ms = media_track._audio_context_ms.load();
 	_stt_enabled = media_track._stt_enabled.load();
 
 	_codec_status = media_track._codec_status.load();

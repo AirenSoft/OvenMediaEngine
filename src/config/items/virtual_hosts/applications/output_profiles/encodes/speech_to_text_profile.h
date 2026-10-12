@@ -34,6 +34,7 @@ namespace cfg
 					int32_t _step_ms = 2000;
 					int32_t _length_ms = 10000;
 					int32_t _keep_ms = 1500;
+					int32_t _audio_context_ms = -1;
 					int32_t _thread_count = 0;
 
 					bool _stt_enabled = true;
@@ -107,6 +108,9 @@ namespace cfg
 
 					void SetKeepMs(int32_t keep_ms) { _keep_ms = keep_ms; }
 					int32_t GetKeepMs() const { return _keep_ms; }
+
+					void SetAudioContextMs(int32_t audio_context_ms) { _audio_context_ms = audio_context_ms; }
+					int32_t GetAudioContextMs() const { return _audio_context_ms; }
 
 					void SetThreadCount(int32_t thread_count) { _thread_count = thread_count; }
 					int32_t GetThreadCount() const { return _thread_count; }

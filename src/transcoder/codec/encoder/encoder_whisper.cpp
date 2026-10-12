@@ -15,6 +15,139 @@
 #include "../../transcoder_private.h"
 #include "../../transcoder_whisper_model_registry.h"
 
+#include <algorithm>
+#include <vector>
+
+// Room left after the longest sliding window, below Whisper's 30 s input and below the
+// encoder context (see Configure).
+static constexpr int64_t kMaxWindowMarginMs = 1000;
+// Audio covered by one Whisper encoder position (the unit of audio_ctx): two 10 ms mel frames.
+static constexpr int64_t kAudioCtxPositionMs = 20;
+// AudioContextMs value (and default) that sizes the encoder context from the window.
+static constexpr int32_t kAudioContextAuto = -1;
+// Automatic context: whole multiples of kAutoCtxAlignPositions (with flash attention the
+// decoder's cross-attention reads the context padded to 256 positions in any case), and
+// no smaller than kAutoCtxMinPositions, because accuracy drops faster below it (measured
+// on one test stream: precision 89.8% at 768, 87.1% at 541, 90.9% at the full 1500).
+// The cost of the context depends on the device: on a GPU 541 saved little over 768
+// (GPU use 17% against 18%), while on the CPU the time of a call grows roughly with the
+// context (measured with 5 threads, median per call: 0.60 s at 240, 1.56 s at 541,
+// 2.07 s at 768).
+static constexpr int64_t kAutoCtxAlignPositions = 256;
+static constexpr int64_t kAutoCtxMinPositions = 768;
+
+// A decoding loop repeats one phrase back to back ("No, no, no, ..." for hundreds of
+// characters, or a whole sentence over and over). Every run of a phrase of up to
+// kRepeatMaxPhraseWords words repeated back to back is collapsed to its first occurrence,
+// wherever it is in the cue; the text before and after the run is kept.
+//
+// How this rule was chosen (measured on recorded test streams with reference subtitles, and
+// on live streams where loops and real speech were told apart by reading the cues):
+// - A 4-word phrase seen 3 times anywhere in a cue also matched real speech that repeats
+//   with other words in between ("Thank you for the prime. Sir ... Thank you for the six
+//   month prime. Neo. Thank you for the ..."), so only back-to-back repetition counts.
+// - Cutting the cue from the second occurrence to its end, and only when the repetition
+//   reached the end, missed loops that other words follow (a 798-character "Lucky. Lucky.
+//   ..." cue was published as is) and dropped the words after a loop ("Oh, oh, oh, ...
+//   five dollars!" became "Oh,"). Collapsing covers both. On the recorded test streams it lost
+//   half as many reference words (4 against 8) and raised the precision of the most
+//   loop-prone test configuration further (46.8% to 75.1%, against 67.8%).
+// - Short phrases need more repeats, because "no, no, no" is ordinary speech. At 5 repeats,
+//   sound tags and short loops ("[Music]" x5, "Alright." x6) are collapsed, and so is
+//   emphatic speech ("No, no, no, no, no." becomes "No."). At 8 the emphasis would stay, and
+//   so would the tags. 5 was chosen: the meaning of the emphasis survives.
+// - A phrase repeated with other words in between is left alone.
+static constexpr int kRepeatMaxPhraseWords = 16;
+static constexpr int kRepeatLongPhraseWords = 3;
+static constexpr int kRepeatMinRepeatsLong = 3;   // phrases of kRepeatLongPhraseWords words or more
+static constexpr int kRepeatMinRepeatsShort = 5;  // shorter phrases
+
+static bool IsRepeatWordByte(unsigned char c)
+{
+	// ASCII letters, digits and apostrophes, or any byte of a multi-byte UTF-8 character,
+	// so words of every script are compared, not only Latin ones.
+	return (c >= 0x80) || ((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z')) || ((c >= '0') && (c <= '9')) || (c == '\'');
+}
+
+// Returns `text` with every back-to-back repeated phrase collapsed to its first occurrence,
+// and the number of collapsed runs in `runs`.
+static ov::String CollapseRepeatedPhrases(const ov::String &text, int *runs)
+{
+	const char *data = text.CStr();
+	const size_t length = text.GetLength();
+
+	// Words (ASCII lowercased, so "No" and "no" match; punctuation is not compared) and the
+	// byte offset just past each word.
+	std::vector<ov::String> words;
+	std::vector<size_t> word_ends;
+	for (size_t i = 0; i < length;)
+	{
+		if (IsRepeatWordByte(static_cast<unsigned char>(data[i])) == false)
+		{
+			i++;
+			continue;
+		}
+
+		ov::String word;
+		while ((i < length) && IsRepeatWordByte(static_cast<unsigned char>(data[i])))
+		{
+			const auto c = static_cast<unsigned char>(data[i]);
+			word.Append(static_cast<char>(((c >= 'A') && (c <= 'Z')) ? (c - 'A' + 'a') : c));
+			i++;
+		}
+		words.push_back(std::move(word));
+		word_ends.push_back(i);
+	}
+
+	// From each word, take the phrase length whose back-to-back repetition covers the most
+	// words. When it repeats often enough, copy the text up to the end of its first
+	// occurrence and resume after the last repeat, so the separator that follows the run
+	// ("...oh, five dollars!") is kept.
+	const int n = static_cast<int>(words.size());
+	ov::String out;
+	size_t copied = 0;
+	*runs = 0;
+	for (int i = 0; i < n;)
+	{
+		int best_p = 0;
+		int best_repeats = 0;
+		for (int p = 1; (p <= kRepeatMaxPhraseWords) && (i + p <= n); p++)
+		{
+			const int min_repeats = (p >= kRepeatLongPhraseWords) ? kRepeatMinRepeatsLong : kRepeatMinRepeatsShort;
+			int repeats = 1;
+			while ((i + (repeats + 1) * p <= n) &&
+				   std::equal(words.begin() + i, words.begin() + i + p, words.begin() + i + repeats * p))
+			{
+				repeats++;
+			}
+
+			if ((repeats >= min_repeats) && (repeats * p > best_repeats * best_p))
+			{
+				best_p = p;
+				best_repeats = repeats;
+			}
+		}
+
+		if (best_p == 0)
+		{
+			i++;
+			continue;
+		}
+
+		out.Append(data + copied, word_ends[i + best_p - 1] - copied);
+		copied = word_ends[i + best_repeats * best_p - 1];
+		i += best_repeats * best_p;
+		(*runs)++;
+	}
+
+	if (*runs == 0)
+	{
+		return text;
+	}
+	out.Append(data + copied, length - copied);
+	return out;
+}
+
 EncoderWhisper::EncoderWhisper(const info::Stream &stream_info)
 	: TranscodeEncoder(stream_info)
 {
@@ -48,12 +181,137 @@ bool EncoderWhisper::Configure(std::shared_ptr<MediaTrack> context)
 	_step_ms = context->GetStepMs();
 	_length_ms = context->GetLengthMs();
 	_keep_ms = context->GetKeepMs();
+	_audio_context_ms = context->GetAudioContextMs();
+
+	// Reject window settings that ThreadLoop cannot run. The configuration accepts any
+	// integer, and some values would otherwise crash the whole process instead of
+	// disabling this non-essential track. Messages name only configuration items.
+	ov::String invalid_reason;
+	if (_step_ms <= 0)
+	{
+		// _length_ms / _step_ms below would divide by zero.
+		invalid_reason = "StepMs must be greater than 0.";
+	}
+	else if (_length_ms <= 0)
+	{
+		invalid_reason = "LengthMs must be greater than 0.";
+	}
+	else if (_keep_ms < 0)
+	{
+		// KeepMs is a length of audio, so a negative value has no meaning. (The original
+		// cycle reset read past the end of the buffer with it.)
+		invalid_reason = "KeepMs must not be negative.";
+	}
+	else if ((_audio_context_ms <= 0) && (_audio_context_ms != kAudioContextAuto))
+	{
+		invalid_reason = "AudioContextMs must be -1 (auto) or greater than 0.";
+	}
+	else
+	{
+		// LengthMs below StepMs is accepted: the cycle is then a single step, so every
+		// window is reset (a fixed-length window).
+		_n_new_lines = std::max(1, (_length_ms / _step_ms) - 1);
+
+		// Longest window ThreadLoop builds: the audio kept over a reset plus the new
+		// audio of one cycle. The previous audio taken into a window is limited to
+		// KeepMs + LengthMs - new, so with LengthMs below StepMs the window is
+		// KeepMs + LengthMs, or one step of new audio alone when that is longer.
+		const int64_t max_window_ms = std::max(static_cast<int64_t>(_step_ms),
+											   static_cast<int64_t>(_keep_ms) +
+												   std::min(static_cast<int64_t>(_n_new_lines) * _step_ms, static_cast<int64_t>(_length_ms)));
+
+		// Whisper decodes in 30 s windows (WHISPER_CHUNK_SIZE). An input that fills or
+		// exceeds one makes a single call run the encoder more than once: with no
+		// trailing silence left, Whisper treats the last segment as cut off and decodes
+		// the remainder in another window. Audio is collected in whole input frames, so
+		// every step overshoots StepMs by up to one frame (~21 ms for 48 kHz AAC, 64 ms
+		// for 16 kHz AAC); kMaxWindowMarginMs absorbs that over a typical cycle and keeps
+		// some padding after the audio. Longer cycles with long frames are covered by the
+		// run-time limit in ThreadLoop.
+		const int64_t window_limit_ms = WHISPER_CHUNK_SIZE * 1000 - kMaxWindowMarginMs;
+		if (max_window_ms > window_limit_ms)
+		{
+			invalid_reason = ov::String::FormatString("The window grows to %" PRId64 " ms; it must not exceed %" PRId64 " ms to fit Whisper's %d ms input. Lower LengthMs or KeepMs.",
+													  max_window_ms, window_limit_ms, WHISPER_CHUNK_SIZE * 1000);
+		}
+		else
+		{
+			_max_window_ms = static_cast<int32_t>(max_window_ms);
+		}
+	}
+
+	if (invalid_reason.IsEmpty() == false)
+	{
+		logte("Invalid Whisper sliding window. stream=%s, track_id=%d, label=%s, step_ms=%d, length_ms=%d, keep_ms=%d, audio_context_ms=%d: %s STT track will be disabled.",
+			  _stream_info.GetName().CStr(), context->GetId(), context->GetOutputTrackLabel().CStr(),
+			  _step_ms, _length_ms, _keep_ms, _audio_context_ms, invalid_reason.CStr());
+		return false;
+	}
+
+	// Encoder context (Whisper's audio_ctx): the audio, from the start of the window, that
+	// the encoder runs over. The full 30 s also runs it over the zero padding after the
+	// window; a shorter context saves that compute but costs accuracy (measured on one
+	// test stream: precision 90.9% at 30000 ms, 90.0% at 20480, 89.8% at 15360, 87.1% at
+	// 10820).
+	// A window longer than the context does not fit: Whisper decodes the rest in another
+	// encoder pass, and the text past the context was measured to drop words, loop and
+	// hallucinate. So the context always covers the longest window plus the margin.
+	const int64_t min_context_ms = static_cast<int64_t>(_max_window_ms) + kMaxWindowMarginMs;
+	if (_audio_context_ms == kAudioContextAuto)
+	{
+		// Sized from the window: a longer window costs more compute and gives more accuracy.
+		const int64_t min_positions = (min_context_ms + kAudioCtxPositionMs - 1) / kAudioCtxPositionMs;
+		const int64_t positions = std::max(kAutoCtxMinPositions,
+										   (min_positions + kAutoCtxAlignPositions - 1) / kAutoCtxAlignPositions * kAutoCtxAlignPositions);
+		_audio_context_ms = static_cast<int32_t>(std::min(positions * kAudioCtxPositionMs, static_cast<int64_t>(WHISPER_CHUNK_SIZE) * 1000));
+		logti("Whisper AudioContextMs auto: %d ms for the longest window of %d ms. stream=%s, track_id=%d, label=%s",
+			  _audio_context_ms, _max_window_ms,
+			  _stream_info.GetName().CStr(), context->GetId(), context->GetOutputTrackLabel().CStr());
+	}
+	else if (_audio_context_ms < min_context_ms)
+	{
+		logtw("Whisper AudioContextMs %d ms is shorter than the longest window (%d ms) plus %" PRId64 " ms; using %" PRId64 " ms. stream=%s, track_id=%d, label=%s",
+			  _audio_context_ms, _max_window_ms, kMaxWindowMarginMs, min_context_ms,
+			  _stream_info.GetName().CStr(), context->GetId(), context->GetOutputTrackLabel().CStr());
+		_audio_context_ms = static_cast<int32_t>(min_context_ms);
+	}
+	// 0 is the model's full context (30 s); otherwise round up to whole positions.
+	_audio_ctx = (_audio_context_ms >= WHISPER_CHUNK_SIZE * 1000)
+					 ? 0
+					 : static_cast<int32_t>((_audio_context_ms + kAudioCtxPositionMs - 1) / kAudioCtxPositionMs);
+	// The window must also fit at run time. Each step collects whole input frames, so it
+	// overshoots StepMs by up to one frame, and that adds up over a cycle: more than the
+	// margin above with many steps per cycle and long frames (128 ms for 8 kHz AAC).
+	// ThreadLoop takes less previous audio when a window would grow past the context.
+	_n_samples_context = static_cast<int32_t>(((_audio_ctx > 0) ? (_audio_ctx * kAudioCtxPositionMs) : (WHISPER_CHUNK_SIZE * 1000)) *
+											  WHISPER_SAMPLE_RATE / 1000);
 
 	_n_samples_step = (static_cast<double>(_step_ms) / 1000.0) * WHISPER_SAMPLE_RATE;
 	_n_samples_length = (static_cast<double>(_length_ms) / 1000.0) * WHISPER_SAMPLE_RATE;
 	_n_samples_keep = (static_cast<double>(_keep_ms) / 1000.0) * WHISPER_SAMPLE_RATE;
 	
-	_source_language = context->GetSourceLanguage();
+	// SourceLanguage is "auto" or a language Whisper knows, by code ("ko") or by name
+	// ("korean"), stored as the code. Whisper does not reject an unknown value: it logs an
+	// error on every call and decodes with an invalid language token, so the output
+	// language is unpredictable. An unknown value (including an empty one) is replaced with "auto" and a
+	// warning, so subtitles keep coming. Case and surrounding spaces are ignored.
+	const ov::String requested_language = context->GetSourceLanguage().Trim().LowerCaseString();
+	const int requested_language_id = (requested_language == "auto") ? -1 : whisper_lang_id(requested_language.CStr());
+	ov::String source_language = "auto";
+	if (requested_language_id >= 0)
+	{
+		source_language = whisper_lang_str(requested_language_id);
+	}
+	else if (requested_language != "auto")
+	{
+		logtw("Unsupported SourceLanguage \"%s\"; using auto. stream=%s, track_id=%d, label=%s",
+			  context->GetSourceLanguage().CStr(),
+			  _stream_info.GetName().CStr(), context->GetId(), context->GetOutputTrackLabel().CStr());
+	}
+	{
+		ov::LockGuard lock(_source_language_mutex);
+		_source_language = source_language;
+	}
 	_translate = context->ShouldTranslate();
 	_output_track_label = context->GetOutputTrackLabel();
 
@@ -101,6 +359,17 @@ bool EncoderWhisper::Initialize()
 			return false;
 		}
 	}
+
+	// Window lengths fed to Whisper. The first window is one step of new audio (the
+	// buffer starts empty, and again after STT is re-enabled); windows then grow up
+	// to the computed maximum. audio_ctx is the encoder context actually used (in
+	// positions of 20 ms), from AudioContextMs as Configure set it: sized from the window
+	// (auto), or the configured value raised to cover the longest window.
+	logti("Whisper sliding window configured. stream=%s, track_id=%d, label=%s, step_ms=%d, length_ms=%d, keep_ms=%d, window_ms=%d~%d, audio_context_ms=%d, audio_ctx=%d",
+		  _stream_info.GetName().CStr(), _track->GetId(), _output_track_label.CStr(),
+		  _step_ms, _length_ms, _keep_ms,
+		  _step_ms, _max_window_ms,
+		  _audio_context_ms, (_audio_ctx > 0) ? _audio_ctx : whisper_model_n_audio_ctx(_whisper_ctx.get()));
 
 	return true;
 }
@@ -170,14 +439,11 @@ void EncoderWhisper::ThreadLoop()
 	pcmf32_buffer_old.reserve(n_samples_30s);
 	pcmf32_buffer_new.reserve(n_samples_30s);
 
-	std::vector<whisper_token> prompt_tokens;
-
 	int64_t new_buffer_start_cs = 0;
 	int64_t new_buffer_end_cs = 0;
 	int64_t last_commit_end_cs = 0;
 
 	int32_t n_iter = 0;
-	int32_t n_new_lines = std::max(1, (_length_ms / _step_ms) - 1);
 	while (!_kill_flag)
 	{
 		// Collect audio samples until n_samples_step is reached.
@@ -200,7 +466,6 @@ void EncoderWhisper::ThreadLoop()
 
 					pcmf32_buffer_old.clear();
 					pcmf32_buffer_new.clear();
-					prompt_tokens.clear();
 					new_buffer_start_cs = 0;
 					new_buffer_end_cs = 0;
 					last_commit_end_cs = 0;
@@ -301,7 +566,12 @@ void EncoderWhisper::ThreadLoop()
 		}
 
 		const int n_samples_new = static_cast<int>(pcmf32_buffer_new.size());
-		const int n_samples_old_keep = std::min(static_cast<int>(pcmf32_buffer_old.size()), std::max(0, _n_samples_keep + _n_samples_length - n_samples_new));
+		// Previous audio taken into the window, limited so the window fits in the encoder
+		// context (see Configure). Only the oldest audio is left out; every earlier
+		// window of the cycle already had it.
+		const int n_samples_old_keep = std::min({static_cast<int>(pcmf32_buffer_old.size()),
+												 std::max(0, _n_samples_keep + _n_samples_length - n_samples_new),
+												 std::max(0, _n_samples_context - n_samples_new)});
 
 		pcmf32_buffer.resize(n_samples_new + n_samples_old_keep);
 
@@ -374,16 +644,6 @@ void EncoderWhisper::ThreadLoop()
 			logti("Translation enabled. Set source language [label : %s] to English for Whisper processing.", _track->GetOutputTrackLabel().CStr());
 		}
 
-		// Size the encoder audio context to the actual window instead of the full
-		// 30 s, so the encoder does not run over the zero-padding. Each context
-		// position spans 320 samples (20 ms); a margin avoids truncating the
-		// window tail. audio_ctx 0 means the full default context.
-		int32_t audio_ctx = static_cast<int32_t>((pcmf32_buffer.size() + 319) / 320) + 64;
-		if (audio_ctx >= 1500)
-		{
-			audio_ctx = 0;
-		}
-
 		whisper_full_params wparams = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
 		wparams.print_progress   = false;
 		wparams.print_special    = false;
@@ -396,11 +656,27 @@ void EncoderWhisper::ThreadLoop()
 		wparams.n_threads        = _n_threads;
 		wparams.beam_search.beam_size = -1; // disable beam search
 		wparams.greedy.best_of = 1; // disable best_of
-		wparams.temperature_inc = 0.0f;
-		wparams.audio_ctx        = audio_ctx;
+		// Temperature fallback with whisper's default step (0.2): a decode that whisper
+		// judges degenerate or low-confidence is retried at higher temperatures, up to 1.0.
+		// It changed the result of only 1-4% of windows (measured), mostly repairing badly
+		// wrong ones, but a call that retries can take longer than one step (measured on a
+		// GPU, worst cases: 2.9 s and 3.9 s).
+		wparams.temperature_inc = 0.2f;
+		// Encoder context from AudioContextMs (see Configure), the same for every call.
+		// Changing audio_ctx between calls on the same whisper_state was measured to
+		// corrupt the results (a call no longer matches a fresh-state run of the same
+		// window): the flash-attention path reads the cross-attention cache padded to 256
+		// positions, and the padded part keeps what earlier calls left there. That, not
+		// the context size, is what broke the earlier per-window sizing (window + 64
+		// positions). The state's buffers are sized for the full context regardless, so
+		// a smaller value saves compute only, not memory.
+		wparams.audio_ctx        = _audio_ctx;
 		wparams.tdrz_enable      = false;
-		wparams.prompt_tokens    = prompt_tokens.data();
-		wparams.prompt_n_tokens  = static_cast<int>(prompt_tokens.size());
+		// No prompt is passed. A prompt would carry a degenerate (repeating) result into
+		// the following calls, and the window after a reset already contains the audio
+		// of the prompt's last words (the KeepMs overlap).
+		wparams.prompt_tokens    = nullptr;
+		wparams.prompt_n_tokens  = 0;
 		wparams.token_timestamps = false;
 		wparams.split_on_word	 = true;
 		wparams.thold_pt		 = 0.01f;
@@ -511,25 +787,35 @@ void EncoderWhisper::ThreadLoop()
 
 		logtt("[%" PRId64 "] : %s", last_commit_end_cs, result_text.CStr());
 
+		// Keep a decoding loop off the screen: publish each repeated phrase once.
+		int collapsed_runs = 0;
+		const ov::String collapsed = CollapseRepeatedPhrases(result_text, &collapsed_runs);
+		if (collapsed_runs > 0)
+		{
+			logtd("Whisper repetition loop collapsed. stream=%s, label=%s, %zu -> %zu chars, runs=%d",
+				  _stream_info.GetName().CStr(), _output_track_label.CStr(),
+				  result_text.GetLength(), collapsed.GetLength(), collapsed_runs);
+			result_text = collapsed;
+		}
+
 		SendVttToProvider(result_text);
 
 		result_text.Clear();
 
+		// Counted within a cycle and reset at its end, so a long-running stream never
+		// overflows it.
 		n_iter++;
-		if (n_iter % n_new_lines == 0)
+		if (n_iter >= _n_new_lines)
 		{
-			pcmf32_buffer_old = std::vector<float>(pcmf32_buffer.end() - _n_samples_keep, pcmf32_buffer.end());
-			prompt_tokens.clear();
+			n_iter = 0;
 
-			const int n_segments = whisper_full_n_segments_from_state(_whisper_state);
-			for (int i = 0; i < n_segments; ++i)
-			{
-				const int nt = whisper_full_n_tokens_from_state(_whisper_state, i);
-				for (int it = 0; it < nt; ++it)
-				{
-					prompt_tokens.push_back(whisper_full_get_token_id_from_state(_whisper_state, i, it));
-				}
-			}
+			// End of a cycle: cut the window back to its last KeepMs, so a word cut at
+			// this point is heard again at the start of the next window. The buffer can
+			// be shorter than KeepMs (the first cycle starts from an empty buffer, and so
+			// does the first one after STT is re-enabled), so keep at most all of it;
+			// taking KeepMs unconditionally would read before the start of the buffer.
+			const size_t n_samples_keep = std::min(pcmf32_buffer.size(), static_cast<size_t>(_n_samples_keep));
+			pcmf32_buffer_old.assign(pcmf32_buffer.end() - n_samples_keep, pcmf32_buffer.end());
 		}
 	}
 
@@ -582,7 +868,10 @@ bool EncoderWhisper::SendLangDetectionEvent(const ov::String &label, const ov::S
 
 	logti("Detected subtitle language: %s -> %s", _source_language.CStr(), language.CStr());
 
-	_source_language = language;
+	{
+		ov::LockGuard lock(_source_language_mutex);
+		_source_language = language;
+	}
 
 	auto event = MediaEvent::BuildEvent(EventCommandUpdateLanguage::Create(label, language));
 	event->SetHighPriority(true);
