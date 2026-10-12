@@ -23,6 +23,17 @@ namespace serdes
 	Json::Value JsonFromVirtualHost(const cfg::vhost::VirtualHost &vhost_config)
 	{
 		auto vhost_json = vhost_config.ToJson();
+
+		// Applications are managed by the apps API. Only the dynamic application template ("*") belongs to the vhost,
+		// and the last one wins like the orchestrator does
+		for (const auto &app : vhost_json["applications"])
+		{
+			if (app["name"] == "*")
+			{
+				vhost_json["dynamicApplicationTemplate"] = app;
+			}
+		}
+
 		vhost_json.removeMember("applications");
 
 		return vhost_json;

@@ -73,6 +73,13 @@ namespace api
 				{
 					app_config.FromJson(requested_app);
 
+					if (app_config.GetName() == "*")
+					{
+						// "*" is the dynamic application template, which belongs to the virtual host
+						throw http::HttpError(http::StatusCode::BadRequest,
+											  "\"*\" is reserved for the dynamic application template. Put it in [applications] of POST /v1/vhosts instead");
+					}
+
 					ThrowIfOrchestratorNotSucceeded(
 						ocst::Orchestrator::GetInstance()->CreateApplication(*vhost, app_config),
 						"create",

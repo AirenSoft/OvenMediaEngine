@@ -1469,6 +1469,8 @@ namespace ocst
 
 		vhost->SetDynamicApplicationConfig(app_config);
 
+		logti("Dynamic application template has been registered for vhost: [%s]", host_info.GetName().CStr());
+
 		return Result::Succeeded;
 	}
 
