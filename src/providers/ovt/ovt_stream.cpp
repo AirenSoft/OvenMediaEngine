@@ -117,36 +117,9 @@ namespace pvd
 		}
 		_origin_response_time_msec = stop_watch.Elapsed();
 
-		// For statistics. Each connection reports its own timings once the stream has a metrics object.
-		// The gate opens only after both values are in place: a motor thread that reached
-		// `ReportOriginTimes()` in between would otherwise publish the previous connection's timings
-		// and close the gate behind them, so the new ones would never go out.
-		_origin_times_reported.store(false);
-		ReportOriginTimes();
+		SetOriginTimings(_origin_request_time_msec, _origin_response_time_msec);
 
 		return true;
-	}
-
-	void OvtStream::ReportOriginTimes()
-	{
-		if (_origin_times_reported.load() == true)
-		{
-			return;
-		}
-
-		auto stream_metrics = StreamMetrics(*std::static_pointer_cast<info::Stream>(pvd::Stream::GetSharedPtr()));
-		if (stream_metrics == nullptr)
-		{
-			return;
-		}
-
-		if (_origin_times_reported.exchange(true) == true)
-		{
-			return;
-		}
-
-		stream_metrics->SetOriginConnectionTimeMSec(_origin_request_time_msec.load());
-		stream_metrics->SetOriginSubscribeTimeMSec(_origin_response_time_msec.load());
 	}
 
 	bool OvtStream::RestartStream(const std::shared_ptr<const ov::Url> &url)
@@ -1762,9 +1735,6 @@ namespace pvd
 
 	PullStream::ProcessMediaResult OvtStream::ProcessMediaPacket()
 	{
-		// The stream is registered with monitoring only after the first handshake returns
-		ReportOriginTimes();
-
 		// One load for the whole call: the socket, the depacketizer and this origin's bookkeeping
 		// all come from the same connection even when the next one starts in the middle of it.
 		auto connection = std::atomic_load(&_connection);

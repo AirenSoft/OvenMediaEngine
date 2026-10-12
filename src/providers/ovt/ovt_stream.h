@@ -182,21 +182,15 @@ namespace pvd
 		bool ReceivePacket(const std::shared_ptr<Connection> &connection, bool non_block = false);
 		std::shared_ptr<ov::Data> ReceiveMessage(const std::shared_ptr<Connection> &connection);
 
-		// Publishes what the handshake measured. Monitoring registers the stream only after the first
-		// `StartStream()` returns, so that first call finds no metrics object and the media path retries.
-		void ReportOriginTimes();
-
 		void Release();
 
 		std::shared_ptr<const ov::Url> _curr_url = nullptr;
 
 		uint32_t _last_request_id;
 
-		// Measured by the handshake, reported once the stream has a metrics object.
-		// The media path reads them, so they carry their own ordering.
-		std::atomic<int64_t> _origin_request_time_msec{0};
-		std::atomic<int64_t> _origin_response_time_msec{0};
-		std::atomic<bool> _origin_times_reported{false};
+		// Measured by the handshake and handed to `PullStream::SetOriginTimings()` in the same call
+		int64_t _origin_request_time_msec  = 0;
+		int64_t _origin_response_time_msec = 0;
 
 		std::shared_mutex	_packetizer_lock;
 		std::shared_ptr<OvtPacketizer>	_packetizer;
