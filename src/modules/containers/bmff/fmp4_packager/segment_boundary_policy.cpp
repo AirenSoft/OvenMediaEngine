@@ -767,6 +767,15 @@ namespace bmff
 			}
 		}
 
+		// The chunk going out may end past the position the gate was asked
+		// about: a keyframe chosen past the boundary, or a slice crossing it.
+		// It still may not run ahead of the reference.
+		int64_t chunk_end_us = (emit_count < sample_list.size()) ? sample_list[emit_count].timing.dts_us : buffer_end_us;
+		if (emit_count > 0 && CanEmitChunk(chunk_end_us) == false)
+		{
+			return decision;
+		}
+
 		decision.emit_count = emit_count;
 		decision.completes_segment = (can_be_last_chunk == true && next_frame.independent == true) ||
 									 (marker_cut_now == true) || (completed_by_split == true);

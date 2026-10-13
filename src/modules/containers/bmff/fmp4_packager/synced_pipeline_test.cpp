@@ -448,6 +448,34 @@ TEST(SyncedPipelineTest, SyncedVideoRunningBehindKeepsItsPartsFlowing)
 	ExpectSamePicturesAndSpecParts(pair, reference_delay_ms, synced_delay_ms, 12, 0, 1);
 }
 
+TEST(SyncedPipelineTest, SyncedVideoRunningAheadNeverPassesTheReference)
+{
+	// The synced track is delivered 1.5 s ahead of the reference and its
+	// keyframes sit 1.5 s past every boundary, so each cut lands on a keyframe
+	// the reference has not reached yet. Nothing it stores may run ahead of
+	// what the reference has stored, the closing part included.
+	const int64_t reference_delay_ms = 33;
+	const int64_t synced_delay_ms = 33;
+	const int64_t lead_frames = 45;
+	auto pair = MakeVideoPair();
+
+	for (int64_t index = 0; index < 1800; index++)
+	{
+		const int64_t synced_index = index + lead_frames;
+		const int64_t synced_pts = 1000 + synced_index * 100 / 3;
+		const int64_t synced_duration = 1000 + (synced_index + 1) * 100 / 3 - synced_pts;
+		ASSERT_TRUE(pair.synced.packager->AppendSample(fmp4_test::MakeVideoFrame(1, synced_pts - synced_delay_ms, synced_duration, (synced_index % (kGopFrames * 4)) == lead_frames, synced_pts)));
+
+		const int64_t pts = 1000 + index * 100 / 3;
+		const int64_t duration = 1000 + (index + 1) * 100 / 3 - pts;
+		ASSERT_TRUE(pair.reference.packager->AppendSample(fmp4_test::MakeVideoFrame(0, pts - reference_delay_ms, duration, (index % kGopFrames) == 0, pts)));
+
+		EXPECT_LE(StoredEndMs(pair.synced), StoredEndMs(pair.reference) + 1) << "at picture " << index;
+	}
+
+	EXPECT_GE(pair.synced.storage->GetLastSegmentNumber(), 12);
+}
+
 TEST(SyncedPipelineTest, SyncedVideoOnAShiftedFrameGridStaysAligned)
 {
 	// A frame rate conversion re-times the synced track a few ms off the
