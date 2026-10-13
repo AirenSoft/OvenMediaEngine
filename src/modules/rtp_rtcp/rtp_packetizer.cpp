@@ -204,6 +204,10 @@ bool RtpPacketizer::PacketizeVideo(cmn::MediaCodecId video_type,
 			_framemarking_extension->SetEndOfFrame();
 		}
 
+		// `RtpFrameBoundaryDetector` fills this in on the receive side only,
+		// so a sender marks the boundary it already knows.
+		packet->SetLastPacketOfFrame(last);
+
 		if(frame_type == FrameType::VideoFrameKey)
 		{
 			packet->SetKeyframe(true);
@@ -292,6 +296,9 @@ bool RtpPacketizer::PacketizeAudio(FrameType frame_type,
 	std::shared_ptr<RtpPacket> packet = AllocatePacket();
 	packet->SetMarker(MarkerBit(frame_type, _payload_type));
 	packet->SetPayloadType(_payload_type);
+	// One access unit is one packet here, so it both starts and ends the frame
+	packet->SetFirstPacketOfFrame(true);
+	packet->SetLastPacketOfFrame(true);
 	packet->SetTimestamp(rtp_timestamp);
 	packet->SetNTPTimestamp(ntp_timestamp);
 	packet->SetTrackId(_track_id);

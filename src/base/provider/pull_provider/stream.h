@@ -55,7 +55,8 @@ namespace pvd
 		virtual ProcessMediaResult ProcessMediaPacket() = 0;
 
 		// Writes the origin timings measured by the latest `StartStream()` to the stream metrics.
-		// `PullApplication` calls it once the stream is registered with monitoring, after `StartStream()` returns.
+		// `PullApplication` calls it after starting or resuming the stream.
+		// A call that finds no metrics object leaves the measurement pending for the next one.
 		void RecordOriginTimings();
 
 	protected:
