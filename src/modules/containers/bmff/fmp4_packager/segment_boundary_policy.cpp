@@ -645,9 +645,10 @@ namespace bmff
 		{
 			keyframe_cut = PlanKeyframeCut(sample_list, next_frame, boundary.end_us, last_segment_duration_us);
 
-			// A reached break closes at the arriving keyframe; a candidate still
-			// pending for a boundary elsewhere must not hold it back
-			if (keyframe_cut.pending == true && break_reached == true && next_frame.independent == true)
+			// A reached break closes at the arriving keyframe, whatever the plan:
+			// the break is where the content changes, and the next keyframe at or
+			// after it is where every track cuts for it
+			if (break_reached == true && next_frame.independent == true)
 			{
 				keyframe_cut = KeyframeCut();
 			}

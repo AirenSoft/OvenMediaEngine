@@ -476,6 +476,68 @@ TEST(SyncedPipelineTest, SyncedVideoRunningAheadNeverPassesTheReference)
 	EXPECT_GE(pair.synced.storage->GetLastSegmentNumber(), 12);
 }
 
+TEST(SyncedPipelineTest, APropagatedBreakClosesBothTracksOnTheSamePicture)
+{
+	// A break propagated from another track reaches both video tracks just
+	// before a picture both have a keyframe on. Each closes at that keyframe,
+	// so the discontinuity lands on the same segment number and the segment
+	// after it opens on the same picture, the reorder skew notwithstanding.
+	const int64_t reference_delay_ms = 33;
+	const int64_t synced_delay_ms = 67;
+	const int64_t break_ms = 6900;
+	auto pair = MakeVideoPair();
+
+	bool requested = false;
+	for (int64_t index = 0; 1000 + index * 100 / 3 < 20000; index++)
+	{
+		const int64_t pts = 1000 + index * 100 / 3;
+		const int64_t duration = 1000 + (index + 1) * 100 / 3 - pts;
+
+		if (requested == false && pts >= break_ms - 500)
+		{
+			pair.reference_policy->RequestDiscontinuity(break_ms * 1000);
+			pair.synced.policy->RequestDiscontinuity(break_ms * 1000);
+			requested = true;
+		}
+
+		ASSERT_TRUE(pair.reference.packager->AppendSample(fmp4_test::MakeVideoFrame(0, pts - reference_delay_ms, duration, (index % kGopFrames) == 0, pts)));
+		ASSERT_TRUE(pair.synced.packager->AppendSample(fmp4_test::MakeVideoFrame(1, pts - synced_delay_ms, duration, (index % (kGopFrames * 2)) == 0, pts)));
+	}
+
+	auto first_break_segment = [](const TrackPipeline &pipeline) -> int64_t {
+		for (int64_t number = 0; number <= pipeline.storage->GetLastSegmentNumber(); number++)
+		{
+			auto segment = pipeline.storage->GetSegment(number);
+			if (segment != nullptr && segment->IsDiscontinuityPoint() == true)
+			{
+				return number;
+			}
+		}
+		return -1;
+	};
+
+	int64_t reference_break = first_break_segment(pair.reference);
+	int64_t synced_break = first_break_segment(pair.synced);
+	ASSERT_GE(reference_break, 0);
+	EXPECT_EQ(reference_break, synced_break);
+
+	for (int64_t number = 1; number <= pair.reference.storage->GetLastSegmentNumber(); number++)
+	{
+		auto reference_segment = pair.reference.storage->GetSegment(number);
+		auto synced_segment = pair.synced.storage->GetSegment(number);
+		if (reference_segment == nullptr || synced_segment == nullptr || synced_segment->IsCompleted() == false)
+		{
+			continue;
+		}
+
+		EXPECT_EQ(reference_segment->GetStartTimestamp() + reference_delay_ms, synced_segment->GetStartTimestamp() + synced_delay_ms) << "segment " << number;
+	}
+
+	auto break_segment = pair.synced.storage->GetSegment(synced_break);
+	ASSERT_NE(break_segment, nullptr);
+	EXPECT_EQ(break_segment->GetStartTimestamp() + synced_delay_ms, 7000);
+}
+
 TEST(SyncedPipelineTest, SyncedVideoOnAShiftedFrameGridStaysAligned)
 {
 	// A frame rate conversion re-times the synced track a few ms off the
