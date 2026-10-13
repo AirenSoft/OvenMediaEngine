@@ -58,6 +58,31 @@ UseTab: Always
 #     AcrossEmptyLinesAndComments
 AlignConsecutiveAssignments: AcrossEmptyLinesAndComments
 
+# Style of aligning consecutive short case labels. Only applies if `AllowShortCaseExpressionOnASingleLine` or `AllowShortCaseLabelsOnASingleLine` is true.
+# 
+# Nested configuration flags:
+# 
+# Alignment options.
+# 
+#     bool Enabled            Whether aligning is enabled.
+#     bool AcrossEmptyLines   Whether to align across empty lines.
+#     bool AcrossComments     Whether to align across comments.
+#     bool AlignCaseArrows    Whether to align the case arrows when aligning short case expressions.
+#     bool AlignCaseColons    Whether aligned case labels are aligned on the colon, or on the tokens
+#                             after the colon.
+# 
+#     AlignCaseColons: false          vs.     AlignCaseColons: true
+#     switch (level) {                        switch (level) {
+#     case log::info:    return 0;            case log::info   : return 0;
+#     case log::warning: return 1;            case log::warning: return 1;
+#     default:           return 2;            default          : return 2;
+#     }                                       }
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+  AlignCaseColons: false
+
 # Options for aligning backslashes in escaped newlines.
 # 
 # Possible values:
@@ -80,6 +105,18 @@ AlignConsecutiveAssignments: AcrossEmptyLinesAndComments
 #           int b;                                                                       \
 #           int dddddddddd;
 AlignEscapedNewlines: Left
+
+# If true, short case labels will be contracted to a single line.
+# 
+# true:                                   false:
+# switch (a) {                    vs.     switch (a) {
+# case 1: x = 1; break;                   case 1:
+# case 2: return;                           x = 1;
+# }                                         break;
+#                                         case 2:
+#                                           return;
+#                                         }
+AllowShortCaseLabelsOnASingleLine: 'true'
 
 # Dependent on the value, int f() { return 0; } can be put on a single line.
 # 
