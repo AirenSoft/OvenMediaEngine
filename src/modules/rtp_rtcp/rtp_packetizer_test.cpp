@@ -28,8 +28,8 @@ namespace
 	};
 }  // namespace
 
-// `RtpFrameBoundaryDetector` runs in `RtpRtcp::OnRtpReceived()`, so it never sees a packet this
-// side makes. Without the packetizer setting them, every sent packet answers `false` to both.
+// `RtpFrameBoundaryDetector` runs in `RtpRtcp::OnRtpReceived()`, so it never sees a packet made here.
+// The packetizer marks both boundaries itself: the first at `i == 0`, the last on the final fragment.
 TEST(RtpPacketizerFrameBoundary, AVideoFrameIsMarkedAtItsFirstAndLastPacket)
 {
 	auto session = std::make_shared<CollectingSession>();
