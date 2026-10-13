@@ -106,14 +106,6 @@ namespace bmff
 			return true;
 		}
 
-		// (decision) Whether a part may end inside a mini-GOP, with samples that
-		// display earlier still buffered. No HLS rule forbids it; only players
-		// that measure the presentation span against the declared duration notice.
-		virtual bool AllowsPartCutsInsideMiniGop() const
-		{
-			return true;
-		}
-
 		// (input) Validate a marker against the pending chain (OUT opens, IN
 		// closes, a break spans at least one cadence). A position already passed
 		// is accepted up to one segment late.

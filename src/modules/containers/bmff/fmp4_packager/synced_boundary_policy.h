@@ -103,12 +103,6 @@ namespace bmff
 		// the boundary that cut publishes would let a synced track emit past it.
 		void OnMediaChunk(int64_t start_timestamp_us, int64_t duration_us, bool independent, bool last_chunk) override;
 
-		// Parts stay whole across mini-GOPs on every track of a synced stream
-		bool AllowsPartCutsInsideMiniGop() const override
-		{
-			return false;
-		}
-
 		// The feed the synced policies of the stream follow; created and owned
 		// by this reference
 		std::shared_ptr<const BoundaryFeed> GetBoundaryFeed() const;
@@ -158,12 +152,6 @@ namespace bmff
 		// A synced track receives its markers relayed on the boundaries the
 		// reference realized
 		bool AcceptsMarkers() const override
-		{
-			return false;
-		}
-
-		// Parts stay whole across mini-GOPs on every track of a synced stream
-		bool AllowsPartCutsInsideMiniGop() const override
 		{
 			return false;
 		}

@@ -125,10 +125,9 @@ namespace fmp4_test
 		return nullptr;
 	}
 
-	// A 10 fps feed with a P B B mini-GOP after each keyframe: decode order
-	// I P B B P B B ..., each P displaying after the two B frames that follow it
+	// A 10 fps feed with B-frames: decode order I P B B P B B ..., each P
+	// displaying after the two B frames that follow it
 	constexpr int64_t kReorderFrameMs = 100;
-	constexpr int64_t kReorderMiniGopMs = 300;
 	constexpr int64_t kReorderGopMs = 4000;	// 40 frames
 	constexpr double kReorderFrameRate = 10.0;
 
@@ -160,9 +159,10 @@ namespace fmp4_test
 		return MakeVideoFrame(track_id, dts, kReorderFrameMs, keyframe, pts);
 	}
 
-	// Every part of every completed segment starts where a mini-GOP of the
-	// reordered feed ends: at the GOP start, or one frame past a group start
-	inline void ExpectPartsEndOnMiniGopBoundaries(const TrackPipeline &pipeline, int min_partials)
+	// Every part of every completed segment keeps to the spec: never longer
+	// than the part target, and never shorter than 85% of it unless it is
+	// independent or closes its segment (rfc8216bis 4.4.4.9)
+	inline void ExpectPartsWithinSpec(const TrackPipeline &pipeline, double chunk_duration_ms, int min_partials)
 	{
 		int checked_partials = 0;
 
@@ -179,9 +179,16 @@ namespace fmp4_test
 				auto partial = segment->GetPartialSegment(index);
 				ASSERT_NE(partial, nullptr);
 
-				int64_t local_offset = partial->GetStartTimestamp() % kReorderGopMs;
-				EXPECT_TRUE(local_offset == 0 || (local_offset % kReorderMiniGopMs) == kReorderFrameMs)
-					<< "the partial at " << partial->GetStartTimestamp() << " splits a mini-GOP";
+				EXPECT_LE(partial->GetDurationMs(), chunk_duration_ms + 1.0)
+					<< "the partial at " << partial->GetStartTimestamp() << " exceeds the part target";
+
+				bool final_part = (index + 1 == segment->GetPartialCount());
+				if (partial->IsIndependent() == false && final_part == false)
+				{
+					EXPECT_GE(partial->GetDurationMs(), chunk_duration_ms * 0.85 - 1.0)
+						<< "the partial at " << partial->GetStartTimestamp() << " is under the 85% floor";
+				}
+
 				checked_partials++;
 			}
 		}

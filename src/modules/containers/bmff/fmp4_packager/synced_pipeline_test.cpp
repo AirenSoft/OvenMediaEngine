@@ -193,11 +193,10 @@ TEST(SyncedPipelineTest, AudioDeliveredAheadStaysAligned)
 	ExpectAlignedSegments(rig, 12);
 }
 
-TEST(SyncedPipelineTest, ReferencePartsEndOnMiniGopBoundaries)
+TEST(SyncedPipelineTest, ReferencePartsStayWithinSpecThroughReordering)
 {
-	// The reference cuts its parts on the duration cadence but keeps them out
-	// of the mini-GOP interior: a cut that would land after a P still waiting
-	// for its B frames moves back to where the reordering had resolved
+	// The reference cuts its parts on the duration cadence whatever the
+	// reordering of the feed, and every part keeps to the spec limits
 	auto track = fmp4_test::MakeReorderedVideoTrack(0);
 
 	bmff::SegmentBoundaryPolicy::Config config;
@@ -213,14 +212,14 @@ TEST(SyncedPipelineTest, ReferencePartsEndOnMiniGopBoundaries)
 		ASSERT_TRUE(pipeline.packager->AppendSample(fmp4_test::MakeReorderedVideoFrame(0, index)));
 	}
 
-	fmp4_test::ExpectPartsEndOnMiniGopBoundaries(pipeline, 20);
+	fmp4_test::ExpectPartsWithinSpec(pipeline, kChunkDurationMs, 20);
 }
 
-TEST(SyncedPipelineTest, SyncedPartsEndOnMiniGopBoundaries)
+TEST(SyncedPipelineTest, SyncedPartsStayWithinSpecThroughReordering)
 {
 	// A synced video track follows the reference's progress, so it emits from
-	// a backlog in part-sized slices. A slice that would end inside a mini-GOP
-	// moves back to where the reordering had resolved, like a cadence cut.
+	// a backlog in part-sized slices; every slice keeps to the spec limits
+	// whatever the reordering of the feed
 	auto observer = std::make_shared<fmp4_test::NullStorageObserver>();
 
 	bmff::SegmentBoundaryPolicy::Config policy_config;
@@ -261,7 +260,7 @@ TEST(SyncedPipelineTest, SyncedPartsEndOnMiniGopBoundaries)
 		}
 	}
 
-	fmp4_test::ExpectPartsEndOnMiniGopBoundaries(synced, 20);
+	fmp4_test::ExpectPartsWithinSpec(synced, kChunkDurationMs, 20);
 }
 
 namespace

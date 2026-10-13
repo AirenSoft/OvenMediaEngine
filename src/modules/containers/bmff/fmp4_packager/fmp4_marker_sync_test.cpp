@@ -683,12 +683,11 @@ TEST(MarkerPolicyTest, EveryTrackCarriesEveryMarkerInDurationMode)
 // Emission timing robustness
 //------------------------------------------------------------------------------
 
-TEST(EmissionTimingTest, PartsCutAtTheTargetInsideAMiniGop)
+TEST(EmissionTimingTest, PartsCutAtTheTargetThroughReordering)
 {
 	// Decode order I P B B: a part cut right after the P emits a frame that
-	// displays after the B frames still buffered. The duration policy cuts
-	// there anyway: parts end on the part target whatever the reordering of
-	// the feed, as they did before the boundary policies.
+	// displays after the B frames still buffered. Parts end on the part target
+	// whatever the reordering of the feed, as they always did.
 	auto track = fmp4_test::MakeReorderedVideoTrack(0);
 	auto policy = std::make_shared<bmff::DurationBoundaryPolicy>(MakeConfig(), false);
 	auto pipeline = fmp4_test::MakePipeline(track, std::make_shared<fmp4_test::NullStorageObserver>(), policy,

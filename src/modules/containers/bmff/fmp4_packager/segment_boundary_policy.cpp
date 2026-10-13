@@ -767,52 +767,6 @@ namespace bmff
 			}
 		}
 
-		// A part cut inside a mini-GOP covers different presentation time than
-		// its declared duration says, and players that compare the two (Shaka)
-		// report the mismatch. Where the policy forbids such cuts, the cut moves
-		// back to the last position where the reordering had resolved; the
-		// samples left behind ride the next part. An immediate marker cut is
-		// exempt: it cuts exactly where asked.
-		if (AllowsPartCutsInsideMiniGop() == false && no_marker == true &&
-			completed_by_split == false && emit_count > 1)
-		{
-			// The lowest presentation timestamp from each position on, to test a
-			// candidate cut against everything it would keep: the samples past
-			// the emit window stay behind as well, and so does the arriving
-			// frame, and a cut that displays after any of them is the overlap
-			// this block exists to prevent
-			const size_t buffered_count = sample_list.size();
-			std::vector<int64_t> lowest_kept_pts_us(buffered_count + 1, next_frame.pts_us);
-			for (size_t index = buffered_count; index-- > 0;)
-			{
-				lowest_kept_pts_us[index] = std::min(lowest_kept_pts_us[index + 1], sample_list[index].timing.pts_us);
-			}
-
-			// The last position in the window where everything emitted displays
-			// before everything kept. The window end is a candidate too, so a
-			// window that is already clean goes out as planned.
-			size_t resolved_count = 0;
-			int64_t highest_emitted_pts_us = sample_list[0].timing.pts_us;
-			for (size_t index = 0; index < emit_count; index++)
-			{
-				highest_emitted_pts_us = std::max(highest_emitted_pts_us, sample_list[index].timing.pts_us);
-
-				if (highest_emitted_pts_us < lowest_kept_pts_us[index + 1])
-				{
-					resolved_count = index + 1;
-				}
-			}
-
-			// However short the resolved prefix is, it goes out on its own: a
-			// part that covers a different stretch of presentation time than it
-			// declares is worse than a short one
-			if (resolved_count > 0 && resolved_count < emit_count)
-			{
-				emit_count = resolved_count;
-				can_be_last_chunk = false;
-			}
-		}
-
 		decision.emit_count = emit_count;
 		decision.completes_segment = (can_be_last_chunk == true && next_frame.independent == true) ||
 									 (marker_cut_now == true) || (completed_by_split == true);
