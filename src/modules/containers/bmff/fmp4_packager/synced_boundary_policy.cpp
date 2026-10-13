@@ -456,8 +456,9 @@ namespace bmff
 
 		// A keyframe-cutting track ends its segments at the keyframe nearest to
 		// a boundary, so it realizes the boundary its end is nearer to than to
-		// the previous one. The previous one is the last consumed boundary, or
-		// where this segment started when none was consumed yet.
+		// the previous one, the midpoint included: the plan may settle on a
+		// keyframe exactly there. The previous one is the last consumed
+		// boundary, or where this segment started when none was consumed yet.
 		int64_t previous_us = completed.start_timestamp_us;
 		if (auto previous = _boundary_feed->GetBoundary(cursor); previous.has_value() == true)
 		{
@@ -475,7 +476,7 @@ namespace bmff
 			bool realized;
 			if (_cuts_only_at_keyframes == true)
 			{
-				realized = (std::llabs(boundary->timestamp_us - segment_end_us) < std::llabs(segment_end_us - previous_us));
+				realized = (std::llabs(boundary->timestamp_us - segment_end_us) <= std::llabs(segment_end_us - previous_us));
 			}
 			else
 			{
