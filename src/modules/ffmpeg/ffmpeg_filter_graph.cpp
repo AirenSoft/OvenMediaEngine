@@ -81,7 +81,15 @@ namespace ffmpeg
 	bool FFmpegFilterGraph::Parse(const ov::String &filter_desc)
 	{
 		_last_error = ::avfilter_graph_parse_ptr(_filter_graph, filter_desc.CStr(), &_inputs, &_outputs, nullptr);
-		return _last_error >= 0;
+		if (_last_error < 0)
+		{
+			// On failure FFmpeg frees every filter in the graph, the buffer source and sink included
+			_buffersrc_ctx	= nullptr;
+			_buffersink_ctx = nullptr;
+			return false;
+		}
+
+		return true;
 	}
 
 	bool FFmpegFilterGraph::Config()
