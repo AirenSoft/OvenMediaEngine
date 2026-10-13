@@ -65,7 +65,9 @@ To publish thumbnails, you need to set up an encoding profile. You can choose **
 </OutputProfiles>
 ```
 
-<table><thead><tr><th width="290">Property</th><th>Description</th></tr></thead><tbody><tr><td>Codec</td><td>Specifies the image codec to use</td></tr><tr><td>Width</td><td>Width of resolution</td></tr><tr><td>Height</td><td>Height of resolution</td></tr><tr><td>Framerate</td><td>Frames per second</td></tr></tbody></table>
+<table><thead><tr><th width="290">Property</th><th>Description</th></tr></thead><tbody><tr><td>Codec</td><td>Specifies the image codec to use</td></tr><tr><td>Width</td><td>Width of resolution</td></tr><tr><td>Height</td><td>Height of resolution</td></tr><tr><td>ScaleMode</td><td>How the input is fitted into the resolution when the aspect ratios differ (fit, crop, stretch)<br />default is stretch</td></tr><tr><td>Framerate</td><td>Frames per second</td></tr></tbody></table>
+
+See [Scale Mode](transcoding/output-profile.md#scale-mode) for how each ScaleMode works.
 
 #### Supported image codecs
 
