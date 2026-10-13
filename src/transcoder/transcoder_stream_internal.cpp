@@ -718,7 +718,7 @@ void TranscoderStreamInternal::UpdateOutputVideoTrackByDecodedFrame(const std::s
 	// Update Output resolution
 	auto output_resolution = output_track->GetResolution();
 	if (output_resolution.width > 0 && output_resolution.height > 0 &&
-		output_resolution.width % 4 == 0 && output_resolution.height % 4 == 0)
+		output_resolution.width % 2 == 0 && output_resolution.height % 2 == 0)
 	{
 		// The output resolution is already set. It should be maintained until the stream end.
 		logtt("Resolution is not changed. %dx%d", output_resolution.width, output_resolution.height);
@@ -1029,27 +1029,26 @@ void TranscoderStreamInternal::GetCountByEncodingType(
 	}
 }
 
-// To be compatible with all hardware. The encoding resolution must be a multiple
-// In particular, Xilinx Media Accelerator must have a resolution specified in multiples of 4.
+// 4:2:0 encoders need an even width and height
 cmn::Resolution TranscoderStreamInternal::GetAlignmentResolution(const cmn::Resolution &resolution)
 {
 	auto aligned = resolution;
 
-	if (aligned.width % 4 != 0)
+	if (aligned.width % 2 != 0)
 	{
-		int32_t new_width = (aligned.width / 4 + 1) * 4;
+		int32_t new_width = aligned.width + 1;
 
-		logtw("The width of the output track is not a multiple of 4. change the width to %d -> %d",
+		logtw("The width of the output track is not a multiple of 2. change the width to %d -> %d",
 			  aligned.width, new_width);
 
 		aligned.width = new_width;
 	}
 
-	if (aligned.height % 4 != 0)
+	if (aligned.height % 2 != 0)
 	{
-		int32_t new_height = (aligned.height / 4 + 1) * 4;
+		int32_t new_height = aligned.height + 1;
 
-		logtw("The height of the output track is not a multiple of 4. change the height to %d -> %d",
+		logtw("The height of the output track is not a multiple of 2. change the height to %d -> %d",
 			  aligned.height, new_height);
 
 		aligned.height = new_height;
