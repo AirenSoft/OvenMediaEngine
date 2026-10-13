@@ -64,9 +64,14 @@ bool FilterLavfiRescaler::BuildDescription(ov::String &desc)
 		}
 	}
 
-	// Scaler description of default module
-	auto resolution = _output_track->GetResolution();
-	desc += ov::String::FormatString("scale=%dx%d:flags=bilinear", resolution.width, resolution.height);
+	_geometry = ScaleGeometry::Compute(_input_track->GetResolution(), _output_track->GetResolution(), _output_track->GetScaleModeByConfig());
+
+	if (_geometry.HasCrop())
+	{
+		desc += ov::String::FormatString("crop=%d:%d:%d:%d,", _geometry.src.width, _geometry.src.height, _geometry.src.x, _geometry.src.y);
+	}
+
+	desc += ov::String::FormatString("scale=%dx%d:flags=bilinear", _geometry.dst.width, _geometry.dst.height);
 
 	return true;
 }
@@ -229,6 +234,8 @@ void FilterLavfiRescaler::Uninitialize()
 
 	_graph.Release();
 
+	_canvas.Release();
+
 	_fps_filter.Clear();
 
 	SetState(State::STOPPED);
@@ -323,6 +330,16 @@ std::shared_ptr<MediaFrame> FilterLavfiRescaler::ReceiveFrame()
 			continue;
 		}
 
+		if (_geometry.HasPadding())
+		{
+			output_frame = CopyToCanvas(output_frame);
+			if (output_frame == nullptr)
+			{
+				SetState(State::ERROR);
+				return nullptr;
+			}
+		}
+
 		output_frame->SetSourceId(_source_id);
 
 #if _SIMULATE_PROCESSING_DELAY_ENABLED
@@ -339,4 +356,22 @@ std::shared_ptr<MediaFrame> FilterLavfiRescaler::ReceiveFrame()
 
 		return output_frame;
 	}
+}
+
+std::shared_ptr<MediaFrame> FilterLavfiRescaler::CopyToCanvas(const std::shared_ptr<MediaFrame> &scaled_frame)
+{
+	const auto &rect = _geometry.dst;
+	if (scaled_frame->GetWidth() != rect.width || scaled_frame->GetHeight() != rect.height)
+	{
+		logte("[%s] The scaled frame is %dx%d, expected %dx%d", GetLogPrefix().CStr(), scaled_frame->GetWidth(), scaled_frame->GetHeight(), rect.width, rect.height);
+		return nullptr;
+	}
+
+	auto output_frame = _canvas.Place(scaled_frame, _geometry.output.width, _geometry.output.height, rect.x, rect.y);
+	if (output_frame == nullptr)
+	{
+		logte("[%s] Could not place the scaled frame on the output frame: %s", GetLogPrefix().CStr(), _canvas.GetLastErrorString().CStr());
+	}
+
+	return output_frame;
 }
