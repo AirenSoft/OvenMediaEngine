@@ -56,6 +56,7 @@ namespace pvd
 
 		// Writes the origin timings measured by the latest `StartStream()` to the stream metrics.
 		// `PullApplication` calls it once the stream is registered with monitoring, after `StartStream()` returns.
+		// A call that finds no metrics object leaves the measurement pending for the next one.
 		void RecordOriginTimings();
 
 	protected:

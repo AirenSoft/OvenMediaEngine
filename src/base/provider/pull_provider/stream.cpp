@@ -170,17 +170,26 @@ namespace pvd
 
 	void PullStream::RecordOriginTimings()
 	{
+		if (_origin_timings_pending.load() == false)
+		{
+			return;
+		}
+
+		// The metrics object is looked up before the flag is closed. A stream whose registration with
+		// monitoring did not happen keeps its measurement for the next call instead of losing it.
+		auto stream_metrics = StreamMetrics(*this);
+		if (stream_metrics == nullptr)
+		{
+			return;
+		}
+
 		if (_origin_timings_pending.exchange(false) == false)
 		{
 			return;
 		}
 
-		auto stream_metrics = StreamMetrics(*this);
-		if (stream_metrics != nullptr)
-		{
-			stream_metrics->SetOriginConnectionTimeMSec(_origin_connection_time_msec);
-			stream_metrics->SetOriginSubscribeTimeMSec(_origin_subscribe_time_msec);
-		}
+		stream_metrics->SetOriginConnectionTimeMSec(_origin_connection_time_msec);
+		stream_metrics->SetOriginSubscribeTimeMSec(_origin_subscribe_time_msec);
 	}
 
 	const std::shared_ptr<const ov::Url> PullStream::GetNextURL()
