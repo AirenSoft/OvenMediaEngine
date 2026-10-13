@@ -35,11 +35,9 @@ namespace cfg
 					// StepMs: how many ms of new audio to collect before running inference (default 2000).
 					// LengthMs: total audio window passed to Whisper per inference call (default 10000).
 					// KeepMs: audio overlap carried over from the previous window after a context reset (default 1500).
-					// AudioContextMs: audio length the Whisper encoder runs over per inference call (default -1 = auto, sized from the window).
 					int32_t _step_ms = 2000;
 					int32_t _length_ms = 10000;
 					int32_t _keep_ms = 1500;
-					int32_t _audio_context_ms = -1;
 					// Number of CPU threads to use for inference on this rendition
 					// (same key as <Video><ThreadCount>). 0 selects a default derived
 					// from the number of hardware threads.
@@ -59,7 +57,6 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetStepMs, _step_ms)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetLengthMs, _length_ms)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetKeepMs, _keep_ms)
-					CFG_DECLARE_CONST_REF_GETTER_OF(GetAudioContextMs, _audio_context_ms)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetThreadCount, _thread_count)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetModules, _modules)
 
@@ -75,7 +72,6 @@ namespace cfg
 						Register<Optional>("StepMs", &_step_ms);
 						Register<Optional>("LengthMs", &_length_ms);
 						Register<Optional>("KeepMs", &_keep_ms);
-						Register<Optional>("AudioContextMs", &_audio_context_ms);
 						Register<Optional>("ThreadCount", &_thread_count);
 						Register<Optional>("Modules", &_modules);
 					}

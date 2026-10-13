@@ -91,7 +91,7 @@ ov::String TranscoderStreamInternal::ProfileToSerialize(const uint32_t track_id,
 
 ov::String TranscoderStreamInternal::ProfileToSerialize(const uint32_t track_id, const cfg::vhost::app::oprf::SpeechToTextProfile &profile)
 {
-	return ov::String::FormatString("I=%d,O=%s:%s:%d:%d:%s:%s:%d:%d:%d:%d:%d",
+	return ov::String::FormatString("I=%d,O=%s:%s:%d:%d:%s:%s:%d:%d:%d:%d",
 									track_id,
 									profile.GetEngine().CStr(),
 									profile.GetModel().CStr(),
@@ -102,7 +102,6 @@ ov::String TranscoderStreamInternal::ProfileToSerialize(const uint32_t track_id,
 									profile.GetStepMs(),
 									profile.GetLengthMs(),
 									profile.GetKeepMs(),
-									profile.GetAudioContextMs(),
 									profile.GetThreadCount());
 }
 
@@ -438,7 +437,6 @@ std::shared_ptr<MediaTrack> TranscoderStreamInternal::CreateOutputTrack(const st
 	output_track->SetStepMs(profile.GetStepMs());
 	output_track->SetLengthMs(profile.GetLengthMs());
 	output_track->SetKeepMs(profile.GetKeepMs());
-	output_track->SetAudioContextMs(profile.GetAudioContextMs());
 	output_track->SetThreadCount(profile.GetThreadCount());
 	output_track->SetSttEnabled(profile.IsSttEnabled());
 

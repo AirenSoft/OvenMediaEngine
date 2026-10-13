@@ -97,8 +97,5 @@ int32_t SubtitleTrack::GetLengthMs() const { return _length_ms; }
 void SubtitleTrack::SetKeepMs(int32_t keep_ms) { _keep_ms = keep_ms; }
 int32_t SubtitleTrack::GetKeepMs() const { return _keep_ms; }
 
-void SubtitleTrack::SetAudioContextMs(int32_t audio_context_ms) { _audio_context_ms = audio_context_ms; }
-int32_t SubtitleTrack::GetAudioContextMs() const { return _audio_context_ms; }
-
 void SubtitleTrack::SetSttEnabled(bool enabled) { _stt_enabled = enabled; }
 bool SubtitleTrack::IsSttEnabled() const { return _stt_enabled; }

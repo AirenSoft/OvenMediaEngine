@@ -120,9 +120,9 @@ private:
 	int32_t _n_new_lines = 4;
 	// Longest window ThreadLoop builds, in ms (computed and validated in Configure).
 	int32_t _max_window_ms = 9500;
-	// Encoder context: AudioContextMs (sized from the window or raised to cover it, in
-	// Configure) and the audio_ctx passed to every call (positions of 20 ms, 0 = full 30 s).
-	int32_t _audio_context_ms = -1;
+	// Encoder context, sized from the longest window in Configure (ms), and the audio_ctx
+	// passed to every call (positions of 20 ms, 0 = full 30 s).
+	int32_t _context_ms = 0;
 	int32_t _audio_ctx = 0;
         // Shared model weights: owned by WhisperModelRegistry, reference-counted here.
         std::shared_ptr<whisper_context> _whisper_ctx;

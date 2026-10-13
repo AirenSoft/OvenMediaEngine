@@ -687,7 +687,6 @@ size_t TranscoderStream::CreateOutputStreams()
 			speech_to_text_profile.SetStepMs(stt_rendition.GetStepMs());
 			speech_to_text_profile.SetLengthMs(stt_rendition.GetLengthMs());
 			speech_to_text_profile.SetKeepMs(stt_rendition.GetKeepMs());
-			speech_to_text_profile.SetAudioContextMs(stt_rendition.GetAudioContextMs());
 			speech_to_text_profile.SetThreadCount(stt_rendition.GetThreadCount());
 			// Whisper runs on the CPU. A hardware selection left over from a GPU
 			// configuration (<Modules>nv:0</Modules>) is accepted but not passed

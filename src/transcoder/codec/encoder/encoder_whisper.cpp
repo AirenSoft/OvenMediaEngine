@@ -19,22 +19,22 @@
 #include <vector>
 
 // Room left after the longest sliding window, below Whisper's 30 s input and below the
-// encoder context (see Configure).
-static constexpr int64_t kMaxWindowMarginMs = 1000;
+// encoder context (see Configure). It covers the whole-frame overshoot of a typical cycle
+// (up to one input frame per step); the run-time limit in ThreadLoop covers the rest.
+static constexpr int64_t kMaxWindowMarginMs = 200;
 // Audio covered by one Whisper encoder position (the unit of audio_ctx): two 10 ms mel frames.
 static constexpr int64_t kAudioCtxPositionMs = 20;
-// AudioContextMs value (and default) that sizes the encoder context from the window.
-static constexpr int32_t kAudioContextAuto = -1;
-// Automatic context: whole multiples of kAutoCtxAlignPositions (with flash attention the
+// Encoder context: whole multiples of kAutoCtxAlignPositions (with flash attention the
 // decoder's cross-attention reads the context padded to 256 positions in any case), and
-// no smaller than kAutoCtxMinPositions, because accuracy drops faster below it (measured
-// on one test stream: precision 89.8% at 768, 87.1% at 541, 90.9% at the full 1500).
-// The cost of the context depends on the device: on a GPU 541 saved little over 768
-// (GPU use 17% against 18%), while on the CPU the time of a call grows roughly with the
-// context (measured with 5 threads, median per call: 0.60 s at 240, 1.56 s at 541,
-// 2.07 s at 768).
+// no smaller than kAutoCtxMinPositions. The default window (9.5 s) lands on 512, which
+// keeps up on the CPU; 768 gains about one point but is slower than real time there.
+// Measured on one test stream with the small model on the CPU (median per call, 2 s step):
+// - default window: 1.32 s at 512 and 2.08 s at 768 with 5 threads, 1.56 s at 512 with 4;
+//   precision 78.9% at 512 against 80.0% at 768 (8 threads, so that 768 kept up).
+// - 3.5 s window: 256 lost 4.7 points of precision against 512 (70.8% against 75.5%) and
+//   had calls of up to 13.9 s; 512 already keeps up on that window.
 static constexpr int64_t kAutoCtxAlignPositions = 256;
-static constexpr int64_t kAutoCtxMinPositions = 768;
+static constexpr int64_t kAutoCtxMinPositions = 512;
 
 // A decoding loop repeats one phrase back to back ("No, no, no, ..." for hundreds of
 // characters, or a whole sentence over and over). Every run of a phrase of up to
@@ -282,7 +282,6 @@ bool EncoderWhisper::Configure(std::shared_ptr<MediaTrack> context)
 	_step_ms = context->GetStepMs();
 	_length_ms = context->GetLengthMs();
 	_keep_ms = context->GetKeepMs();
-	_audio_context_ms = context->GetAudioContextMs();
 
 	// Reject window settings that ThreadLoop cannot run. The configuration accepts any
 	// integer, and some values would otherwise crash the whole process instead of
@@ -302,10 +301,6 @@ bool EncoderWhisper::Configure(std::shared_ptr<MediaTrack> context)
 		// KeepMs is a length of audio, so a negative value has no meaning. (The original
 		// cycle reset read past the end of the buffer with it.)
 		invalid_reason = "KeepMs must not be negative.";
-	}
-	else if ((_audio_context_ms <= 0) && (_audio_context_ms != kAudioContextAuto))
-	{
-		invalid_reason = "AudioContextMs must be -1 (auto) or greater than 0.";
 	}
 	else
 	{
@@ -343,9 +338,9 @@ bool EncoderWhisper::Configure(std::shared_ptr<MediaTrack> context)
 
 	if (invalid_reason.IsEmpty() == false)
 	{
-		logte("Invalid Whisper sliding window. stream=%s, track_id=%d, label=%s, step_ms=%d, length_ms=%d, keep_ms=%d, audio_context_ms=%d: %s STT track will be disabled.",
+		logte("Invalid Whisper sliding window. stream=%s, track_id=%d, label=%s, step_ms=%d, length_ms=%d, keep_ms=%d: %s STT track will be disabled.",
 			  _stream_info.GetName().CStr(), context->GetId(), context->GetOutputTrackLabel().CStr(),
-			  _step_ms, _length_ms, _keep_ms, _audio_context_ms, invalid_reason.CStr());
+			  _step_ms, _length_ms, _keep_ms, invalid_reason.CStr());
 		return false;
 	}
 
@@ -353,42 +348,21 @@ bool EncoderWhisper::Configure(std::shared_ptr<MediaTrack> context)
 	// the encoder runs over. The full 30 s also runs it over the zero padding after the
 	// window; a shorter context saves that compute but costs accuracy (measured on one
 	// test stream: precision 90.9% at 30000 ms, 90.0% at 20480, 89.8% at 15360, 87.1% at
-	// 10820).
+	// 10820, a size that may also include the padding effect below).
 	// A window longer than the context does not fit: Whisper decodes the rest in another
 	// encoder pass, and the text past the context was measured to drop words, loop and
-	// hallucinate. So the context always covers the longest window plus the margin.
+	// hallucinate. So the context covers the longest window plus the margin, sized from the
+	// window alone: a longer window costs more compute and gives more accuracy. It is a
+	// whole multiple of 256 positions, the size the flash-attention path pads the cache
+	// to, so every cache entry the decoder reads was written by the same call (except for
+	// the full 1500, Whisper's own default, whose padding no call writes).
 	const int64_t min_context_ms = static_cast<int64_t>(_max_window_ms) + kMaxWindowMarginMs;
-	if (_audio_context_ms == kAudioContextAuto)
-	{
-		// Sized from the window: a longer window costs more compute and gives more accuracy.
-		const int64_t min_positions = (min_context_ms + kAudioCtxPositionMs - 1) / kAudioCtxPositionMs;
-		const int64_t positions = std::max(kAutoCtxMinPositions,
-										   (min_positions + kAutoCtxAlignPositions - 1) / kAutoCtxAlignPositions * kAutoCtxAlignPositions);
-		_audio_context_ms = static_cast<int32_t>(std::min(positions * kAudioCtxPositionMs, static_cast<int64_t>(WHISPER_CHUNK_SIZE) * 1000));
-		logti("Whisper AudioContextMs auto: %d ms for the longest window of %d ms. stream=%s, track_id=%d, label=%s",
-			  _audio_context_ms, _max_window_ms,
-			  _stream_info.GetName().CStr(), context->GetId(), context->GetOutputTrackLabel().CStr());
-	}
-	else if (_audio_context_ms < min_context_ms)
-	{
-		logtw("Whisper AudioContextMs %d ms is shorter than the longest window (%d ms) plus %" PRId64 " ms; using %" PRId64 " ms. stream=%s, track_id=%d, label=%s",
-			  _audio_context_ms, _max_window_ms, kMaxWindowMarginMs, min_context_ms,
-			  _stream_info.GetName().CStr(), context->GetId(), context->GetOutputTrackLabel().CStr());
-		_audio_context_ms = static_cast<int32_t>(min_context_ms);
-	}
-	else if (_audio_context_ms > WHISPER_CHUNK_SIZE * 1000)
-	{
-		// The encoder never sees more than Whisper's 30 s input, so a longer value means the
-		// full context; the log then shows the value actually used.
-		logtw("Whisper AudioContextMs %d ms is longer than Whisper's %d ms input; using %d ms. stream=%s, track_id=%d, label=%s",
-			  _audio_context_ms, WHISPER_CHUNK_SIZE * 1000, WHISPER_CHUNK_SIZE * 1000,
-			  _stream_info.GetName().CStr(), context->GetId(), context->GetOutputTrackLabel().CStr());
-		_audio_context_ms = WHISPER_CHUNK_SIZE * 1000;
-	}
-	// 0 is the model's full context (30 s); otherwise round up to whole positions.
-	_audio_ctx = (_audio_context_ms >= WHISPER_CHUNK_SIZE * 1000)
-					 ? 0
-					 : static_cast<int32_t>((_audio_context_ms + kAudioCtxPositionMs - 1) / kAudioCtxPositionMs);
+	const int64_t min_positions = (min_context_ms + kAudioCtxPositionMs - 1) / kAudioCtxPositionMs;
+	const int64_t positions = std::max(kAutoCtxMinPositions,
+									   (min_positions + kAutoCtxAlignPositions - 1) / kAutoCtxAlignPositions * kAutoCtxAlignPositions);
+	_context_ms = static_cast<int32_t>(std::min(positions * kAudioCtxPositionMs, static_cast<int64_t>(WHISPER_CHUNK_SIZE) * 1000));
+	// 0 is the model's full context (30 s).
+	_audio_ctx = (_context_ms >= WHISPER_CHUNK_SIZE * 1000) ? 0 : static_cast<int32_t>(_context_ms / kAudioCtxPositionMs);
 	// The window must also fit at run time. Each step collects whole input frames, so it
 	// overshoots StepMs by up to one frame, and that adds up over a cycle: more than the
 	// margin above with many steps per cycle and long frames (128 ms for 8 kHz AAC).
@@ -460,13 +434,12 @@ bool EncoderWhisper::Initialize()
 	// Window lengths fed to Whisper. The first window is one step of new audio (the
 	// buffer starts empty, and again after STT is re-enabled); windows then grow up
 	// to the computed maximum. audio_ctx is the encoder context actually used (in
-	// positions of 20 ms), from AudioContextMs as Configure set it: sized from the window
-	// (auto), or the configured value raised to cover the longest window.
-	logti("Whisper sliding window configured. stream=%s, track_id=%d, label=%s, step_ms=%d, length_ms=%d, keep_ms=%d, window_ms=%d~%d, audio_context_ms=%d, audio_ctx=%d",
+	// positions of 20 ms), sized from the longest window in Configure.
+	logti("Whisper sliding window configured. stream=%s, track_id=%d, label=%s, step_ms=%d, length_ms=%d, keep_ms=%d, window_ms=%d~%d, context_ms=%d, audio_ctx=%d",
 		  _stream_info.GetName().CStr(), _track->GetId(), _output_track_label.CStr(),
 		  _step_ms, _length_ms, _keep_ms,
 		  _step_ms, _max_window_ms,
-		  _audio_context_ms, (_audio_ctx > 0) ? _audio_ctx : whisper_model_n_audio_ctx(_whisper_ctx.get()));
+		  _context_ms, (_audio_ctx > 0) ? _audio_ctx : whisper_model_n_audio_ctx(_whisper_ctx.get()));
 
 	return true;
 }
@@ -759,7 +732,7 @@ void EncoderWhisper::ThreadLoop()
 		// wrong ones, but a call that retries can take longer than one step (measured on a
 		// GPU, worst cases: 2.9 s and 3.9 s).
 		wparams.temperature_inc = 0.2f;
-		// Encoder context from AudioContextMs (see Configure), the same for every call.
+		// Encoder context sized from the window (see Configure), the same for every call.
 		// Changing audio_ctx between calls on the same whisper_state was measured to
 		// corrupt the results (a call no longer matches a fresh-state run of the same
 		// window): the flash-attention path reads the cross-attention cache padded to 256
@@ -806,7 +779,7 @@ void EncoderWhisper::ThreadLoop()
 		if ((inference_ms > _step_ms) && _slow_inference_warn_gate.TryConsume())
 		{
 			logtw("Whisper inference is slower than real time (%" PRId64 " ms for a %d ms step) and subtitles will fall behind. "
-				  "Use a smaller model, raise <ThreadCount>, or reduce the number of concurrent STT tracks. "
+				  "Use a smaller model, raise <ThreadCount>, use a shorter <LengthMs> or <KeepMs>, or a longer <StepMs>, or reduce the number of concurrent STT tracks. "
 				  "stream=%s, track_id=%d, label=%s, model=%s, threads=%d",
 				  inference_ms, _step_ms,
 				  _stream_info.GetName().CStr(), _track->GetId(), _output_track_label.CStr(), _track->GetModel().CStr(), _n_threads);
