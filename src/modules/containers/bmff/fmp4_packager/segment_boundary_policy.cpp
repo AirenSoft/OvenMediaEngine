@@ -30,7 +30,6 @@ namespace bmff
 		: _segment_duration_us(static_cast<int64_t>(config.segment_duration_ms) * 1000),
 		  _chunk_duration_us(static_cast<int64_t>(config.chunk_duration_ms * 1000.0 + 0.5)),
 		  _cue_out_cut_mode(config.cue_out_cut_mode),
-		  _cuts_only_at_keyframes(config.cuts_only_at_keyframes),
 		  _log_context(config.log_context),
 		  _next_segment_number(config.initial_segment_number)
 	{
@@ -605,6 +604,14 @@ namespace bmff
 			}
 		}
 
+		// An immediate marker cut announced by the reference ends this track's
+		// segment at the boundary the same way, keyframe or not
+		if (boundary.marker_cut == true && (next_frame.dts_us >= boundary.end_us || buffer_end_us > boundary.end_us))
+		{
+			marker_cut_now = true;
+			marker_cut_us = boundary.end_us;
+		}
+
 		// Where the segment would end if it closed at the arriving frame. Sample
 		// durations are rounded to the source timebase, so their sum can fall a
 		// millisecond short of the plan while the position says otherwise; the
@@ -636,12 +643,28 @@ namespace bmff
 
 		bool no_marker = (marker_cut_now == false && marker_close_asap == false);
 
-		// A keyframe-cutting track ends its segment at the keyframe nearest to
-		// an exact boundary, before or after it: the same picture decodes at a
-		// different time on every rendition, so the boundary itself is rarely
-		// one of this track's keyframes
+		// In synced segmentation every video track carries the same picture at
+		// the same decode time, so an exact boundary falls on a keyframe of every
+		// track and the segment ends right there, as it does on audio and on an
+		// immediate marker cut. A track whose keyframes have drifted from that
+		// premise finds no keyframe at the boundary and cannot end there; it ends
+		// at its keyframe nearest to the boundary instead, before or after it, so
+		// the stream keeps playing. The sample at the boundary is the first one
+		// at or past the plan, the convention the split below follows.
 		KeyframeCut keyframe_cut;
-		if (_cuts_only_at_keyframes == true && boundary.exact == true && no_marker == true)
+		int64_t boundary_sample_us = next_frame.dts_us;
+		bool boundary_sample_independent = next_frame.independent;
+		for (const auto &sample : sample_list)
+		{
+			if (sample.timing.dts_us >= boundary.end_us)
+			{
+				boundary_sample_us = sample.timing.dts_us;
+				boundary_sample_independent = sample.timing.independent;
+				break;
+			}
+		}
+
+		if (boundary.exact == true && no_marker == true && next_frame.dts_us >= boundary.end_us && boundary_sample_independent == false)
 		{
 			keyframe_cut = PlanKeyframeCut(sample_list, next_frame, boundary.end_us, last_segment_duration_us);
 
@@ -718,11 +741,10 @@ namespace bmff
 				return decision;
 			}
 		}
-		// A track that cuts anywhere ends its segment at the boundary itself:
-		// the samples past it belong to the next segment, so the boundary lands
-		// exactly where the plan said. Never engages while cuts fire at the
-		// crossing frame (nothing accumulates past the plan then).
-		else if (_cuts_only_at_keyframes == false && can_be_last_chunk == true && no_marker == true && boundary.exact == true &&
+		// The samples past an exact boundary belong to the next segment, so the
+		// boundary lands exactly where the plan said. Never engages while cuts
+		// fire at the crossing frame (nothing accumulates past the plan then).
+		else if (can_be_last_chunk == true && no_marker == true && boundary.exact == true &&
 				 buffer_end_us > boundary.end_us)
 		{
 			size_t samples_before_boundary = 0;
@@ -780,6 +802,13 @@ namespace bmff
 		decision.emit_count = emit_count;
 		decision.completes_segment = (can_be_last_chunk == true && next_frame.independent == true) ||
 									 (marker_cut_now == true) || (completed_by_split == true);
+
+		if (keyframe_cut.decided == true && decision.completes_segment == true)
+		{
+			int64_t cut_us = (keyframe_cut.count < sample_list.size()) ? sample_list[keyframe_cut.count].timing.dts_us : next_frame.dts_us;
+			logtw("%s - The boundary at %.3f ms is not a keyframe on this track; the segment closes at the nearest keyframe (%.3f ms) instead",
+				  _log_context.CStr(), boundary_sample_us / 1000.0, cut_us / 1000.0);
+		}
 
 		// Last resort: no cuttable position appeared for twice the cadence, so
 		// the segment closes here rather than growing without bound

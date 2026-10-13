@@ -32,6 +32,10 @@ namespace bmff
 		// Whether end_us is the exact end or the aim to cut at or after
 		bool exact = false;
 
+		// An immediate marker cut decided elsewhere: the segment ends right at
+		// end_us on every track, keyframe or not
+		bool marker_cut = false;
+
 		// The name of the segment being accumulated
 		int64_t segment_number = -1;
 	};
@@ -82,10 +86,6 @@ namespace bmff
 			// The cadence this track can cut at (0 when it can cut anywhere).
 			// A break must be long enough to return from at that cadence.
 			double keyframe_interval_ms = 0.0;
-			// A track that cuts only at keyframes ends its segments at the
-			// keyframe nearest to an exact boundary, before or after it. A track
-			// that cuts anywhere ends them at the boundary itself.
-			bool cuts_only_at_keyframes = false;
 			// Where the numbering starts (server-time based numbering derives it
 			// from the wall clock)
 			int64_t initial_segment_number = 0;
@@ -231,15 +231,14 @@ namespace bmff
 		// saving.
 		int64_t _cut_cadence_us = 0;
 		LLHlsCueOutCutMode _cue_out_cut_mode = LLHlsCueOutCutMode::Keyframe;
-		bool _cuts_only_at_keyframes = false;
 		ov::String _log_context;
 
 		// The name of the segment accumulating now, advanced by the settlements
 		int64_t _next_segment_number = 0;
 
 	private:
-		// Where a keyframe-cutting track ends its segment against an exact
-		// boundary: the nearest keyframe, before or after the boundary
+		// Where a track ends its segment when the sample at an exact boundary
+		// is not one of its keyframes: the nearest keyframe, before or after it
 		struct KeyframeCut
 		{
 			// The keyframe is chosen; count samples go out ahead of it (the

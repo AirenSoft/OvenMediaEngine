@@ -276,7 +276,7 @@ namespace
 		TrackPipeline synced;
 	};
 
-	VideoPair MakeVideoPair()
+	VideoPair MakeVideoPair(LLHlsCueOutCutMode cue_out_cut_mode = LLHlsCueOutCutMode::Keyframe)
 	{
 		VideoPair pair;
 		auto observer = std::make_shared<fmp4_test::NullStorageObserver>();
@@ -284,7 +284,7 @@ namespace
 		bmff::SegmentBoundaryPolicy::Config policy_config;
 		policy_config.segment_duration_ms = static_cast<uint64_t>(kSegmentDurationMs);
 		policy_config.chunk_duration_ms = kChunkDurationMs;
-		policy_config.cuts_only_at_keyframes = true;
+		policy_config.cue_out_cut_mode = cue_out_cut_mode;
 
 		auto reference_config = policy_config;
 		reference_config.log_context = "synced_pipeline_test/reference";
@@ -302,9 +302,10 @@ namespace
 	}
 
 	VideoPair DriveVideoPair(int64_t reference_delay_ms, int64_t synced_delay_ms, int64_t total_duration_ms,
-							 const std::vector<int64_t> &cue_out_timestamps = {}, uint32_t cue_duration_ms = 0, int64_t synced_shift_ms = 0)
+							 const std::vector<int64_t> &cue_out_timestamps = {}, uint32_t cue_duration_ms = 0, int64_t synced_shift_ms = 0,
+							 LLHlsCueOutCutMode cue_out_cut_mode = LLHlsCueOutCutMode::Keyframe)
 	{
-		VideoPair pair = MakeVideoPair();
+		VideoPair pair = MakeVideoPair(cue_out_cut_mode);
 
 		// Picture i displays at 1000 + i * 100 / 3 on both tracks
 		size_t cue_index = 0;
@@ -666,6 +667,70 @@ TEST(SyncedPipelineTest, MarkersReachASyncedVideoWithALongerReorderDelay)
 			EXPECT_EQ(reference_markers[index].marker, synced_markers[index].marker) << "cue " << index;
 			EXPECT_NEAR(reference_markers[index].segment_end_ms + reference_delay_ms, synced_markers[index].segment_end_ms + synced_delay_ms, 1.0) << "cue " << index;
 		}
+	}
+}
+
+TEST(SyncedPipelineTest, SyncedVideoOnTheSameGridEndsEverySegmentOnTheBoundary)
+{
+	// The premise of synced segmentation: both video tracks carry the same
+	// picture at the same decode time with the same keyframe interval. Every
+	// boundary is then a keyframe on the synced track, and its segments end
+	// exactly where the reference's do.
+	const int64_t delay_ms = 33;
+	auto pair = MakeVideoPair();
+
+	for (int64_t index = 0; 1000 + index * 100 / 3 < 60000; index++)
+	{
+		const int64_t pts = 1000 + index * 100 / 3;
+		const int64_t duration = 1000 + (index + 1) * 100 / 3 - pts;
+		const bool keyframe = (index % kGopFrames) == 0;
+
+		ASSERT_TRUE(pair.reference.packager->AppendSample(fmp4_test::MakeVideoFrame(0, pts - delay_ms, duration, keyframe, pts)));
+		ASSERT_TRUE(pair.synced.packager->AppendSample(fmp4_test::MakeVideoFrame(1, pts - delay_ms, duration, keyframe, pts)));
+	}
+
+	size_t common_segments = 0;
+	for (int64_t number = 0; number <= pair.reference.storage->GetLastSegmentNumber(); number++)
+	{
+		auto reference_segment = std::static_pointer_cast<bmff::FMP4Segment>(pair.reference.storage->GetSegment(number));
+		auto synced_segment = std::static_pointer_cast<bmff::FMP4Segment>(pair.synced.storage->GetSegment(number));
+		if (reference_segment == nullptr || synced_segment == nullptr ||
+			reference_segment->IsCompleted() == false || synced_segment->IsCompleted() == false)
+		{
+			continue;
+		}
+
+		common_segments++;
+		EXPECT_EQ(reference_segment->GetStartTimestamp(), synced_segment->GetStartTimestamp()) << "segment " << number;
+		EXPECT_DOUBLE_EQ(reference_segment->GetDurationMs(), synced_segment->GetDurationMs()) << "segment " << number;
+	}
+
+	EXPECT_GE(common_segments, 12u);
+	ExpectSamePicturesAndSpecParts(pair, delay_ms, delay_ms, 12);
+}
+
+TEST(SyncedPipelineTest, AnImmediateCutClosesBothVideoTracksAtTheMarker)
+{
+	// Two video tracks on the same decode timeline: an immediate CUE-OUT cuts
+	// the reference mid-GOP, and the synced track ends its segment at the same
+	// position, keyframe or not, on the same segment number. The cues sit a
+	// few hundred milliseconds past a keyframe of the synced track, where a
+	// keyframe cut would otherwise settle.
+	std::vector<int64_t> cue_out_timestamps = {15310, 35310};
+	auto pair = DriveVideoPair(33, 33, 60000, cue_out_timestamps, 10000, 0, LLHlsCueOutCutMode::Immediate);
+
+	auto reference_markers = CollectMarkers(pair.reference, CueEvent::CueType::OUT);
+	auto synced_markers = CollectMarkers(pair.synced, CueEvent::CueType::OUT);
+	ASSERT_EQ(reference_markers.size(), cue_out_timestamps.size());
+	ASSERT_EQ(synced_markers.size(), cue_out_timestamps.size());
+
+	for (size_t index = 0; index < cue_out_timestamps.size(); index++)
+	{
+		EXPECT_EQ(reference_markers[index].segment_number, synced_markers[index].segment_number) << "cue " << index;
+		EXPECT_EQ(reference_markers[index].marker, synced_markers[index].marker) << "cue " << index;
+		EXPECT_NEAR(reference_markers[index].segment_end_ms, synced_markers[index].segment_end_ms, 1.0) << "cue " << index;
+		EXPECT_GE(reference_markers[index].segment_end_ms, static_cast<double>(cue_out_timestamps[index])) << "cue " << index;
+		EXPECT_LT(reference_markers[index].segment_end_ms, static_cast<double>(cue_out_timestamps[index]) + kVideoFrameMs + 1.0) << "cue " << index;
 	}
 }
 

@@ -359,6 +359,20 @@ namespace bmff
 				// every player reconciles; landing short would leave a gap that
 				// permanently stalls a frame-counting audio clock
 				plan.end_us = boundary->timestamp_us - kBoundaryBiasUs;
+
+				// An immediate CUE-OUT cut the reference mid-GOP; every track ends
+				// its segment right there as well
+				if (_cue_out_cut_mode == LLHlsCueOutCutMode::Immediate)
+				{
+					for (const auto &marker : boundary->markers)
+					{
+						if (marker != nullptr && marker->IsOutOfNetwork() == true)
+						{
+							plan.marker_cut = true;
+						}
+					}
+				}
+
 				return plan;
 			}
 		}
@@ -446,19 +460,15 @@ namespace bmff
 
 		// Consumption is strictly sequential: this completion realizes the next
 		// boundary in numbering order, so two completions can never take the same
-		// boundary and crowded boundaries pair off one by one. A cut lands at or
-		// past its aim, so the boundary it was aimed at is at or below the cut; a
-		// forced, overlong segment may have run past several boundaries and
-		// realizes each of them.
-		constexpr int64_t kRealizedSlackUs = 100;
-
+		// boundary and crowded boundaries pair off one by one. A completion
+		// realizes a boundary its end is nearer to than to the previous one, the
+		// midpoint included: a cut normally lands on the boundary, a keyframe
+		// cut may sit a little before or after it, and a forced, overlong
+		// segment may have run past several boundaries and realizes each of
+		// them. The previous one is the last consumed boundary, or where this
+		// segment started when none was consumed yet.
 		int64_t consumed_count = 0;
 
-		// A keyframe-cutting track ends its segments at the keyframe nearest to
-		// a boundary, so it realizes the boundary its end is nearer to than to
-		// the previous one, the midpoint included: the plan may settle on a
-		// keyframe exactly there. The previous one is the last consumed
-		// boundary, or where this segment started when none was consumed yet.
 		int64_t previous_us = completed.start_timestamp_us;
 		if (auto previous = _boundary_feed->GetBoundary(cursor); previous.has_value() == true)
 		{
@@ -473,16 +483,7 @@ namespace bmff
 				break;
 			}
 
-			bool realized;
-			if (_cuts_only_at_keyframes == true)
-			{
-				realized = (std::llabs(boundary->timestamp_us - segment_end_us) <= std::llabs(segment_end_us - previous_us));
-			}
-			else
-			{
-				realized = (boundary->timestamp_us <= segment_end_us + kRealizedSlackUs);
-			}
-
+			bool realized = (std::llabs(boundary->timestamp_us - segment_end_us) <= std::llabs(segment_end_us - previous_us));
 			if (realized == false)
 			{
 				break;

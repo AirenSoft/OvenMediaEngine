@@ -1924,7 +1924,6 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 	policy_config.cue_out_cut_mode = llhls_config.GetCueOutCutMode();
 	// Video cuts only at keyframes; audio can cut at any frame
 	policy_config.keyframe_interval_ms = (media_track->GetMediaType() == cmn::MediaType::Video) ? media_track->GetKeyframeIntervalDurationMs() : 0.0;
-	policy_config.cuts_only_at_keyframes = (media_track->GetMediaType() == cmn::MediaType::Video);
 	policy_config.log_context = ov::String::FormatString("LLHLS stream (%s) / track (%u)", tag.CStr(), media_track->GetId());
 	if (server_time_based_segment_numbering == true)
 	{
@@ -1957,7 +1956,6 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 			// The cadence must be the reference's own; policy_config carries the
 			// one of whichever track this call is for
 			reference_config.keyframe_interval_ms = (reference_track->GetMediaType() == cmn::MediaType::Video) ? reference_track->GetKeyframeIntervalDurationMs() : 0.0;
-			reference_config.cuts_only_at_keyframes = (reference_track->GetMediaType() == cmn::MediaType::Video);
 			reference_config.log_context = ov::String::FormatString("LLHLS stream (%s) / track (%u)", tag.CStr(), reference_track->GetId());
 			_reference_boundary_policy = std::make_shared<bmff::ReferenceBoundaryPolicy>(reference_config, reference_track->GetFrameRate());
 		}
