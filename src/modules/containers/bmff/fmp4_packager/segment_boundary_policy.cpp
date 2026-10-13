@@ -645,6 +645,13 @@ namespace bmff
 		{
 			keyframe_cut = PlanKeyframeCut(sample_list, next_frame, boundary.end_us, last_segment_duration_us);
 
+			// A reached break closes at the arriving keyframe; a candidate still
+			// pending for a boundary elsewhere must not hold it back
+			if (keyframe_cut.pending == true && break_reached == true && next_frame.independent == true)
+			{
+				keyframe_cut = KeyframeCut();
+			}
+
 			if (keyframe_cut.decided == true && keyframe_cut.count == sample_list.size())
 			{
 				// The arriving keyframe opens the next segment
@@ -842,10 +849,13 @@ namespace bmff
 	{
 		KeyframeCut cut;
 
-		// The last buffered keyframe at or before the boundary and the first one
-		// after it, buffered or just arriving (an index of the buffer size). The
-		// keyframe that opened this segment cannot end it: until something is
-		// stored, the first buffered sample is that one.
+		// The last buffered keyframe within one part before the boundary and the
+		// first one after it, buffered or just arriving (an index of the buffer
+		// size). A keyframe further back only lingers in the buffer of a track
+		// running behind the reference, and holding the samples behind it would
+		// stall that track for seconds. The keyframe that opened this segment
+		// cannot end it: until something is stored, the first buffered sample is
+		// that one.
 		std::optional<size_t> before;
 		std::optional<size_t> after;
 		for (size_t index = 0; index < sample_list.size(); index++)
@@ -858,7 +868,10 @@ namespace bmff
 
 			if (timing.dts_us <= boundary_us)
 			{
-				before = index;
+				if (boundary_us - timing.dts_us <= _chunk_duration_us)
+				{
+					before = index;
+				}
 			}
 			else if (after.has_value() == false)
 			{
