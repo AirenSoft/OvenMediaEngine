@@ -9,6 +9,7 @@
 #include "synced_boundary_policy.h"
 
 #include <cmath>
+#include <cstdlib>
 
 #include "fmp4_private.h"
 
@@ -453,6 +454,16 @@ namespace bmff
 
 		int64_t consumed_count = 0;
 
+		// A keyframe-cutting track ends its segments at the keyframe nearest to
+		// a boundary, so it realizes the boundary its end is nearer to than to
+		// the previous one. The previous one is the last consumed boundary, or
+		// where this segment started when none was consumed yet.
+		int64_t previous_us = completed.start_timestamp_us;
+		if (auto previous = _boundary_feed->GetBoundary(cursor); previous.has_value() == true)
+		{
+			previous_us = previous->timestamp_us;
+		}
+
 		while (true)
 		{
 			auto boundary = _boundary_feed->GetBoundaryAfterNumber(cursor);
@@ -461,10 +472,22 @@ namespace bmff
 				break;
 			}
 
-			if (boundary->timestamp_us > segment_end_us + kRealizedSlackUs)
+			bool realized;
+			if (_cuts_only_at_keyframes == true)
+			{
+				realized = (std::llabs(boundary->timestamp_us - segment_end_us) < std::llabs(segment_end_us - previous_us));
+			}
+			else
+			{
+				realized = (boundary->timestamp_us <= segment_end_us + kRealizedSlackUs);
+			}
+
+			if (realized == false)
 			{
 				break;
 			}
+
+			previous_us = boundary->timestamp_us;
 
 			cursor = boundary->segment_number;
 			consumed_count++;

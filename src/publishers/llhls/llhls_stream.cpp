@@ -1924,6 +1924,7 @@ bool LLHlsStream::AddPackager(const std::shared_ptr<const MediaTrack> &media_tra
 	policy_config.cue_out_cut_mode = llhls_config.GetCueOutCutMode();
 	// Video cuts only at keyframes; audio can cut at any frame
 	policy_config.keyframe_interval_ms = (media_track->GetMediaType() == cmn::MediaType::Video) ? media_track->GetKeyframeIntervalDurationMs() : 0.0;
+	policy_config.cuts_only_at_keyframes = (media_track->GetMediaType() == cmn::MediaType::Video);
 	policy_config.log_context = ov::String::FormatString("LLHLS stream (%s) / track (%u)", tag.CStr(), media_track->GetId());
 	if (server_time_based_segment_numbering == true)
 	{

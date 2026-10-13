@@ -82,6 +82,10 @@ namespace bmff
 			// The cadence this track can cut at (0 when it can cut anywhere).
 			// A break must be long enough to return from at that cadence.
 			double keyframe_interval_ms = 0.0;
+			// A track that cuts only at keyframes ends its segments at the
+			// keyframe nearest to an exact boundary, before or after it. A track
+			// that cuts anywhere ends them at the boundary itself.
+			bool cuts_only_at_keyframes = false;
 			// Where the numbering starts (server-time based numbering derives it
 			// from the wall clock)
 			int64_t initial_segment_number = 0;
@@ -98,6 +102,14 @@ namespace bmff
 		// follows boundaries decided elsewhere receives them relayed on those
 		// boundaries instead
 		virtual bool AcceptsMarkers() const
+		{
+			return true;
+		}
+
+		// (decision) Whether a part may end inside a mini-GOP, with samples that
+		// display earlier still buffered. No HLS rule forbids it; only players
+		// that measure the presentation span against the declared duration notice.
+		virtual bool AllowsPartCutsInsideMiniGop() const
 		{
 			return true;
 		}
@@ -227,12 +239,27 @@ namespace bmff
 		// saving.
 		int64_t _cut_cadence_us = 0;
 		LLHlsCueOutCutMode _cue_out_cut_mode = LLHlsCueOutCutMode::Keyframe;
+		bool _cuts_only_at_keyframes = false;
 		ov::String _log_context;
 
 		// The name of the segment accumulating now, advanced by the settlements
 		int64_t _next_segment_number = 0;
 
 	private:
+		// Where a keyframe-cutting track ends its segment against an exact
+		// boundary: the nearest keyframe, before or after the boundary
+		struct KeyframeCut
+		{
+			// The keyframe is chosen; count samples go out ahead of it (the
+			// buffer size when the arriving frame is the keyframe)
+			bool decided = false;
+			// An earlier keyframe is the candidate so far; a later one could
+			// still be nearer, so the samples from it on stay back
+			bool pending = false;
+			size_t count = 0;
+		};
+		KeyframeCut PlanKeyframeCut(const std::vector<Sample> &sample_list, const SampleTiming &next_frame, int64_t boundary_us, int64_t stored_duration_us) const;
+
 		// The shared settlement: consume the covered markers, hand them to the
 		// policy's hook, and advance the numbering
 		CompletionResult Settle(const CompletedSegment &completed, bool discontinuity);
