@@ -35,21 +35,14 @@ namespace ovt
 	{
 		switch (media_type)
 		{
-			case cmn::MediaType::Unknown:
-				return WIRE_NO_VALUE;
-			case cmn::MediaType::Video:
-				return 0;
-			case cmn::MediaType::Audio:
-				return 1;
-			case cmn::MediaType::Data:
-				return 2;
-			case cmn::MediaType::Subtitle:
-				return 3;
-			case cmn::MediaType::Attachment:
-				return 4;
+			case cmn::MediaType::Unknown:	 return WIRE_NO_VALUE;
+			case cmn::MediaType::Video:		 return 0;
+			case cmn::MediaType::Audio:		 return 1;
+			case cmn::MediaType::Data:		 return 2;
+			case cmn::MediaType::Subtitle:	 return 3;
+			case cmn::MediaType::Attachment: return 4;
 			// End marker, never sent. Listed only so the switch stays exhaustive.
-			case cmn::MediaType::Nb:
-				return 5;
+			case cmn::MediaType::Nb:		 return 5;
 		}
 
 		return WIRE_NO_VALUE;
@@ -61,12 +54,9 @@ namespace ovt
 	{
 		switch (flag)
 		{
-			case MediaPacketFlag::Unknown:
-				return 0;
-			case MediaPacketFlag::NoFlag:
-				return 1;
-			case MediaPacketFlag::Key:
-				return 2;
+			case MediaPacketFlag::Unknown: return 0;
+			case MediaPacketFlag::NoFlag:  return 1;
+			case MediaPacketFlag::Key:	   return 2;
 		}
 
 		return 0;
@@ -76,67 +66,37 @@ namespace ovt
 	{
 		switch (format)
 		{
-			case cmn::BitstreamFormat::Unknown:
-				return WIRE_NO_VALUE;
-			case cmn::BitstreamFormat::H264_AVCC:
-				return 0;
-			case cmn::BitstreamFormat::H264_ANNEXB:
-				return 1;
-			case cmn::BitstreamFormat::H264_RTP_RFC_6184:
-				return 2;
-			case cmn::BitstreamFormat::HVCC:
-				return 3;
-			case cmn::BitstreamFormat::H265_ANNEXB:
-				return 4;
-			case cmn::BitstreamFormat::H265_RTP_RFC_7798:
-				return 5;
-			case cmn::BitstreamFormat::VP8:
-				return 6;
-			case cmn::BitstreamFormat::VP8_RTP_RFC_7741:
-				return 7;
-			case cmn::BitstreamFormat::AAC_RAW:
-				return 8;
-			case cmn::BitstreamFormat::AAC_MPEG4_GENERIC:
-				return 9;
-			case cmn::BitstreamFormat::AAC_ADTS:
-				return 10;
-			case cmn::BitstreamFormat::AAC_LATM:
-				return 11;
-			case cmn::BitstreamFormat::OPUS:
-				return 12;
-			case cmn::BitstreamFormat::OPUS_RTP_RFC_7587:
-				return 13;
-			case cmn::BitstreamFormat::MP3:
-				return 14;
-			case cmn::BitstreamFormat::JPEG:
-				return 15;
-			case cmn::BitstreamFormat::PNG:
-				return 16;
-			case cmn::BitstreamFormat::WEBP:
-				return 17;
-			case cmn::BitstreamFormat::ID3v2:
-				return 18;
-			case cmn::BitstreamFormat::OVEN_EVENT:
-				return 19;
-			case cmn::BitstreamFormat::CUE:
-				return 20;
-			case cmn::BitstreamFormat::AMF:
-				return 21;
-			case cmn::BitstreamFormat::SEI:
-				return 22;
-			case cmn::BitstreamFormat::SCTE35:
-				return 23;
-			case cmn::BitstreamFormat::WebVTT:
-				return 24;
-			case cmn::BitstreamFormat::MP2:
-				return 25;
-			case cmn::BitstreamFormat::AV1_OBU:
-				return 26;
-			case cmn::BitstreamFormat::AV1_RTP_AOM:
-				return 27;
+			case cmn::BitstreamFormat::Unknown:			  return WIRE_NO_VALUE;
+			case cmn::BitstreamFormat::H264_AVCC:		  return 0;
+			case cmn::BitstreamFormat::H264_ANNEXB:		  return 1;
+			case cmn::BitstreamFormat::H264_RTP_RFC_6184: return 2;
+			case cmn::BitstreamFormat::HVCC:			  return 3;
+			case cmn::BitstreamFormat::H265_ANNEXB:		  return 4;
+			case cmn::BitstreamFormat::H265_RTP_RFC_7798: return 5;
+			case cmn::BitstreamFormat::VP8:				  return 6;
+			case cmn::BitstreamFormat::VP8_RTP_RFC_7741:  return 7;
+			case cmn::BitstreamFormat::AAC_RAW:			  return 8;
+			case cmn::BitstreamFormat::AAC_MPEG4_GENERIC: return 9;
+			case cmn::BitstreamFormat::AAC_ADTS:		  return 10;
+			case cmn::BitstreamFormat::AAC_LATM:		  return 11;
+			case cmn::BitstreamFormat::OPUS:			  return 12;
+			case cmn::BitstreamFormat::OPUS_RTP_RFC_7587: return 13;
+			case cmn::BitstreamFormat::MP3:				  return 14;
+			case cmn::BitstreamFormat::JPEG:			  return 15;
+			case cmn::BitstreamFormat::PNG:				  return 16;
+			case cmn::BitstreamFormat::WEBP:			  return 17;
+			case cmn::BitstreamFormat::ID3v2:			  return 18;
+			case cmn::BitstreamFormat::OVEN_EVENT:		  return 19;
+			case cmn::BitstreamFormat::CUE:				  return 20;
+			case cmn::BitstreamFormat::AMF:				  return 21;
+			case cmn::BitstreamFormat::SEI:				  return 22;
+			case cmn::BitstreamFormat::SCTE35:			  return 23;
+			case cmn::BitstreamFormat::WebVTT:			  return 24;
+			case cmn::BitstreamFormat::MP2:				  return 25;
+			case cmn::BitstreamFormat::AV1_OBU:			  return 26;
+			case cmn::BitstreamFormat::AV1_RTP_AOM:		  return 27;
 			// Released with v0.21.0.0
-			case cmn::BitstreamFormat::AVIF:
-				return 28;
+			case cmn::BitstreamFormat::AVIF:			  return 28;
 		}
 
 		return WIRE_NO_VALUE;
@@ -146,22 +106,14 @@ namespace ovt
 	{
 		switch (packet_type)
 		{
-			case cmn::PacketType::Unknown:
-				return WIRE_NO_VALUE;
-			case cmn::PacketType::OVT:
-				return 0;
-			case cmn::PacketType::RAW:
-				return 1;
-			case cmn::PacketType::SEQUENCE_HEADER:
-				return 2;
-			case cmn::PacketType::NALU:
-				return 3;
-			case cmn::PacketType::EVENT:
-				return 4;
-			case cmn::PacketType::VIDEO_EVENT:
-				return 5;
-			case cmn::PacketType::AUDIO_EVENT:
-				return 6;
+			case cmn::PacketType::Unknown:		   return WIRE_NO_VALUE;
+			case cmn::PacketType::OVT:			   return 0;
+			case cmn::PacketType::RAW:			   return 1;
+			case cmn::PacketType::SEQUENCE_HEADER: return 2;
+			case cmn::PacketType::NALU:			   return 3;
+			case cmn::PacketType::EVENT:		   return 4;
+			case cmn::PacketType::VIDEO_EVENT:	   return 5;
+			case cmn::PacketType::AUDIO_EVENT:	   return 6;
 		}
 
 		return WIRE_NO_VALUE;
@@ -171,41 +123,24 @@ namespace ovt
 	{
 		switch (codec_id)
 		{
-			case cmn::MediaCodecId::None:
-				return 0;
-			case cmn::MediaCodecId::H264:
-				return 1;
-			case cmn::MediaCodecId::H265:
-				return 2;
-			case cmn::MediaCodecId::Vp8:
-				return 3;
-			case cmn::MediaCodecId::Vp9:
-				return 4;
-			case cmn::MediaCodecId::Av1:
-				return 5;
-			case cmn::MediaCodecId::Flv:
-				return 6;
-			case cmn::MediaCodecId::Aac:
-				return 7;
-			case cmn::MediaCodecId::Mp3:
-				return 8;
-			case cmn::MediaCodecId::Opus:
-				return 9;
-			case cmn::MediaCodecId::Jpeg:
-				return 10;
-			case cmn::MediaCodecId::Png:
-				return 11;
-			case cmn::MediaCodecId::Webp:
-				return 12;
-			case cmn::MediaCodecId::WebVTT:
-				return 13;
-			case cmn::MediaCodecId::Whisper:
-				return 14;
-			case cmn::MediaCodecId::Mp2:
-				return 15;
+			case cmn::MediaCodecId::None:	 return 0;
+			case cmn::MediaCodecId::H264:	 return 1;
+			case cmn::MediaCodecId::H265:	 return 2;
+			case cmn::MediaCodecId::Vp8:	 return 3;
+			case cmn::MediaCodecId::Vp9:	 return 4;
+			case cmn::MediaCodecId::Av1:	 return 5;
+			case cmn::MediaCodecId::Flv:	 return 6;
+			case cmn::MediaCodecId::Aac:	 return 7;
+			case cmn::MediaCodecId::Mp3:	 return 8;
+			case cmn::MediaCodecId::Opus:	 return 9;
+			case cmn::MediaCodecId::Jpeg:	 return 10;
+			case cmn::MediaCodecId::Png:	 return 11;
+			case cmn::MediaCodecId::Webp:	 return 12;
+			case cmn::MediaCodecId::WebVTT:	 return 13;
+			case cmn::MediaCodecId::Whisper: return 14;
+			case cmn::MediaCodecId::Mp2:	 return 15;
 			// Released with v0.21.0.0
-			case cmn::MediaCodecId::Avif:
-				return 16;
+			case cmn::MediaCodecId::Avif:	 return 16;
 		}
 
 		return 0;
@@ -215,31 +150,19 @@ namespace ovt
 	{
 		switch (format)
 		{
-			case cmn::AudioSample::Format::None:
-				return WIRE_NO_VALUE;
-			case cmn::AudioSample::Format::U8:
-				return 0;
-			case cmn::AudioSample::Format::S16:
-				return 1;
-			case cmn::AudioSample::Format::S32:
-				return 2;
-			case cmn::AudioSample::Format::Flt:
-				return 3;
-			case cmn::AudioSample::Format::Dbl:
-				return 4;
-			case cmn::AudioSample::Format::U8P:
-				return 5;
-			case cmn::AudioSample::Format::S16P:
-				return 6;
-			case cmn::AudioSample::Format::S32P:
-				return 7;
-			case cmn::AudioSample::Format::FltP:
-				return 8;
-			case cmn::AudioSample::Format::DblP:
-				return 9;
+			case cmn::AudioSample::Format::None: return WIRE_NO_VALUE;
+			case cmn::AudioSample::Format::U8:	 return 0;
+			case cmn::AudioSample::Format::S16:	 return 1;
+			case cmn::AudioSample::Format::S32:	 return 2;
+			case cmn::AudioSample::Format::Flt:	 return 3;
+			case cmn::AudioSample::Format::Dbl:	 return 4;
+			case cmn::AudioSample::Format::U8P:	 return 5;
+			case cmn::AudioSample::Format::S16P: return 6;
+			case cmn::AudioSample::Format::S32P: return 7;
+			case cmn::AudioSample::Format::FltP: return 8;
+			case cmn::AudioSample::Format::DblP: return 9;
 			// End marker, never sent. Listed only so the switch stays exhaustive.
-			case cmn::AudioSample::Format::Nb:
-				return 10;
+			case cmn::AudioSample::Format::Nb:	 return 10;
 		}
 
 		return WIRE_NO_VALUE;
@@ -250,20 +173,13 @@ namespace ovt
 	{
 		switch (wire)
 		{
-			case WIRE_NO_VALUE:
-				return cmn::MediaType::Unknown;
-			case 0:
-				return cmn::MediaType::Video;
-			case 1:
-				return cmn::MediaType::Audio;
-			case 2:
-				return cmn::MediaType::Data;
-			case 3:
-				return cmn::MediaType::Subtitle;
-			case 4:
-				return cmn::MediaType::Attachment;
-			default:
-				return std::nullopt;
+			case WIRE_NO_VALUE: return cmn::MediaType::Unknown;
+			case 0:				return cmn::MediaType::Video;
+			case 1:				return cmn::MediaType::Audio;
+			case 2:				return cmn::MediaType::Data;
+			case 3:				return cmn::MediaType::Subtitle;
+			case 4:				return cmn::MediaType::Attachment;
+			default:			return std::nullopt;
 		}
 	}
 
@@ -298,68 +214,37 @@ namespace ovt
 	{
 		switch (wire)
 		{
-			case WIRE_NO_VALUE:
-				return cmn::BitstreamFormat::Unknown;
-			case 0:
-				return cmn::BitstreamFormat::H264_AVCC;
-			case 1:
-				return cmn::BitstreamFormat::H264_ANNEXB;
-			case 2:
-				return cmn::BitstreamFormat::H264_RTP_RFC_6184;
-			case 3:
-				return cmn::BitstreamFormat::HVCC;
-			case 4:
-				return cmn::BitstreamFormat::H265_ANNEXB;
-			case 5:
-				return cmn::BitstreamFormat::H265_RTP_RFC_7798;
-			case 6:
-				return cmn::BitstreamFormat::VP8;
-			case 7:
-				return cmn::BitstreamFormat::VP8_RTP_RFC_7741;
-			case 8:
-				return cmn::BitstreamFormat::AAC_RAW;
-			case 9:
-				return cmn::BitstreamFormat::AAC_MPEG4_GENERIC;
-			case 10:
-				return cmn::BitstreamFormat::AAC_ADTS;
-			case 11:
-				return cmn::BitstreamFormat::AAC_LATM;
-			case 12:
-				return cmn::BitstreamFormat::OPUS;
-			case 13:
-				return cmn::BitstreamFormat::OPUS_RTP_RFC_7587;
-			case 14:
-				return cmn::BitstreamFormat::MP3;
-			case 15:
-				return cmn::BitstreamFormat::JPEG;
-			case 16:
-				return cmn::BitstreamFormat::PNG;
-			case 17:
-				return cmn::BitstreamFormat::WEBP;
-			case 18:
-				return cmn::BitstreamFormat::ID3v2;
-			case 19:
-				return cmn::BitstreamFormat::OVEN_EVENT;
-			case 20:
-				return cmn::BitstreamFormat::CUE;
-			case 21:
-				return cmn::BitstreamFormat::AMF;
-			case 22:
-				return cmn::BitstreamFormat::SEI;
-			case 23:
-				return cmn::BitstreamFormat::SCTE35;
-			case 24:
-				return cmn::BitstreamFormat::WebVTT;
-			case 25:
-				return cmn::BitstreamFormat::MP2;
-			case 26:
-				return cmn::BitstreamFormat::AV1_OBU;
-			case 27:
-				return cmn::BitstreamFormat::AV1_RTP_AOM;
-			case 28:
-				return cmn::BitstreamFormat::AVIF;
-			default:
-				return std::nullopt;
+			case WIRE_NO_VALUE: return cmn::BitstreamFormat::Unknown;
+			case 0:				return cmn::BitstreamFormat::H264_AVCC;
+			case 1:				return cmn::BitstreamFormat::H264_ANNEXB;
+			case 2:				return cmn::BitstreamFormat::H264_RTP_RFC_6184;
+			case 3:				return cmn::BitstreamFormat::HVCC;
+			case 4:				return cmn::BitstreamFormat::H265_ANNEXB;
+			case 5:				return cmn::BitstreamFormat::H265_RTP_RFC_7798;
+			case 6:				return cmn::BitstreamFormat::VP8;
+			case 7:				return cmn::BitstreamFormat::VP8_RTP_RFC_7741;
+			case 8:				return cmn::BitstreamFormat::AAC_RAW;
+			case 9:				return cmn::BitstreamFormat::AAC_MPEG4_GENERIC;
+			case 10:			return cmn::BitstreamFormat::AAC_ADTS;
+			case 11:			return cmn::BitstreamFormat::AAC_LATM;
+			case 12:			return cmn::BitstreamFormat::OPUS;
+			case 13:			return cmn::BitstreamFormat::OPUS_RTP_RFC_7587;
+			case 14:			return cmn::BitstreamFormat::MP3;
+			case 15:			return cmn::BitstreamFormat::JPEG;
+			case 16:			return cmn::BitstreamFormat::PNG;
+			case 17:			return cmn::BitstreamFormat::WEBP;
+			case 18:			return cmn::BitstreamFormat::ID3v2;
+			case 19:			return cmn::BitstreamFormat::OVEN_EVENT;
+			case 20:			return cmn::BitstreamFormat::CUE;
+			case 21:			return cmn::BitstreamFormat::AMF;
+			case 22:			return cmn::BitstreamFormat::SEI;
+			case 23:			return cmn::BitstreamFormat::SCTE35;
+			case 24:			return cmn::BitstreamFormat::WebVTT;
+			case 25:			return cmn::BitstreamFormat::MP2;
+			case 26:			return cmn::BitstreamFormat::AV1_OBU;
+			case 27:			return cmn::BitstreamFormat::AV1_RTP_AOM;
+			case 28:			return cmn::BitstreamFormat::AVIF;
+			default:			return std::nullopt;
 		}
 	}
 
@@ -368,24 +253,15 @@ namespace ovt
 	{
 		switch (wire)
 		{
-			case WIRE_NO_VALUE:
-				return cmn::PacketType::Unknown;
-			case 0:
-				return cmn::PacketType::OVT;
-			case 1:
-				return cmn::PacketType::RAW;
-			case 2:
-				return cmn::PacketType::SEQUENCE_HEADER;
-			case 3:
-				return cmn::PacketType::NALU;
-			case 4:
-				return cmn::PacketType::EVENT;
-			case 5:
-				return cmn::PacketType::VIDEO_EVENT;
-			case 6:
-				return cmn::PacketType::AUDIO_EVENT;
-			default:
-				return std::nullopt;
+			case WIRE_NO_VALUE: return cmn::PacketType::Unknown;
+			case 0:				return cmn::PacketType::OVT;
+			case 1:				return cmn::PacketType::RAW;
+			case 2:				return cmn::PacketType::SEQUENCE_HEADER;
+			case 3:				return cmn::PacketType::NALU;
+			case 4:				return cmn::PacketType::EVENT;
+			case 5:				return cmn::PacketType::VIDEO_EVENT;
+			case 6:				return cmn::PacketType::AUDIO_EVENT;
+			default:			return std::nullopt;
 		}
 	}
 
@@ -394,42 +270,24 @@ namespace ovt
 	{
 		switch (wire)
 		{
-			case 0:
-				return cmn::MediaCodecId::None;
-			case 1:
-				return cmn::MediaCodecId::H264;
-			case 2:
-				return cmn::MediaCodecId::H265;
-			case 3:
-				return cmn::MediaCodecId::Vp8;
-			case 4:
-				return cmn::MediaCodecId::Vp9;
-			case 5:
-				return cmn::MediaCodecId::Av1;
-			case 6:
-				return cmn::MediaCodecId::Flv;
-			case 7:
-				return cmn::MediaCodecId::Aac;
-			case 8:
-				return cmn::MediaCodecId::Mp3;
-			case 9:
-				return cmn::MediaCodecId::Opus;
-			case 10:
-				return cmn::MediaCodecId::Jpeg;
-			case 11:
-				return cmn::MediaCodecId::Png;
-			case 12:
-				return cmn::MediaCodecId::Webp;
-			case 13:
-				return cmn::MediaCodecId::WebVTT;
-			case 14:
-				return cmn::MediaCodecId::Whisper;
-			case 15:
-				return cmn::MediaCodecId::Mp2;
-			case 16:
-				return cmn::MediaCodecId::Avif;
-			default:
-				return std::nullopt;
+			case 0:	 return cmn::MediaCodecId::None;
+			case 1:	 return cmn::MediaCodecId::H264;
+			case 2:	 return cmn::MediaCodecId::H265;
+			case 3:	 return cmn::MediaCodecId::Vp8;
+			case 4:	 return cmn::MediaCodecId::Vp9;
+			case 5:	 return cmn::MediaCodecId::Av1;
+			case 6:	 return cmn::MediaCodecId::Flv;
+			case 7:	 return cmn::MediaCodecId::Aac;
+			case 8:	 return cmn::MediaCodecId::Mp3;
+			case 9:	 return cmn::MediaCodecId::Opus;
+			case 10: return cmn::MediaCodecId::Jpeg;
+			case 11: return cmn::MediaCodecId::Png;
+			case 12: return cmn::MediaCodecId::Webp;
+			case 13: return cmn::MediaCodecId::WebVTT;
+			case 14: return cmn::MediaCodecId::Whisper;
+			case 15: return cmn::MediaCodecId::Mp2;
+			case 16: return cmn::MediaCodecId::Avif;
+			default: return std::nullopt;
 		}
 	}
 
@@ -438,30 +296,18 @@ namespace ovt
 	{
 		switch (wire)
 		{
-			case WIRE_NO_VALUE:
-				return cmn::AudioSample::Format::None;
-			case 0:
-				return cmn::AudioSample::Format::U8;
-			case 1:
-				return cmn::AudioSample::Format::S16;
-			case 2:
-				return cmn::AudioSample::Format::S32;
-			case 3:
-				return cmn::AudioSample::Format::Flt;
-			case 4:
-				return cmn::AudioSample::Format::Dbl;
-			case 5:
-				return cmn::AudioSample::Format::U8P;
-			case 6:
-				return cmn::AudioSample::Format::S16P;
-			case 7:
-				return cmn::AudioSample::Format::S32P;
-			case 8:
-				return cmn::AudioSample::Format::FltP;
-			case 9:
-				return cmn::AudioSample::Format::DblP;
-			default:
-				return std::nullopt;
+			case WIRE_NO_VALUE: return cmn::AudioSample::Format::None;
+			case 0:				return cmn::AudioSample::Format::U8;
+			case 1:				return cmn::AudioSample::Format::S16;
+			case 2:				return cmn::AudioSample::Format::S32;
+			case 3:				return cmn::AudioSample::Format::Flt;
+			case 4:				return cmn::AudioSample::Format::Dbl;
+			case 5:				return cmn::AudioSample::Format::U8P;
+			case 6:				return cmn::AudioSample::Format::S16P;
+			case 7:				return cmn::AudioSample::Format::S32P;
+			case 8:				return cmn::AudioSample::Format::FltP;
+			case 9:				return cmn::AudioSample::Format::DblP;
+			default:			return std::nullopt;
 		}
 	}
 
@@ -470,16 +316,11 @@ namespace ovt
 	{
 		switch (wire)
 		{
-			case 10:
-				return OvtPayloadType::MessageRequest;
-			case 20:
-				return OvtPayloadType::MessageResponse;
-			case 30:
-				return OvtPayloadType::MediaPacket;
-			case 40:
-				return OvtPayloadType::Required;
-			default:
-				return std::nullopt;
+			case 10: return OvtPayloadType::MessageRequest;
+			case 20: return OvtPayloadType::MessageResponse;
+			case 30: return OvtPayloadType::MediaPacket;
+			case 40: return OvtPayloadType::Required;
+			default: return std::nullopt;
 		}
 	}
 
@@ -488,40 +329,23 @@ namespace ovt
 	{
 		switch (codec_id)
 		{
-			case cmn::MediaCodecId::None:
-				[[fallthrough]];
-			case cmn::MediaCodecId::H264:
-				[[fallthrough]];
-			case cmn::MediaCodecId::H265:
-				[[fallthrough]];
-			case cmn::MediaCodecId::Vp8:
-				[[fallthrough]];
-			case cmn::MediaCodecId::Vp9:
-				[[fallthrough]];
-			case cmn::MediaCodecId::Av1:
-				[[fallthrough]];
-			case cmn::MediaCodecId::Flv:
-				[[fallthrough]];
-			case cmn::MediaCodecId::Aac:
-				[[fallthrough]];
-			case cmn::MediaCodecId::Mp3:
-				[[fallthrough]];
-			case cmn::MediaCodecId::Opus:
-				[[fallthrough]];
-			case cmn::MediaCodecId::Jpeg:
-				[[fallthrough]];
-			case cmn::MediaCodecId::Png:
-				[[fallthrough]];
-			case cmn::MediaCodecId::Webp:
-				[[fallthrough]];
-			case cmn::MediaCodecId::WebVTT:
-				[[fallthrough]];
-			case cmn::MediaCodecId::Whisper:
-				[[fallthrough]];
-			case cmn::MediaCodecId::Mp2:
-				[[fallthrough]];
-			case cmn::MediaCodecId::Avif:
-				return true;
+			case cmn::MediaCodecId::None:	 [[fallthrough]];
+			case cmn::MediaCodecId::H264:	 [[fallthrough]];
+			case cmn::MediaCodecId::H265:	 [[fallthrough]];
+			case cmn::MediaCodecId::Vp8:	 [[fallthrough]];
+			case cmn::MediaCodecId::Vp9:	 [[fallthrough]];
+			case cmn::MediaCodecId::Av1:	 [[fallthrough]];
+			case cmn::MediaCodecId::Flv:	 [[fallthrough]];
+			case cmn::MediaCodecId::Aac:	 [[fallthrough]];
+			case cmn::MediaCodecId::Mp3:	 [[fallthrough]];
+			case cmn::MediaCodecId::Opus:	 [[fallthrough]];
+			case cmn::MediaCodecId::Jpeg:	 [[fallthrough]];
+			case cmn::MediaCodecId::Png:	 [[fallthrough]];
+			case cmn::MediaCodecId::Webp:	 [[fallthrough]];
+			case cmn::MediaCodecId::WebVTT:	 [[fallthrough]];
+			case cmn::MediaCodecId::Whisper: [[fallthrough]];
+			case cmn::MediaCodecId::Mp2:	 [[fallthrough]];
+			case cmn::MediaCodecId::Avif:	 return true;
 		}
 
 		return false;
@@ -531,66 +355,36 @@ namespace ovt
 	{
 		switch (format)
 		{
-			case cmn::BitstreamFormat::Unknown:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::H264_AVCC:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::H264_ANNEXB:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::H264_RTP_RFC_6184:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::HVCC:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::H265_ANNEXB:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::H265_RTP_RFC_7798:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::VP8:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::VP8_RTP_RFC_7741:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::AAC_RAW:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::AAC_MPEG4_GENERIC:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::AAC_ADTS:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::AAC_LATM:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::OPUS:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::OPUS_RTP_RFC_7587:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::MP3:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::JPEG:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::PNG:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::WEBP:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::ID3v2:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::OVEN_EVENT:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::CUE:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::AMF:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::SEI:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::SCTE35:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::WebVTT:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::MP2:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::AV1_OBU:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::AV1_RTP_AOM:
-				[[fallthrough]];
-			case cmn::BitstreamFormat::AVIF:
-				return true;
+			case cmn::BitstreamFormat::Unknown:			  [[fallthrough]];
+			case cmn::BitstreamFormat::H264_AVCC:		  [[fallthrough]];
+			case cmn::BitstreamFormat::H264_ANNEXB:		  [[fallthrough]];
+			case cmn::BitstreamFormat::H264_RTP_RFC_6184: [[fallthrough]];
+			case cmn::BitstreamFormat::HVCC:			  [[fallthrough]];
+			case cmn::BitstreamFormat::H265_ANNEXB:		  [[fallthrough]];
+			case cmn::BitstreamFormat::H265_RTP_RFC_7798: [[fallthrough]];
+			case cmn::BitstreamFormat::VP8:				  [[fallthrough]];
+			case cmn::BitstreamFormat::VP8_RTP_RFC_7741:  [[fallthrough]];
+			case cmn::BitstreamFormat::AAC_RAW:			  [[fallthrough]];
+			case cmn::BitstreamFormat::AAC_MPEG4_GENERIC: [[fallthrough]];
+			case cmn::BitstreamFormat::AAC_ADTS:		  [[fallthrough]];
+			case cmn::BitstreamFormat::AAC_LATM:		  [[fallthrough]];
+			case cmn::BitstreamFormat::OPUS:			  [[fallthrough]];
+			case cmn::BitstreamFormat::OPUS_RTP_RFC_7587: [[fallthrough]];
+			case cmn::BitstreamFormat::MP3:				  [[fallthrough]];
+			case cmn::BitstreamFormat::JPEG:			  [[fallthrough]];
+			case cmn::BitstreamFormat::PNG:				  [[fallthrough]];
+			case cmn::BitstreamFormat::WEBP:			  [[fallthrough]];
+			case cmn::BitstreamFormat::ID3v2:			  [[fallthrough]];
+			case cmn::BitstreamFormat::OVEN_EVENT:		  [[fallthrough]];
+			case cmn::BitstreamFormat::CUE:				  [[fallthrough]];
+			case cmn::BitstreamFormat::AMF:				  [[fallthrough]];
+			case cmn::BitstreamFormat::SEI:				  [[fallthrough]];
+			case cmn::BitstreamFormat::SCTE35:			  [[fallthrough]];
+			case cmn::BitstreamFormat::WebVTT:			  [[fallthrough]];
+			case cmn::BitstreamFormat::MP2:				  [[fallthrough]];
+			case cmn::BitstreamFormat::AV1_OBU:			  [[fallthrough]];
+			case cmn::BitstreamFormat::AV1_RTP_AOM:		  [[fallthrough]];
+			case cmn::BitstreamFormat::AVIF:			  return true;
 		}
 
 		return false;
@@ -600,22 +394,14 @@ namespace ovt
 	{
 		switch (packet_type)
 		{
-			case cmn::PacketType::Unknown:
-				[[fallthrough]];
-			case cmn::PacketType::OVT:
-				[[fallthrough]];
-			case cmn::PacketType::RAW:
-				[[fallthrough]];
-			case cmn::PacketType::SEQUENCE_HEADER:
-				[[fallthrough]];
-			case cmn::PacketType::NALU:
-				[[fallthrough]];
-			case cmn::PacketType::EVENT:
-				[[fallthrough]];
-			case cmn::PacketType::VIDEO_EVENT:
-				[[fallthrough]];
-			case cmn::PacketType::AUDIO_EVENT:
-				return true;
+			case cmn::PacketType::Unknown:		   [[fallthrough]];
+			case cmn::PacketType::OVT:			   [[fallthrough]];
+			case cmn::PacketType::RAW:			   [[fallthrough]];
+			case cmn::PacketType::SEQUENCE_HEADER: [[fallthrough]];
+			case cmn::PacketType::NALU:			   [[fallthrough]];
+			case cmn::PacketType::EVENT:		   [[fallthrough]];
+			case cmn::PacketType::VIDEO_EVENT:	   [[fallthrough]];
+			case cmn::PacketType::AUDIO_EVENT:	   return true;
 		}
 
 		return false;
@@ -626,40 +412,23 @@ namespace ovt
 	{
 		switch (codec_id)
 		{
-			case cmn::MediaCodecId::H264:
-				return cmn::BitstreamFormat::H264_ANNEXB;
-			case cmn::MediaCodecId::H265:
-				return cmn::BitstreamFormat::H265_ANNEXB;
-			case cmn::MediaCodecId::Aac:
-				return cmn::BitstreamFormat::AAC_ADTS;
-			case cmn::MediaCodecId::Av1:
-				return cmn::BitstreamFormat::AV1_OBU;
-			case cmn::MediaCodecId::Vp8:
-				return cmn::BitstreamFormat::VP8;
-			case cmn::MediaCodecId::Opus:
-				return cmn::BitstreamFormat::OPUS;
-			case cmn::MediaCodecId::Mp3:
-				return cmn::BitstreamFormat::MP3;
-			case cmn::MediaCodecId::Mp2:
-				return cmn::BitstreamFormat::MP2;
-			case cmn::MediaCodecId::Jpeg:
-				return cmn::BitstreamFormat::JPEG;
-			case cmn::MediaCodecId::Png:
-				return cmn::BitstreamFormat::PNG;
-			case cmn::MediaCodecId::Webp:
-				return cmn::BitstreamFormat::WEBP;
-			case cmn::MediaCodecId::Avif:
-				return cmn::BitstreamFormat::AVIF;
-			case cmn::MediaCodecId::WebVTT:
-				return cmn::BitstreamFormat::WebVTT;
-			case cmn::MediaCodecId::None:
-				[[fallthrough]];
-			case cmn::MediaCodecId::Vp9:
-				[[fallthrough]];
-			case cmn::MediaCodecId::Flv:
-				[[fallthrough]];
-			case cmn::MediaCodecId::Whisper:
-				return std::nullopt;
+			case cmn::MediaCodecId::H264:	 return cmn::BitstreamFormat::H264_ANNEXB;
+			case cmn::MediaCodecId::H265:	 return cmn::BitstreamFormat::H265_ANNEXB;
+			case cmn::MediaCodecId::Aac:	 return cmn::BitstreamFormat::AAC_ADTS;
+			case cmn::MediaCodecId::Av1:	 return cmn::BitstreamFormat::AV1_OBU;
+			case cmn::MediaCodecId::Vp8:	 return cmn::BitstreamFormat::VP8;
+			case cmn::MediaCodecId::Opus:	 return cmn::BitstreamFormat::OPUS;
+			case cmn::MediaCodecId::Mp3:	 return cmn::BitstreamFormat::MP3;
+			case cmn::MediaCodecId::Mp2:	 return cmn::BitstreamFormat::MP2;
+			case cmn::MediaCodecId::Jpeg:	 return cmn::BitstreamFormat::JPEG;
+			case cmn::MediaCodecId::Png:	 return cmn::BitstreamFormat::PNG;
+			case cmn::MediaCodecId::Webp:	 return cmn::BitstreamFormat::WEBP;
+			case cmn::MediaCodecId::Avif:	 return cmn::BitstreamFormat::AVIF;
+			case cmn::MediaCodecId::WebVTT:	 return cmn::BitstreamFormat::WebVTT;
+			case cmn::MediaCodecId::None:	 [[fallthrough]];
+			case cmn::MediaCodecId::Vp9:	 [[fallthrough]];
+			case cmn::MediaCodecId::Flv:	 [[fallthrough]];
+			case cmn::MediaCodecId::Whisper: return std::nullopt;
 		}
 
 		return std::nullopt;
