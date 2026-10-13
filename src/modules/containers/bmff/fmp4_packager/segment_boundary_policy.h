@@ -233,6 +233,10 @@ namespace bmff
 		LLHlsCueOutCutMode _cue_out_cut_mode = LLHlsCueOutCutMode::Keyframe;
 		ov::String _log_context;
 
+		// A boundary off this track's keyframes is reported once; later ones
+		// go to the debug log
+		bool _nearest_keyframe_warned = false;
+
 		// The name of the segment accumulating now, advanced by the settlements
 		int64_t _next_segment_number = 0;
 

@@ -806,8 +806,17 @@ namespace bmff
 		if (keyframe_cut.decided == true && decision.completes_segment == true)
 		{
 			int64_t cut_us = (keyframe_cut.count < sample_list.size()) ? sample_list[keyframe_cut.count].timing.dts_us : next_frame.dts_us;
-			logtw("%s - The boundary at %.3f ms is not a keyframe on this track; the segment closes at the nearest keyframe (%.3f ms) instead",
-				  _log_context.CStr(), boundary_sample_us / 1000.0, cut_us / 1000.0);
+			if (_nearest_keyframe_warned == false)
+			{
+				_nearest_keyframe_warned = true;
+				logtw("%s - The boundary at %.3f ms is not a keyframe on this track; the segment closes at the nearest keyframe (%.3f ms) instead",
+					  _log_context.CStr(), boundary_sample_us / 1000.0, cut_us / 1000.0);
+			}
+			else
+			{
+				logtd("%s - The boundary at %.3f ms is not a keyframe on this track; the segment closes at the nearest keyframe (%.3f ms) instead",
+					  _log_context.CStr(), boundary_sample_us / 1000.0, cut_us / 1000.0);
+			}
 		}
 
 		// Last resort: no cuttable position appeared for twice the cadence, so
