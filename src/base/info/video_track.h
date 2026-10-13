@@ -88,6 +88,9 @@ public:
 	void SetExtraEncoderOptionsByConfig(const ov::String &options);
 	ov::String GetExtraEncoderOptionsByConfig() const;
 
+	void SetScaleModeByConfig(cmn::VideoScaleMode scale_mode);
+	cmn::VideoScaleMode GetScaleModeByConfig() const;
+
 protected:
 	mutable ov::SharedMutex _video_mutex;
 
@@ -150,6 +153,9 @@ protected:
 	// @encoder
 	// Lookahead (set by user)
 	std::atomic<int32_t> _lookahead_conf = -1;
+
+	// How the input is mapped onto the output resolution (set by user)
+	std::atomic<cmn::VideoScaleMode> _scale_mode_conf = cmn::VideoScaleMode::Stretch;
 
 	// Abnormal key frame interval detection
 	std::atomic<bool> _detect_abnormal_framerate = false;

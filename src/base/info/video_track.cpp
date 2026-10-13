@@ -269,6 +269,16 @@ int32_t VideoTrack::GetSkipFramesByConfig() const
 	return _skip_frames_conf;
 }
 
+void VideoTrack::SetScaleModeByConfig(cmn::VideoScaleMode scale_mode)
+{
+	_scale_mode_conf = scale_mode;
+}
+
+cmn::VideoScaleMode VideoTrack::GetScaleModeByConfig() const
+{
+	return _scale_mode_conf;
+}
+
 bool VideoTrack::IsKeyframeDecodeOnly() const
 {
 	return _keyframe_decode_only;
