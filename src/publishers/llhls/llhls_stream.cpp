@@ -2694,6 +2694,9 @@ void LLHlsStream::OnMediaSegmentCompleted(const int32_t &track_id, const uint32_
 	// boundary it differs from the completed segment's map and is hinted as TYPE=MAP
 	ov::String next_partial_map_uri;
 	std::optional<uint32_t> next_partial_track_version;
+	// The markers settled on the completed segment; a segment that closed on
+	// what was already stored never passed them through a chunk update
+	std::vector<std::shared_ptr<Marker>> markers;
 	auto storage = GetFmp4Storage(track_id);
 	if (storage != nullptr)
 	{
@@ -2703,11 +2706,17 @@ void LLHlsStream::OnMediaSegmentCompleted(const int32_t &track_id, const uint32_
 			next_partial_track_version = last_segment->GetTrackVersion();
 			next_partial_map_uri = GetMapUriForTrackVersion(track_id, next_partial_track_version.value());
 		}
+
+		auto completed_segment = storage->GetSegment(segment_number);
+		if (completed_segment != nullptr && completed_segment->HasMarker() == true)
+		{
+			markers = completed_segment->GetMarkers();
+		}
 	}
 
 	// Subtitle chunklists are not mirrored here; a configuration change of the VTT
 	// reference track is not supported yet
-	playlist->CompleteSegmentInfo(segment_number, GetNextPartialSegmentName(track_id, segment_number, 0, true), next_partial_map_uri, next_partial_track_version);
+	playlist->CompleteSegmentInfo(segment_number, GetNextPartialSegmentName(track_id, segment_number, 0, true), next_partial_map_uri, next_partial_track_version, markers);
 
 	int64_t last_msn = -1, last_psn = -1;
 	playlist->GetLastSequenceNumber(last_msn, last_psn);
