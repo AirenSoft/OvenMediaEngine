@@ -99,7 +99,7 @@ sudo dnf update
 sudo dnf install -y 'dnf-command(config-manager)'
 # OvenMediaEngine needs packages from the CRB repository, which is named
 # differently on Rocky/AlmaLinux and on RHEL.
-sudo dnf config-manager --set-enabled crb || sudo dnf config-manager --set-enabled codeready-builder-for-rhel-9-x86_64-rpms
+sudo dnf config-manager --set-enabled crb || sudo dnf config-manager --set-enabled codeready-builder-for-rhel-9-$(arch)-rpms
 sudo dnf install -y gcc-c++ ninja-build pkgconf-pkg-config
 cd OvenMediaEngine-master
 cmake -B build/Release -G Ninja -DCMAKE_BUILD_TYPE=Release
