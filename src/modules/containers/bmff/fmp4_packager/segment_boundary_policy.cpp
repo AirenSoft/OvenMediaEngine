@@ -837,11 +837,14 @@ namespace bmff
 			}
 		}
 
-		// The break is stamped where it actually happened, on the first close at
-		// or after its position. Riding an earlier close instead would consume
-		// the break on the tracks that received it while the track that changed
+		// The break is stamped on the first close decided after its position is
+		// reached, never on a close that came before: that would consume the
+		// break on the tracks that received it while the track that changed
 		// still closes at its own position, leaving that rendition one segment
-		// ahead of the others.
+		// ahead. A synced track whose keyframes miss the break may cut at its
+		// keyframe nearest the boundary, up to one part before the break, and
+		// still carries the stamp: staying on the reference's segment number is
+		// what keeps the renditions switchable
 		decision.discontinuity = break_reached && decision.completes_segment;
 
 		return decision;

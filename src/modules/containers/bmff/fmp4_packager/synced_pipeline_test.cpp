@@ -539,6 +539,79 @@ TEST(SyncedPipelineTest, APropagatedBreakClosesBothTracksOnTheSamePicture)
 	EXPECT_EQ(break_segment->GetStartTimestamp() + synced_delay_ms, 7000);
 }
 
+TEST(SyncedPipelineTest, ABreakInsideASyncedGopClosesAtTheKeyframeBeforeIt)
+{
+	// The reference changes on one of its keyframes while the synced track's
+	// keyframes sit 100 ms before the reference's, off the shared grid. The
+	// synced track has no keyframe at the break; its keyframe nearest the
+	// boundary lies just before it, within a part. The segment closes there,
+	// carries the discontinuity on the same segment number as the reference,
+	// and the following segments keep the same 100 ms alignment, instead of
+	// waiting a whole GOP for the next keyframe or being forced closed.
+	const int64_t break_ms = 8000;
+	const int64_t synced_lead_ms = 100;
+	auto pair = MakeVideoPair();
+
+	bool requested = false;
+	for (int64_t index = 0; 1000 + index * 100 / 3 < 20000; index++)
+	{
+		const int64_t pts = 1000 + index * 100 / 3;
+		const int64_t duration = 1000 + (index + 1) * 100 / 3 - pts;
+
+		if (requested == false && pts >= break_ms - 500)
+		{
+			pair.reference_policy->RequestDiscontinuity(break_ms * 1000);
+			pair.synced.policy->RequestDiscontinuity(break_ms * 1000);
+			requested = true;
+		}
+
+		// Reference keyframes at 1000, 2000, ... and synced ones at 1000, 1900, 2900, ...
+		bool reference_keyframe = (index % kGopFrames) == 0;
+		bool synced_keyframe = (index == 0) || (index % kGopFrames) == kGopFrames - 3;
+		ASSERT_TRUE(pair.reference.packager->AppendSample(fmp4_test::MakeVideoFrame(0, pts, duration, reference_keyframe, pts)));
+		ASSERT_TRUE(pair.synced.packager->AppendSample(fmp4_test::MakeVideoFrame(1, pts, duration, synced_keyframe, pts)));
+	}
+
+	auto first_break_segment = [](const TrackPipeline &pipeline) -> int64_t {
+		for (int64_t number = 0; number <= pipeline.storage->GetLastSegmentNumber(); number++)
+		{
+			auto segment = pipeline.storage->GetSegment(number);
+			if (segment != nullptr && segment->IsDiscontinuityPoint() == true)
+			{
+				return number;
+			}
+		}
+		return -1;
+	};
+
+	int64_t reference_break = first_break_segment(pair.reference);
+	int64_t synced_break = first_break_segment(pair.synced);
+	ASSERT_GE(reference_break, 0);
+	EXPECT_EQ(reference_break, synced_break);
+
+	// The reference closes on its keyframe at the break, the synced track on
+	// its keyframe 100 ms before it
+	EXPECT_EQ(pair.reference.storage->GetSegment(reference_break)->GetStartTimestamp(), break_ms);
+	EXPECT_EQ(pair.synced.storage->GetSegment(synced_break)->GetStartTimestamp(), break_ms - synced_lead_ms);
+
+	size_t common_segments = 0;
+	for (int64_t number = 1; number <= pair.reference.storage->GetLastSegmentNumber(); number++)
+	{
+		auto reference_segment = std::static_pointer_cast<bmff::FMP4Segment>(pair.reference.storage->GetSegment(number));
+		auto synced_segment = std::static_pointer_cast<bmff::FMP4Segment>(pair.synced.storage->GetSegment(number));
+		if (reference_segment == nullptr || synced_segment == nullptr || synced_segment->IsCompleted() == false)
+		{
+			continue;
+		}
+
+		common_segments++;
+		EXPECT_EQ(synced_segment->GetStartTimestamp(), reference_segment->GetStartTimestamp() - synced_lead_ms) << "segment " << number;
+		// Never stretched to the next keyframe, never forced closed
+		EXPECT_LE(synced_segment->GetDurationMs(), kSegmentDurationMs + kChunkDurationMs) << "segment " << number;
+	}
+	EXPECT_GE(common_segments, 3u);
+}
+
 TEST(SyncedPipelineTest, SyncedVideoOnAShiftedFrameGridStaysAligned)
 {
 	// A frame rate conversion re-times the synced track a few ms off the
