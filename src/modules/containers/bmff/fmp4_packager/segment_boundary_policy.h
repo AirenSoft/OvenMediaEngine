@@ -32,18 +32,24 @@ namespace bmff
 		// Whether end_us is the exact end or the aim to cut at or after
 		bool exact = false;
 
+		// An immediate marker cut decided elsewhere: the segment ends right at
+		// end_us on every track, keyframe or not
+		bool marker_cut = false;
+
 		// The name of the segment being accumulated
 		int64_t segment_number = -1;
 	};
 
-	// What a completed segment actually was. has_marker is filled at the
-	// settlement, from the markers the segment consumed.
+	// What a completed segment actually was. has_marker and marker_cut are
+	// filled at the settlement, from the markers the segment consumed.
 	struct CompletedSegment
 	{
 		int64_t number = -1;
 		int64_t start_timestamp_us = 0;
 		int64_t duration_us = 0;
 		bool has_marker = false;
+		// The segment ended right at an immediate CUE-OUT
+		bool marker_cut = false;
 	};
 
 	// What settling a completion yields for the caller
@@ -229,10 +235,29 @@ namespace bmff
 		LLHlsCueOutCutMode _cue_out_cut_mode = LLHlsCueOutCutMode::Keyframe;
 		ov::String _log_context;
 
+		// A boundary off this track's keyframes is reported once; later ones
+		// go to the debug log
+		bool _keyframe_cut_warned = false;
+
 		// The name of the segment accumulating now, advanced by the settlements
 		int64_t _next_segment_number = 0;
 
 	private:
+		// Where a track ends its segment when the sample at an exact boundary
+		// is not one of its keyframes: a keyframe within one part before the
+		// boundary, or else the first one after it
+		struct KeyframeCut
+		{
+			// The keyframe is chosen; count samples go out ahead of it (the
+			// buffer size when the arriving frame is the keyframe)
+			bool decided = false;
+			// An earlier keyframe is the candidate so far; a later one could
+			// still be nearer, so the samples from it on stay back
+			bool pending = false;
+			size_t count = 0;
+		};
+		KeyframeCut PlanKeyframeCut(const std::vector<Sample> &sample_list, const SampleTiming &next_frame, int64_t boundary_us, int64_t stored_duration_us) const;
+
 		// The shared settlement: consume the covered markers, hand them to the
 		// policy's hook, and advance the numbering
 		CompletionResult Settle(const CompletedSegment &completed, bool discontinuity);
@@ -271,6 +296,8 @@ namespace bmff
 			// Whether one of them cut this segment, so the pacing knows this
 			// segment gained a boundary
 			bool cut_this_segment = false;
+			// Whether an immediate CUE-OUT ended this segment at its position
+			bool immediate_out_cut = false;
 		};
 
 		// Consume the markers this settlement takes over. A position the media

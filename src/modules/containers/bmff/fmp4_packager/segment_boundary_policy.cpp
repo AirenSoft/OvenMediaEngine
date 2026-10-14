@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <optional>
 
 #include "fmp4_private.h"
 
@@ -402,6 +403,12 @@ namespace bmff
 				// This segment covers the position, so the marker cut it
 				settled.markers.push_back(it->second);
 				settled.cut_this_segment = true;
+
+				// An immediate OUT inside the segment is where the segment ended
+				if (_cue_out_cut_mode == LLHlsCueOutCutMode::Immediate && it->second->IsOutOfNetwork() == true && it->first > start_us)
+				{
+					settled.immediate_out_cut = true;
+				}
 			}
 			else if (start_us - it->first <= _segment_duration_us)
 			{
@@ -496,6 +503,7 @@ namespace bmff
 		// Only a marker that cut this segment gained it a boundary; one that
 		// merely rides it must not shorten the next target
 		settled.has_marker = settled_markers.cut_this_segment;
+		settled.marker_cut = settled_markers.immediate_out_cut;
 
 		if (discontinuity == true)
 		{
@@ -603,6 +611,14 @@ namespace bmff
 			}
 		}
 
+		// An immediate marker cut announced by the reference ends this track's
+		// segment at the boundary the same way, keyframe or not
+		if (boundary.marker_cut == true && (next_frame.dts_us >= boundary.end_us || buffer_end_us > boundary.end_us))
+		{
+			marker_cut_now = true;
+			marker_cut_us = boundary.end_us;
+		}
+
 		// Where the segment would end if it closed at the arriving frame. Sample
 		// durations are rounded to the source timebase, so their sum can fall a
 		// millisecond short of the plan while the position says otherwise; the
@@ -632,11 +648,53 @@ namespace bmff
 			return decision;
 		}
 
+		bool no_marker = (marker_cut_now == false && marker_close_asap == false);
+
+		// In synced segmentation every video track carries the same picture at
+		// the same decode time, so an exact boundary falls on a keyframe of every
+		// track and the segment ends right there, as it does on audio and on an
+		// immediate marker cut. A track whose keyframes have drifted from that
+		// premise finds no keyframe at the boundary and cannot end there; it ends
+		// at a keyframe of its own instead, one within one part before the
+		// boundary or else the first one after it, so the stream keeps playing.
+		// The sample at the boundary is the first one at or past the plan, the
+		// convention the split below follows.
+		KeyframeCut keyframe_cut;
+		bool boundary_sample_independent = next_frame.independent;
+		for (const auto &sample : sample_list)
+		{
+			if (sample.timing.dts_us >= boundary.end_us)
+			{
+				boundary_sample_independent = sample.timing.independent;
+				break;
+			}
+		}
+
+		if (boundary.exact == true && no_marker == true && next_frame.dts_us >= boundary.end_us && boundary_sample_independent == false)
+		{
+			keyframe_cut = PlanKeyframeCut(sample_list, next_frame, boundary.end_us, last_segment_duration_us);
+
+			// A reached break closes at the arriving keyframe, whatever the plan:
+			// the break is where the content changes, and the next keyframe at or
+			// after it is where every track cuts for it
+			if (break_reached == true && next_frame.independent == true)
+			{
+				keyframe_cut = KeyframeCut();
+			}
+
+			if (keyframe_cut.decided == true && keyframe_cut.count == sample_list.size())
+			{
+				// The arriving keyframe opens the next segment
+				can_be_last_chunk = true;
+			}
+		}
+
 		// A part must stay within the part target and reach at least 85% of it,
 		// except an independent or segment-final part (rfc8216bis 4.4.4.9)
 		if (((buffered_duration_us >= _chunk_duration_us) ||
 			 (marker_cut_now == true) ||
 			 (can_be_last_chunk == true && next_frame.independent == true) ||
+			 (keyframe_cut.decided == true) ||
 			 ((next_buffered_duration_us > _chunk_duration_us) && (buffered_duration_us >= (_chunk_duration_us * 85) / 100))) == false)
 		{
 			return decision;
@@ -646,7 +704,6 @@ namespace bmff
 		// The duration of the emit_count prefix, kept in step with every trim
 		int64_t emit_duration_us = buffered_duration_us;
 		bool completed_by_split = false;
-		bool no_marker = (marker_cut_now == false && marker_close_asap == false);
 
 		// An immediate marker cut ends the segment exactly at the marker;
 		// samples past it open the break content's replacement point
@@ -668,11 +725,35 @@ namespace bmff
 			emit_duration_us = duration_before_marker_us;
 		}
 
-		// Samples past an exact boundary belong to the next segment, so the
+		// The samples ahead of the chosen keyframe end the segment. While an
+		// earlier keyframe is only the candidate so far, the samples from it on
+		// stay back and whole parts ahead of it still go out.
+		if (keyframe_cut.decided == true || keyframe_cut.pending == true)
+		{
+			if (keyframe_cut.count < emit_count)
+			{
+				emit_count = keyframe_cut.count;
+				emit_duration_us = 0;
+				for (size_t index = 0; index < emit_count; index++)
+				{
+					emit_duration_us += sample_list[index].timing.duration_us;
+				}
+
+				completed_by_split = keyframe_cut.decided;
+			}
+
+			if (keyframe_cut.pending == true && emit_duration_us < _chunk_duration_us)
+			{
+				return decision;
+			}
+		}
+		// The samples past an exact boundary belong to the next segment, so the
 		// boundary lands exactly where the plan said. Never engages while cuts
 		// fire at the crossing frame (nothing accumulates past the plan then).
-		if (can_be_last_chunk == true && no_marker == true && boundary.exact == true &&
-			buffer_end_us > boundary.end_us)
+		// Only a keyframe can open the next segment; a track with no keyframe
+		// near the boundary keeps the segment open until its next one arrives
+		else if (can_be_last_chunk == true && no_marker == true && boundary.exact == true &&
+				 buffer_end_us > boundary.end_us && boundary_sample_independent == true)
 		{
 			size_t samples_before_boundary = 0;
 			int64_t duration_before_boundary_us = 0;
@@ -686,16 +767,7 @@ namespace bmff
 			{
 				emit_count = samples_before_boundary;
 				emit_duration_us = duration_before_boundary_us;
-
-				// The boundary frame itself leads the samples left behind; when
-				// it can open the next segment, the segment completes right here
-				// instead of waiting for a later keyframe
-				completed_by_split = sample_list[samples_before_boundary].timing.independent;
-				if (completed_by_split == false)
-				{
-					logtw("%s - The boundary at %.3f ms is not a keyframe on this track; the segment closes at the next keyframe instead",
-						  _log_context.CStr(), static_cast<double>(boundary.end_us) / 1000.0);
-				}
+				completed_by_split = true;
 			}
 		}
 
@@ -726,55 +798,34 @@ namespace bmff
 			}
 		}
 
-		// A part cut mid-reorder covers different presentation time than its
-		// declared duration says, and players that compare the two (Shaka)
-		// report the mismatch. So the cut moves back to the last position where
-		// the reordering had resolved; the samples left behind ride the next
-		// part. An immediate marker cut is exempt: it cuts exactly where asked.
-		bool reorder_resolved = (next_frame.pts_us > buffered.GetHighestPtsUs());
-
-		if (reorder_resolved == false && no_marker == true &&
-			completed_by_split == false && emit_count > 1)
+		// The chunk going out may end past the position the gate was asked
+		// about: a keyframe chosen past the boundary, or a slice crossing it.
+		// It still may not run ahead of the reference.
+		int64_t chunk_end_us = (emit_count < sample_list.size()) ? sample_list[emit_count].timing.dts_us : buffer_end_us;
+		if (emit_count > 0 && CanEmitChunk(chunk_end_us) == false)
 		{
-			// The lowest presentation timestamp from each position on, to test a
-			// candidate cut against everything it would keep. Spans the whole
-			// buffer, not the emit window: the samples past that window stay
-			// behind as well, and a cut that displays after one of them is the
-			// overlap this block exists to prevent.
-			const size_t buffered_count = sample_list.size();
-			std::vector<int64_t> lowest_kept_pts_us(buffered_count, 0);
-			int64_t lowest_us = 0;
-			for (size_t index = buffered_count; index-- > 0;)
-			{
-				lowest_us = (index + 1 == buffered_count) ? sample_list[index].timing.pts_us : std::min(lowest_us, sample_list[index].timing.pts_us);
-				lowest_kept_pts_us[index] = lowest_us;
-			}
-
-			size_t resolved_count = 0;
-			int64_t highest_emitted_pts_us = 0;
-			for (size_t index = 0; index + 1 < emit_count; index++)
-			{
-				highest_emitted_pts_us = (index == 0) ? sample_list[index].timing.pts_us : std::max(highest_emitted_pts_us, sample_list[index].timing.pts_us);
-
-				if (highest_emitted_pts_us < lowest_kept_pts_us[index + 1])
-				{
-					resolved_count = index + 1;
-				}
-			}
-
-			// However short the resolved prefix is, it goes out on its own: a
-			// part that covers a different stretch of presentation time than it
-			// declares is worse than a short one
-			if (resolved_count > 0)
-			{
-				emit_count = resolved_count;
-				can_be_last_chunk = false;
-			}
+			return decision;
 		}
 
 		decision.emit_count = emit_count;
 		decision.completes_segment = (can_be_last_chunk == true && next_frame.independent == true) ||
 									 (marker_cut_now == true) || (completed_by_split == true);
+
+		if (keyframe_cut.decided == true && decision.completes_segment == true)
+		{
+			int64_t cut_us = (keyframe_cut.count < sample_list.size()) ? sample_list[keyframe_cut.count].timing.dts_us : next_frame.dts_us;
+			if (_keyframe_cut_warned == false)
+			{
+				_keyframe_cut_warned = true;
+				logtw("%s - The boundary at %.3f ms is not a keyframe on this track; the segment closes at the keyframe at %.3f ms instead",
+					  _log_context.CStr(), boundary.end_us / 1000.0, cut_us / 1000.0);
+			}
+			else
+			{
+				logtd("%s - The boundary at %.3f ms is not a keyframe on this track; the segment closes at the keyframe at %.3f ms instead",
+					  _log_context.CStr(), boundary.end_us / 1000.0, cut_us / 1000.0);
+			}
+		}
 
 		// Last resort: no cuttable position appeared for twice the cadence, so
 		// the segment closes here rather than growing without bound
@@ -794,13 +845,79 @@ namespace bmff
 			}
 		}
 
-		// The break is stamped where it actually happened, on the first close at
-		// or after its position. Riding an earlier close instead would consume
-		// the break on the tracks that received it while the track that changed
+		// The break is stamped on the first close decided after its position is
+		// reached, never on a close that came before: that would consume the
+		// break on the tracks that received it while the track that changed
 		// still closes at its own position, leaving that rendition one segment
-		// ahead of the others.
+		// ahead. A synced track whose keyframes miss the break may cut at its
+		// keyframe nearest the boundary, up to one part before the break, and
+		// still carries the stamp: staying on the reference's segment number is
+		// what keeps the renditions switchable
 		decision.discontinuity = break_reached && decision.completes_segment;
 
 		return decision;
+	}
+
+	SegmentBoundaryPolicy::KeyframeCut SegmentBoundaryPolicy::PlanKeyframeCut(const std::vector<Sample> &sample_list, const SampleTiming &next_frame, int64_t boundary_us, int64_t stored_duration_us) const
+	{
+		KeyframeCut cut;
+
+		// The last buffered keyframe within one part before the boundary and the
+		// first one after it, buffered or just arriving (an index of the buffer
+		// size). A keyframe further back only lingers in the buffer of a track
+		// running behind the reference, and holding the samples behind it would
+		// stall that track for seconds. The keyframe that opened this segment
+		// cannot end it: until something is stored, the first buffered sample is
+		// that one.
+		std::optional<size_t> before;
+		std::optional<size_t> after;
+		for (size_t index = 0; index < sample_list.size(); index++)
+		{
+			const auto &timing = sample_list[index].timing;
+			if (timing.independent == false || (index == 0 && stored_duration_us == 0))
+			{
+				continue;
+			}
+
+			if (timing.dts_us <= boundary_us)
+			{
+				if (boundary_us - timing.dts_us <= _chunk_duration_us)
+				{
+					before = index;
+				}
+			}
+			else if (after.has_value() == false)
+			{
+				after = index;
+			}
+		}
+
+		if (after.has_value() == false && next_frame.independent == true && next_frame.dts_us > boundary_us)
+		{
+			after = sample_list.size();
+		}
+
+		if (after.has_value() == true)
+		{
+			// Nothing later can be nearer than the first keyframe past the boundary
+			int64_t after_us = (*after < sample_list.size()) ? sample_list[*after].timing.dts_us : next_frame.dts_us;
+			bool after_is_nearer = (before.has_value() == false) || (after_us - boundary_us <= boundary_us - sample_list[*before].timing.dts_us);
+
+			cut.decided = true;
+			cut.count = after_is_nearer ? *after : *before;
+			return cut;
+		}
+
+		if (before.has_value() == true)
+		{
+			// A later keyframe could still be nearer until the samples have run
+			// as far past the boundary as this one stands before it
+			int64_t lead_us = boundary_us - sample_list[*before].timing.dts_us;
+			cut.decided = (next_frame.dts_us > boundary_us + lead_us);
+			cut.pending = (cut.decided == false);
+			cut.count = *before;
+		}
+
+		return cut;
 	}
 }  // namespace bmff

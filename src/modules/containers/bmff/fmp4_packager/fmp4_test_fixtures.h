@@ -7,6 +7,8 @@
 //==============================================================================
 #pragma once
 
+#include <gtest/gtest.h>
+
 #include <base/info/media_track.h>
 #include <base/mediarouter/media_buffer.h>
 
@@ -121,5 +123,113 @@ namespace fmp4_test
 		}
 
 		return nullptr;
+	}
+
+	// A 10 fps feed with B-frames: decode order I P B B P B B ..., each P
+	// displaying after the two B frames that follow it
+	constexpr int64_t kReorderFrameMs = 100;
+	constexpr int64_t kReorderGopMs = 4000;	// 40 frames
+	constexpr double kReorderFrameRate = 10.0;
+
+	inline std::shared_ptr<MediaTrack> MakeReorderedVideoTrack(uint32_t track_id)
+	{
+		return MakeVideoTrack(track_id, kReorderFrameRate, static_cast<int32_t>(kReorderGopMs / kReorderFrameMs));
+	}
+
+	inline std::shared_ptr<MediaPacket> MakeReorderedVideoFrame(uint32_t track_id, int64_t index)
+	{
+		const int64_t dts = index * kReorderFrameMs;
+		const int64_t local = index % (kReorderGopMs / kReorderFrameMs);
+		const bool keyframe = (local == 0);
+
+		int64_t pts;
+		if (keyframe == true)
+		{
+			pts = dts;
+		}
+		else if (((local - 1) % 3) == 0)
+		{
+			pts = dts + 2 * kReorderFrameMs;
+		}
+		else
+		{
+			pts = dts - kReorderFrameMs;
+		}
+
+		return MakeVideoFrame(track_id, dts, kReorderFrameMs, keyframe, pts);
+	}
+
+	// Every part of every completed segment keeps to the spec: never longer
+	// than the part target, and never shorter than 85% of it unless it is
+	// independent or closes its segment (rfc8216bis 4.4.4.9)
+	inline void ExpectPartsWithinSpec(const TrackPipeline &pipeline, double chunk_duration_ms, int min_partials)
+	{
+		int checked_partials = 0;
+
+		for (int64_t number = 0; number <= pipeline.storage->GetLastSegmentNumber(); number++)
+		{
+			auto segment = std::static_pointer_cast<bmff::FMP4Segment>(pipeline.storage->GetSegment(number));
+			if (segment == nullptr || segment->IsCompleted() == false)
+			{
+				continue;
+			}
+
+			for (uint64_t index = 0; index < segment->GetPartialCount(); index++)
+			{
+				auto partial = segment->GetPartialSegment(index);
+				ASSERT_NE(partial, nullptr);
+
+				EXPECT_LE(partial->GetDurationMs(), chunk_duration_ms + 1.0)
+					<< "the partial at " << partial->GetStartTimestamp() << " exceeds the part target";
+
+				bool final_part = (index + 1 == segment->GetPartialCount());
+				if (partial->IsIndependent() == false && final_part == false)
+				{
+					EXPECT_GE(partial->GetDurationMs(), chunk_duration_ms * 0.85 - 1.0)
+						<< "the partial at " << partial->GetStartTimestamp() << " is under the 85% floor";
+				}
+
+				checked_partials++;
+			}
+		}
+
+		EXPECT_GE(checked_partials, min_partials);
+	}
+
+	// Every part of every completed segment starts on the part cadence and,
+	// unless it closes the segment, runs the full part target: the reordering
+	// of the feed never moved a cut
+	inline void ExpectPartsCutAtTheTarget(const TrackPipeline &pipeline, int64_t chunk_duration_ms, int min_partials)
+	{
+		int checked_partials = 0;
+
+		for (int64_t number = 0; number <= pipeline.storage->GetLastSegmentNumber(); number++)
+		{
+			auto segment = std::static_pointer_cast<bmff::FMP4Segment>(pipeline.storage->GetSegment(number));
+			if (segment == nullptr || segment->IsCompleted() == false)
+			{
+				continue;
+			}
+
+			for (uint64_t index = 0; index < segment->GetPartialCount(); index++)
+			{
+				auto partial = segment->GetPartialSegment(index);
+				ASSERT_NE(partial, nullptr);
+
+				int64_t local_offset = partial->GetStartTimestamp() % kReorderGopMs;
+				EXPECT_EQ(local_offset % chunk_duration_ms, 0)
+					<< "the partial at " << partial->GetStartTimestamp() << " is off the part cadence";
+
+				if (index + 1 < segment->GetPartialCount())
+				{
+					EXPECT_DOUBLE_EQ(partial->GetDurationMs(), static_cast<double>(chunk_duration_ms))
+						<< "the partial at " << partial->GetStartTimestamp() << " was cut short";
+				}
+
+				checked_partials++;
+			}
+		}
+
+		EXPECT_GE(checked_partials, min_partials);
 	}
 }  // namespace fmp4_test

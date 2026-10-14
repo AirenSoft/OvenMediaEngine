@@ -36,6 +36,9 @@ namespace bmff
 			// The markers the reference's segment consumed; every synced track
 			// attaches them to its own segment of the same number
 			std::vector<std::shared_ptr<Marker>> markers;
+			// The reference ended its segment right at an immediate CUE-OUT, so
+			// every synced track ends its own there too, keyframe or not
+			bool marker_cut = false;
 			// A boundary published when the reference OPENED its first segment,
 			// so the synced tracks can name theirs without waiting a whole
 			// segment for the first completion. No segment ended here: media

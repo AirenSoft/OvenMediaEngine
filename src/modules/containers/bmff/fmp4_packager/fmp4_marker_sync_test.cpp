@@ -683,69 +683,22 @@ TEST(MarkerPolicyTest, EveryTrackCarriesEveryMarkerInDurationMode)
 // Emission timing robustness
 //------------------------------------------------------------------------------
 
-TEST(EmissionTimingTest, PartCutsWaitForTheReorderToResolve)
+TEST(EmissionTimingTest, PartsCutAtTheTargetThroughReordering)
 {
-	// Decode order I P B B: a cut right after the P would emit a frame that
-	// displays after the B frames still buffered, so the part would cover
-	// different presentation time than its declared duration says. Cuts may
-	// land only where everything emitted displays before everything kept.
-	auto track = fmp4_test::MakeVideoTrack(0, 10.0, 40);
+	// Decode order I P B B: a part cut right after the P emits a frame that
+	// displays after the B frames still buffered. Parts end on the part target
+	// whatever the reordering of the feed, as they always did.
+	auto track = fmp4_test::MakeReorderedVideoTrack(0);
 	auto policy = std::make_shared<bmff::DurationBoundaryPolicy>(MakeConfig(), false);
 	auto pipeline = fmp4_test::MakePipeline(track, std::make_shared<fmp4_test::NullStorageObserver>(), policy,
 										   kSegmentDurationMs, kChunkDurationMs, "reorder_test");
 
-	constexpr int64_t kFrameMs = 100;
-	constexpr int64_t kGroupMs = 300;  // one P B B reorder group
-	constexpr int64_t kGopMs = 4000;
-
 	for (int64_t index = 0; index < 120; index++)
 	{
-		int64_t dts = index * kFrameMs;
-		int64_t local = index % 40;
-		bool keyframe = (local == 0);
-
-		int64_t pts;
-		if (keyframe == true)
-		{
-			pts = dts;
-		}
-		else if ((local - 1) % 3 == 0)
-		{
-			// The P displays after the two B frames that follow it in decode order
-			pts = dts + 2 * kFrameMs;
-		}
-		else
-		{
-			pts = dts - kFrameMs;
-		}
-
-		ASSERT_TRUE(pipeline.packager->AppendSample(fmp4_test::MakeVideoFrame(0, dts, kFrameMs, keyframe, pts)));
+		ASSERT_TRUE(pipeline.packager->AppendSample(fmp4_test::MakeReorderedVideoFrame(0, index)));
 	}
 
-	int checked_partials = 0;
-	for (int64_t number = 0; number <= pipeline.storage->GetLastSegmentNumber(); number++)
-	{
-		auto segment = std::static_pointer_cast<bmff::FMP4Segment>(pipeline.storage->GetSegment(number));
-		if (segment == nullptr || segment->IsCompleted() == false)
-		{
-			continue;
-		}
-
-		for (uint64_t index = 0; index < segment->GetPartialCount(); index++)
-		{
-			auto partial = segment->GetPartialSegment(index);
-			ASSERT_NE(partial, nullptr);
-
-			// Resolved positions are the group boundaries: the GOP start, and
-			// one frame past each group start within it
-			int64_t local_offset = partial->GetStartTimestamp() % kGopMs;
-			EXPECT_TRUE(local_offset == 0 || (local_offset % kGroupMs) == kFrameMs)
-				<< "the partial at " << partial->GetStartTimestamp() << " splits a reorder group";
-			checked_partials++;
-		}
-	}
-
-	EXPECT_GE(checked_partials, 20);
+	fmp4_test::ExpectPartsCutAtTheTarget(pipeline, static_cast<int64_t>(kChunkDurationMs), 20);
 }
 
 TEST(EmissionTimingTest, FractionalTicksKeepThePartCadence)

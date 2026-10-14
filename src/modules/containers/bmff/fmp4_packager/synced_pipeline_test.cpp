@@ -193,6 +193,472 @@ TEST(SyncedPipelineTest, AudioDeliveredAheadStaysAligned)
 	ExpectAlignedSegments(rig, 12);
 }
 
+TEST(SyncedPipelineTest, ReferencePartsStayWithinSpecThroughReordering)
+{
+	// The reference cuts its parts on the duration cadence whatever the
+	// reordering of the feed, and every part keeps to the spec limits
+	auto track = fmp4_test::MakeReorderedVideoTrack(0);
+
+	bmff::SegmentBoundaryPolicy::Config config;
+	config.segment_duration_ms = static_cast<uint64_t>(kSegmentDurationMs);
+	config.chunk_duration_ms = kChunkDurationMs;
+	config.log_context = "synced_pipeline_test/reference";
+	auto policy = std::make_shared<bmff::ReferenceBoundaryPolicy>(config, fmp4_test::kReorderFrameRate);
+	auto pipeline = fmp4_test::MakePipeline(track, std::make_shared<fmp4_test::NullStorageObserver>(), policy,
+										   static_cast<uint64_t>(kSegmentDurationMs), kChunkDurationMs, "synced_pipeline_test");
+
+	for (int64_t index = 0; index < 120; index++)
+	{
+		ASSERT_TRUE(pipeline.packager->AppendSample(fmp4_test::MakeReorderedVideoFrame(0, index)));
+	}
+
+	fmp4_test::ExpectPartsWithinSpec(pipeline, kChunkDurationMs, 20);
+}
+
+TEST(SyncedPipelineTest, SyncedPartsStayWithinSpecThroughReordering)
+{
+	// A synced video track follows the reference's progress, so it emits from
+	// a backlog in part-sized slices; every slice keeps to the spec limits
+	// whatever the reordering of the feed
+	auto observer = std::make_shared<fmp4_test::NullStorageObserver>();
+
+	bmff::SegmentBoundaryPolicy::Config policy_config;
+	policy_config.segment_duration_ms = static_cast<uint64_t>(kSegmentDurationMs);
+	policy_config.chunk_duration_ms = kChunkDurationMs;
+
+	auto reference_config = policy_config;
+	reference_config.log_context = "synced_pipeline_test/reference";
+	auto reference_policy = std::make_shared<bmff::ReferenceBoundaryPolicy>(reference_config, 30.0);
+	auto reference = fmp4_test::MakePipeline(fmp4_test::MakeVideoTrack(0, 30.0, kGopFrames), observer, reference_policy,
+											 static_cast<uint64_t>(kSegmentDurationMs), kChunkDurationMs, "synced_pipeline_test");
+
+	auto synced_config = policy_config;
+	synced_config.log_context = "synced_pipeline_test/synced";
+	auto synced_policy = std::make_shared<bmff::SyncedBoundaryPolicy>(reference_policy, synced_config);
+	auto synced = fmp4_test::MakePipeline(fmp4_test::MakeReorderedVideoTrack(1), observer, synced_policy,
+										  static_cast<uint64_t>(kSegmentDurationMs), kChunkDurationMs, "synced_pipeline_test");
+
+	// Interleaved by decode time, the reference first on a tie so that its
+	// progress mark is ahead whenever the synced track asks
+	int64_t reference_index = 0;
+	int64_t synced_index = 0;
+	while (synced_index < 120)
+	{
+		const int64_t reference_dts = reference_index * 100 / 3;
+		const int64_t synced_dts = synced_index * fmp4_test::kReorderFrameMs;
+
+		if (reference_dts <= synced_dts)
+		{
+			const int64_t duration = (reference_index + 1) * 100 / 3 - reference_dts;
+			ASSERT_TRUE(reference.packager->AppendSample(fmp4_test::MakeVideoFrame(0, reference_dts, duration, (reference_index % kGopFrames) == 0)));
+			reference_index++;
+		}
+		else
+		{
+			ASSERT_TRUE(synced.packager->AppendSample(fmp4_test::MakeReorderedVideoFrame(1, synced_index)));
+			synced_index++;
+		}
+	}
+
+	fmp4_test::ExpectPartsWithinSpec(synced, kChunkDurationMs, 20);
+}
+
+namespace
+{
+	// Two video tracks carrying the same pictures with different reorder
+	// delays: every frame's pts is dts + delay, so the same picture has a
+	// different dts on each track. Keyframes every second on the reference
+	// and every two seconds on the synced track, both on the same pictures.
+	struct VideoPair
+	{
+		std::shared_ptr<bmff::ReferenceBoundaryPolicy> reference_policy;
+		TrackPipeline reference;
+		TrackPipeline synced;
+	};
+
+	VideoPair MakeVideoPair(LLHlsCueOutCutMode cue_out_cut_mode = LLHlsCueOutCutMode::Keyframe)
+	{
+		VideoPair pair;
+		auto observer = std::make_shared<fmp4_test::NullStorageObserver>();
+
+		bmff::SegmentBoundaryPolicy::Config policy_config;
+		policy_config.segment_duration_ms = static_cast<uint64_t>(kSegmentDurationMs);
+		policy_config.chunk_duration_ms = kChunkDurationMs;
+		policy_config.cue_out_cut_mode = cue_out_cut_mode;
+
+		auto reference_config = policy_config;
+		reference_config.log_context = "synced_pipeline_test/reference";
+		pair.reference_policy = std::make_shared<bmff::ReferenceBoundaryPolicy>(reference_config, 30.0);
+		pair.reference = fmp4_test::MakePipeline(fmp4_test::MakeVideoTrack(0, 30.0, kGopFrames), observer, pair.reference_policy,
+												 static_cast<uint64_t>(kSegmentDurationMs), kChunkDurationMs, "synced_pipeline_test");
+
+		auto synced_config = policy_config;
+		synced_config.log_context = "synced_pipeline_test/synced";
+		auto synced_policy = std::make_shared<bmff::SyncedBoundaryPolicy>(pair.reference_policy, synced_config);
+		pair.synced = fmp4_test::MakePipeline(fmp4_test::MakeVideoTrack(1, 30.0, kGopFrames * 2), observer, synced_policy,
+											  static_cast<uint64_t>(kSegmentDurationMs), kChunkDurationMs, "synced_pipeline_test");
+
+		return pair;
+	}
+
+	VideoPair DriveVideoPair(int64_t reference_delay_ms, int64_t synced_delay_ms, int64_t total_duration_ms,
+							 const std::vector<int64_t> &cue_out_timestamps = {}, uint32_t cue_duration_ms = 0, int64_t synced_shift_ms = 0,
+							 LLHlsCueOutCutMode cue_out_cut_mode = LLHlsCueOutCutMode::Keyframe)
+	{
+		VideoPair pair = MakeVideoPair(cue_out_cut_mode);
+
+		// Picture i displays at 1000 + i * 100 / 3 on both tracks
+		size_t cue_index = 0;
+		for (int64_t index = 0; 1000 + index * 100 / 3 < total_duration_ms; index++)
+		{
+			const int64_t pts = 1000 + index * 100 / 3;
+			const int64_t duration = 1000 + (index + 1) * 100 / 3 - pts;
+
+			if (cue_index < cue_out_timestamps.size() && pts >= cue_out_timestamps[cue_index] - 1000)
+			{
+				auto out_data = CueEvent::Create(CueEvent::CueType::OUT, cue_duration_ms, 0, false)->Serialize();
+				EXPECT_TRUE(pair.reference_policy->InsertMarker(Marker::CreateMarker(cmn::BitstreamFormat::CUE, cue_out_timestamps[cue_index], cue_out_timestamps[cue_index], out_data)));
+				auto in_data = CueEvent::Create(CueEvent::CueType::IN, 0, 0, true)->Serialize();
+				EXPECT_TRUE(pair.reference_policy->InsertMarker(Marker::CreateMarker(cmn::BitstreamFormat::CUE, cue_out_timestamps[cue_index] + cue_duration_ms, cue_out_timestamps[cue_index] + cue_duration_ms, in_data)));
+				cue_index++;
+			}
+
+			EXPECT_TRUE(pair.reference.packager->AppendSample(fmp4_test::MakeVideoFrame(0, pts - reference_delay_ms, duration, (index % kGopFrames) == 0, pts)));
+			EXPECT_TRUE(pair.synced.packager->AppendSample(fmp4_test::MakeVideoFrame(1, pts + synced_shift_ms - synced_delay_ms, duration, (index % (kGopFrames * 2)) == 0, pts + synced_shift_ms)));
+		}
+
+		return pair;
+	}
+
+	// Every segment number completed on both tracks starts on the same
+	// picture, and every part keeps to the spec: never longer than the part
+	// target, and never shorter than 85% of it unless independent or final
+	void ExpectSamePicturesAndSpecParts(const VideoPair &pair, int64_t reference_delay_ms, int64_t synced_delay_ms, size_t min_common_segments, int64_t synced_shift_ms = 0, int64_t first_segment = 0)
+	{
+		size_t common_segments = 0;
+
+		for (int64_t number = first_segment; number <= pair.reference.storage->GetLastSegmentNumber(); number++)
+		{
+			auto reference_segment = std::static_pointer_cast<bmff::FMP4Segment>(pair.reference.storage->GetSegment(number));
+			auto synced_segment = std::static_pointer_cast<bmff::FMP4Segment>(pair.synced.storage->GetSegment(number));
+			if (reference_segment == nullptr || synced_segment == nullptr ||
+				reference_segment->IsCompleted() == false || synced_segment->IsCompleted() == false)
+			{
+				continue;
+			}
+
+			common_segments++;
+
+			int64_t reference_start_pts = reference_segment->GetStartTimestamp() + reference_delay_ms;
+			int64_t synced_start_pts = synced_segment->GetStartTimestamp() + synced_delay_ms - synced_shift_ms;
+			EXPECT_EQ(reference_start_pts, synced_start_pts) << "segment " << number << " opens on different pictures";
+			EXPECT_NEAR(synced_segment->GetDurationMs(), kSegmentDurationMs, kVideoFrameMs + 1.0) << "segment " << number;
+
+			for (uint64_t index = 0; index < synced_segment->GetPartialCount(); index++)
+			{
+				auto partial = synced_segment->GetPartialSegment(index);
+				ASSERT_NE(partial, nullptr);
+
+				EXPECT_LE(partial->GetDurationMs(), kChunkDurationMs + 1.0) << "segment " << number << " part " << index;
+
+				bool final_part = (index + 1 == synced_segment->GetPartialCount());
+				if (partial->IsIndependent() == false && final_part == false)
+				{
+					EXPECT_GE(partial->GetDurationMs(), kChunkDurationMs * 0.85 - 1.0) << "segment " << number << " part " << index;
+				}
+			}
+		}
+
+		EXPECT_GE(common_segments, min_common_segments);
+	}
+}  // namespace
+
+TEST(SyncedPipelineTest, SyncedVideoWithALongerReorderDelayStaysAligned)
+{
+	// The synced track's keyframes decode two frames before they display, the
+	// reference's one frame: the keyframe opening a segment sits one frame
+	// before the reference's boundary in decode time, on the same picture
+	auto pair = DriveVideoPair(33, 67, 60000);
+	ExpectSamePicturesAndSpecParts(pair, 33, 67, 12);
+}
+
+TEST(SyncedPipelineTest, SyncedVideoWithAShorterReorderDelayStaysAligned)
+{
+	auto pair = DriveVideoPair(67, 33, 60000);
+	ExpectSamePicturesAndSpecParts(pair, 67, 33, 12);
+}
+
+TEST(SyncedPipelineTest, SyncedVideoWithAMuchLongerReorderDelayStaysAligned)
+{
+	// Six frames of delay against one: the opening keyframe decodes well
+	// before the reference's boundary and still opens the same picture
+	auto pair = DriveVideoPair(33, 200, 60000);
+	ExpectSamePicturesAndSpecParts(pair, 33, 200, 12);
+}
+
+// The end of what the storage holds for this track: the open segment's end,
+// or the last completed one's when the next has nothing stored yet
+static int64_t StoredEndMs(const TrackPipeline &pipeline)
+{
+	for (int64_t number = pipeline.storage->GetLastSegmentNumber(); number >= 0; number--)
+	{
+		auto segment = std::static_pointer_cast<bmff::FMP4Segment>(pipeline.storage->GetSegment(number));
+		if (segment != nullptr && segment->GetPartialCount() > 0)
+		{
+			return segment->GetStartTimestamp() + static_cast<int64_t>(segment->GetDurationMs());
+		}
+	}
+
+	return 0;
+}
+
+TEST(SyncedPipelineTest, SyncedVideoRunningBehindKeepsItsPartsFlowing)
+{
+	// The synced track is delivered two seconds behind the reference, so when
+	// a boundary is published its buffer still holds the keyframe from the
+	// middle of the segment. That keyframe is no candidate for the cut: the
+	// parts behind it keep going out, and the track never falls more than a
+	// part behind its own samples. Its first segment spans the lag; the
+	// alignment holds from the second one on.
+	const int64_t reference_delay_ms = 33;
+	const int64_t synced_delay_ms = 67;
+	const int64_t lag_frames = kGopFrames * 2;
+	auto pair = MakeVideoPair();
+
+	int64_t worst_backlog_ms = 0;
+	for (int64_t index = 0; index < 1800; index++)
+	{
+		const int64_t reference_index = index + lag_frames;
+		const int64_t reference_pts = 1000 + reference_index * 100 / 3;
+		const int64_t reference_duration = 1000 + (reference_index + 1) * 100 / 3 - reference_pts;
+		ASSERT_TRUE(pair.reference.packager->AppendSample(fmp4_test::MakeVideoFrame(0, reference_pts - reference_delay_ms, reference_duration, (reference_index % kGopFrames) == 0, reference_pts)));
+
+		const int64_t pts = 1000 + index * 100 / 3;
+		const int64_t duration = 1000 + (index + 1) * 100 / 3 - pts;
+		ASSERT_TRUE(pair.synced.packager->AppendSample(fmp4_test::MakeVideoFrame(1, pts - synced_delay_ms, duration, (index % (kGopFrames * 2)) == 0, pts)));
+
+		if (index > lag_frames + kGopFrames * 2)
+		{
+			worst_backlog_ms = std::max(worst_backlog_ms, (pts - synced_delay_ms) - StoredEndMs(pair.synced));
+		}
+	}
+
+	// One part may wait for its target, and a candidate keyframe may hold the
+	// samples behind it for up to its lead past the boundary: one more part
+	EXPECT_LE(worst_backlog_ms, static_cast<int64_t>(kChunkDurationMs) * 2 + 1);
+	ExpectSamePicturesAndSpecParts(pair, reference_delay_ms, synced_delay_ms, 12, 0, 1);
+}
+
+TEST(SyncedPipelineTest, SyncedVideoRunningAheadNeverPassesTheReference)
+{
+	// The synced track is delivered 1.5 s ahead of the reference and its
+	// keyframes sit 1.5 s past every boundary, so each cut lands on a keyframe
+	// the reference has not reached yet. Nothing it stores may run ahead of
+	// what the reference has stored, the closing part included.
+	const int64_t reference_delay_ms = 33;
+	const int64_t synced_delay_ms = 33;
+	const int64_t lead_frames = 45;
+	auto pair = MakeVideoPair();
+
+	for (int64_t index = 0; index < 1800; index++)
+	{
+		const int64_t synced_index = index + lead_frames;
+		const int64_t synced_pts = 1000 + synced_index * 100 / 3;
+		const int64_t synced_duration = 1000 + (synced_index + 1) * 100 / 3 - synced_pts;
+		ASSERT_TRUE(pair.synced.packager->AppendSample(fmp4_test::MakeVideoFrame(1, synced_pts - synced_delay_ms, synced_duration, (synced_index % (kGopFrames * 4)) == lead_frames, synced_pts)));
+
+		const int64_t pts = 1000 + index * 100 / 3;
+		const int64_t duration = 1000 + (index + 1) * 100 / 3 - pts;
+		ASSERT_TRUE(pair.reference.packager->AppendSample(fmp4_test::MakeVideoFrame(0, pts - reference_delay_ms, duration, (index % kGopFrames) == 0, pts)));
+
+		EXPECT_LE(StoredEndMs(pair.synced), StoredEndMs(pair.reference) + 1) << "at picture " << index;
+	}
+
+	EXPECT_GE(pair.synced.storage->GetLastSegmentNumber(), 12);
+}
+
+TEST(SyncedPipelineTest, APropagatedBreakClosesBothTracksOnTheSamePicture)
+{
+	// A break propagated from another track reaches both video tracks just
+	// before a picture both have a keyframe on. Each closes at that keyframe,
+	// so the discontinuity lands on the same segment number and the segment
+	// after it opens on the same picture, the reorder skew notwithstanding.
+	const int64_t reference_delay_ms = 33;
+	const int64_t synced_delay_ms = 67;
+	const int64_t break_ms = 6900;
+	auto pair = MakeVideoPair();
+
+	bool requested = false;
+	for (int64_t index = 0; 1000 + index * 100 / 3 < 20000; index++)
+	{
+		const int64_t pts = 1000 + index * 100 / 3;
+		const int64_t duration = 1000 + (index + 1) * 100 / 3 - pts;
+
+		if (requested == false && pts >= break_ms - 500)
+		{
+			pair.reference_policy->RequestDiscontinuity(break_ms * 1000);
+			pair.synced.policy->RequestDiscontinuity(break_ms * 1000);
+			requested = true;
+		}
+
+		ASSERT_TRUE(pair.reference.packager->AppendSample(fmp4_test::MakeVideoFrame(0, pts - reference_delay_ms, duration, (index % kGopFrames) == 0, pts)));
+		ASSERT_TRUE(pair.synced.packager->AppendSample(fmp4_test::MakeVideoFrame(1, pts - synced_delay_ms, duration, (index % (kGopFrames * 2)) == 0, pts)));
+	}
+
+	auto first_break_segment = [](const TrackPipeline &pipeline) -> int64_t {
+		for (int64_t number = 0; number <= pipeline.storage->GetLastSegmentNumber(); number++)
+		{
+			auto segment = pipeline.storage->GetSegment(number);
+			if (segment != nullptr && segment->IsDiscontinuityPoint() == true)
+			{
+				return number;
+			}
+		}
+		return -1;
+	};
+
+	int64_t reference_break = first_break_segment(pair.reference);
+	int64_t synced_break = first_break_segment(pair.synced);
+	ASSERT_GE(reference_break, 0);
+	EXPECT_EQ(reference_break, synced_break);
+
+	for (int64_t number = 1; number <= pair.reference.storage->GetLastSegmentNumber(); number++)
+	{
+		auto reference_segment = pair.reference.storage->GetSegment(number);
+		auto synced_segment = pair.synced.storage->GetSegment(number);
+		if (reference_segment == nullptr || synced_segment == nullptr || synced_segment->IsCompleted() == false)
+		{
+			continue;
+		}
+
+		EXPECT_EQ(reference_segment->GetStartTimestamp() + reference_delay_ms, synced_segment->GetStartTimestamp() + synced_delay_ms) << "segment " << number;
+	}
+
+	auto break_segment = pair.synced.storage->GetSegment(synced_break);
+	ASSERT_NE(break_segment, nullptr);
+	EXPECT_EQ(break_segment->GetStartTimestamp() + synced_delay_ms, 7000);
+}
+
+TEST(SyncedPipelineTest, ABreakInsideASyncedGopClosesAtTheKeyframeBeforeIt)
+{
+	// The reference changes on one of its keyframes while the synced track's
+	// keyframes sit 100 ms before the reference's, off the shared grid. The
+	// synced track has no keyframe at the break; its keyframe nearest the
+	// boundary lies just before it, within a part. The segment closes there,
+	// carries the discontinuity on the same segment number as the reference,
+	// and the following segments keep the same 100 ms alignment, instead of
+	// waiting a whole GOP for the next keyframe or being forced closed.
+	const int64_t break_ms = 8000;
+	const int64_t synced_lead_ms = 100;
+	auto pair = MakeVideoPair();
+
+	bool requested = false;
+	for (int64_t index = 0; 1000 + index * 100 / 3 < 20000; index++)
+	{
+		const int64_t pts = 1000 + index * 100 / 3;
+		const int64_t duration = 1000 + (index + 1) * 100 / 3 - pts;
+
+		if (requested == false && pts >= break_ms - 500)
+		{
+			pair.reference_policy->RequestDiscontinuity(break_ms * 1000);
+			pair.synced.policy->RequestDiscontinuity(break_ms * 1000);
+			requested = true;
+		}
+
+		// Reference keyframes at 1000, 2000, ... and synced ones at 1000, 1900, 2900, ...
+		bool reference_keyframe = (index % kGopFrames) == 0;
+		bool synced_keyframe = (index == 0) || (index % kGopFrames) == kGopFrames - 3;
+		ASSERT_TRUE(pair.reference.packager->AppendSample(fmp4_test::MakeVideoFrame(0, pts, duration, reference_keyframe, pts)));
+		ASSERT_TRUE(pair.synced.packager->AppendSample(fmp4_test::MakeVideoFrame(1, pts, duration, synced_keyframe, pts)));
+	}
+
+	auto first_break_segment = [](const TrackPipeline &pipeline) -> int64_t {
+		for (int64_t number = 0; number <= pipeline.storage->GetLastSegmentNumber(); number++)
+		{
+			auto segment = pipeline.storage->GetSegment(number);
+			if (segment != nullptr && segment->IsDiscontinuityPoint() == true)
+			{
+				return number;
+			}
+		}
+		return -1;
+	};
+
+	int64_t reference_break = first_break_segment(pair.reference);
+	int64_t synced_break = first_break_segment(pair.synced);
+	ASSERT_GE(reference_break, 0);
+	EXPECT_EQ(reference_break, synced_break);
+
+	// The reference closes on its keyframe at the break, the synced track on
+	// its keyframe 100 ms before it
+	EXPECT_EQ(pair.reference.storage->GetSegment(reference_break)->GetStartTimestamp(), break_ms);
+	EXPECT_EQ(pair.synced.storage->GetSegment(synced_break)->GetStartTimestamp(), break_ms - synced_lead_ms);
+
+	size_t common_segments = 0;
+	for (int64_t number = 1; number <= pair.reference.storage->GetLastSegmentNumber(); number++)
+	{
+		auto reference_segment = std::static_pointer_cast<bmff::FMP4Segment>(pair.reference.storage->GetSegment(number));
+		auto synced_segment = std::static_pointer_cast<bmff::FMP4Segment>(pair.synced.storage->GetSegment(number));
+		if (reference_segment == nullptr || synced_segment == nullptr || synced_segment->IsCompleted() == false)
+		{
+			continue;
+		}
+
+		common_segments++;
+		EXPECT_EQ(synced_segment->GetStartTimestamp(), reference_segment->GetStartTimestamp() - synced_lead_ms) << "segment " << number;
+		// Never stretched to the next keyframe, never forced closed
+		EXPECT_LE(synced_segment->GetDurationMs(), kSegmentDurationMs + kChunkDurationMs) << "segment " << number;
+	}
+	EXPECT_GE(common_segments, 3u);
+}
+
+TEST(SyncedPipelineTest, ASyncedTrackWithNoKeyframeNearTheBoundaryWaitsForTheNextOne)
+{
+	// The synced track's keyframes sit 500 ms after the reference's, further
+	// than a part, so no keyframe is buffered when a boundary is reached and
+	// the nearest-keyframe planner has nothing to pick yet. The segment must
+	// stay open until that keyframe arrives: every segment opens independent
+	// and keeps the reference's numbering.
+	const int64_t synced_lag_ms = 500;
+	auto pair = MakeVideoPair();
+
+	for (int64_t index = 0; 1000 + index * 100 / 3 < 30000; index++)
+	{
+		const int64_t pts = 1000 + index * 100 / 3;
+		const int64_t duration = 1000 + (index + 1) * 100 / 3 - pts;
+
+		bool reference_keyframe = (index % kGopFrames) == 0;
+		bool synced_keyframe = (index == 0) || (index % kGopFrames) == kGopFrames / 2;
+		ASSERT_TRUE(pair.reference.packager->AppendSample(fmp4_test::MakeVideoFrame(0, pts, duration, reference_keyframe, pts)));
+		ASSERT_TRUE(pair.synced.packager->AppendSample(fmp4_test::MakeVideoFrame(1, pts, duration, synced_keyframe, pts)));
+	}
+
+	size_t common_segments = 0;
+	for (int64_t number = 1; number <= pair.reference.storage->GetLastSegmentNumber(); number++)
+	{
+		auto reference_segment = std::static_pointer_cast<bmff::FMP4Segment>(pair.reference.storage->GetSegment(number));
+		auto synced_segment = std::static_pointer_cast<bmff::FMP4Segment>(pair.synced.storage->GetSegment(number));
+		if (reference_segment == nullptr || synced_segment == nullptr || synced_segment->IsCompleted() == false)
+		{
+			continue;
+		}
+
+		common_segments++;
+		ASSERT_GT(synced_segment->GetPartialCount(), 0u) << "segment " << number;
+		EXPECT_TRUE(synced_segment->GetPartialSegment(0)->IsIndependent()) << "segment " << number << " opens on a non-keyframe";
+		EXPECT_EQ(synced_segment->GetStartTimestamp(), reference_segment->GetStartTimestamp() + synced_lag_ms) << "segment " << number;
+	}
+	EXPECT_GE(common_segments, 4u);
+}
+
+TEST(SyncedPipelineTest, SyncedVideoOnAShiftedFrameGridStaysAligned)
+{
+	// A frame rate conversion re-times the synced track a few ms off the
+	// reference's frames: its keyframe nearest to the boundary opens the segment
+	auto pair = DriveVideoPair(33, 33, 60000, {}, 0, 4);
+	ExpectSamePicturesAndSpecParts(pair, 33, 33, 12, 4);
+}
+
 struct MarkerObservation
 {
 	int64_t segment_number = -1;
@@ -287,6 +753,97 @@ TEST(SyncedPipelineTest, MarkersRideTheRealizedBoundary)
 TEST(SyncedPipelineTest, ImmediateCutRealizesTheMarkerMidGop)
 {
 	ExpectMarkersRideTheBoundary(LLHlsCueOutCutMode::Immediate);
+}
+
+TEST(SyncedPipelineTest, MarkersReachASyncedVideoWithALongerReorderDelay)
+{
+	// Cues whose keyframe cuts (15000, 25000, 35000, 45000) are pictures both
+	// tracks have keyframes on; the markers must ride the same segment numbers
+	// on the synced track, closed on the same pictures
+	const int64_t reference_delay_ms = 33;
+	const int64_t synced_delay_ms = 67;
+	std::vector<int64_t> cue_out_timestamps = {14210, 34210};
+	auto pair = DriveVideoPair(reference_delay_ms, synced_delay_ms, 60000, cue_out_timestamps, 10000);
+
+	for (auto type : {CueEvent::CueType::OUT, CueEvent::CueType::IN})
+	{
+		auto reference_markers = CollectMarkers(pair.reference, type);
+		auto synced_markers = CollectMarkers(pair.synced, type);
+
+		ASSERT_EQ(reference_markers.size(), cue_out_timestamps.size());
+		ASSERT_EQ(synced_markers.size(), cue_out_timestamps.size());
+
+		for (size_t index = 0; index < cue_out_timestamps.size(); index++)
+		{
+			EXPECT_EQ(reference_markers[index].segment_number, synced_markers[index].segment_number) << "cue " << index;
+			EXPECT_EQ(reference_markers[index].marker, synced_markers[index].marker) << "cue " << index;
+			EXPECT_NEAR(reference_markers[index].segment_end_ms + reference_delay_ms, synced_markers[index].segment_end_ms + synced_delay_ms, 1.0) << "cue " << index;
+		}
+	}
+}
+
+TEST(SyncedPipelineTest, SyncedVideoOnTheSameGridEndsEverySegmentOnTheBoundary)
+{
+	// The premise of synced segmentation: both video tracks carry the same
+	// picture at the same decode time with the same keyframe interval. Every
+	// boundary is then a keyframe on the synced track, and its segments end
+	// exactly where the reference's do.
+	const int64_t delay_ms = 33;
+	auto pair = MakeVideoPair();
+
+	for (int64_t index = 0; 1000 + index * 100 / 3 < 60000; index++)
+	{
+		const int64_t pts = 1000 + index * 100 / 3;
+		const int64_t duration = 1000 + (index + 1) * 100 / 3 - pts;
+		const bool keyframe = (index % kGopFrames) == 0;
+
+		ASSERT_TRUE(pair.reference.packager->AppendSample(fmp4_test::MakeVideoFrame(0, pts - delay_ms, duration, keyframe, pts)));
+		ASSERT_TRUE(pair.synced.packager->AppendSample(fmp4_test::MakeVideoFrame(1, pts - delay_ms, duration, keyframe, pts)));
+	}
+
+	size_t common_segments = 0;
+	for (int64_t number = 0; number <= pair.reference.storage->GetLastSegmentNumber(); number++)
+	{
+		auto reference_segment = std::static_pointer_cast<bmff::FMP4Segment>(pair.reference.storage->GetSegment(number));
+		auto synced_segment = std::static_pointer_cast<bmff::FMP4Segment>(pair.synced.storage->GetSegment(number));
+		if (reference_segment == nullptr || synced_segment == nullptr ||
+			reference_segment->IsCompleted() == false || synced_segment->IsCompleted() == false)
+		{
+			continue;
+		}
+
+		common_segments++;
+		EXPECT_EQ(reference_segment->GetStartTimestamp(), synced_segment->GetStartTimestamp()) << "segment " << number;
+		EXPECT_DOUBLE_EQ(reference_segment->GetDurationMs(), synced_segment->GetDurationMs()) << "segment " << number;
+	}
+
+	EXPECT_GE(common_segments, 12u);
+	ExpectSamePicturesAndSpecParts(pair, delay_ms, delay_ms, 12);
+}
+
+TEST(SyncedPipelineTest, AnImmediateCutClosesBothVideoTracksAtTheMarker)
+{
+	// Two video tracks on the same decode timeline: an immediate CUE-OUT cuts
+	// the reference mid-GOP, and the synced track ends its segment at the same
+	// position, keyframe or not, on the same segment number. The cues sit a
+	// few hundred milliseconds past a keyframe of the synced track, where a
+	// keyframe cut would otherwise settle.
+	std::vector<int64_t> cue_out_timestamps = {15310, 35310};
+	auto pair = DriveVideoPair(33, 33, 60000, cue_out_timestamps, 10000, 0, LLHlsCueOutCutMode::Immediate);
+
+	auto reference_markers = CollectMarkers(pair.reference, CueEvent::CueType::OUT);
+	auto synced_markers = CollectMarkers(pair.synced, CueEvent::CueType::OUT);
+	ASSERT_EQ(reference_markers.size(), cue_out_timestamps.size());
+	ASSERT_EQ(synced_markers.size(), cue_out_timestamps.size());
+
+	for (size_t index = 0; index < cue_out_timestamps.size(); index++)
+	{
+		EXPECT_EQ(reference_markers[index].segment_number, synced_markers[index].segment_number) << "cue " << index;
+		EXPECT_EQ(reference_markers[index].marker, synced_markers[index].marker) << "cue " << index;
+		EXPECT_NEAR(reference_markers[index].segment_end_ms, synced_markers[index].segment_end_ms, 1.0) << "cue " << index;
+		EXPECT_GE(reference_markers[index].segment_end_ms, static_cast<double>(cue_out_timestamps[index])) << "cue " << index;
+		EXPECT_LT(reference_markers[index].segment_end_ms, static_cast<double>(cue_out_timestamps[index]) + kVideoFrameMs + 1.0) << "cue " << index;
+	}
 }
 
 TEST(SyncedPipelineTest, LateStartingAudioAdoptsTheSlotNumbering)

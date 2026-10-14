@@ -9,6 +9,7 @@
 #include "synced_boundary_policy.h"
 
 #include <cmath>
+#include <cstdlib>
 
 #include "fmp4_private.h"
 
@@ -247,6 +248,7 @@ namespace bmff
 		boundary.segment_number = completed.number;
 		boundary.timestamp_us = completed.start_timestamp_us + completed.duration_us;
 		boundary.markers = covered_markers;
+		boundary.marker_cut = completed.marker_cut;
 
 		_boundary_feed->PublishBoundary(boundary);
 
@@ -358,6 +360,12 @@ namespace bmff
 				// every player reconciles; landing short would leave a gap that
 				// permanently stalls a frame-counting audio clock
 				plan.end_us = boundary->timestamp_us - kBoundaryBiasUs;
+
+				// An immediate CUE-OUT cut the reference mid-GOP; every track ends
+				// its segment right there as well. A marker that only rides the
+				// boundary because the media never reached its position is no cut
+				plan.marker_cut = boundary->marker_cut;
+
 				return plan;
 			}
 		}
@@ -445,13 +453,23 @@ namespace bmff
 
 		// Consumption is strictly sequential: this completion realizes the next
 		// boundary in numbering order, so two completions can never take the same
-		// boundary and crowded boundaries pair off one by one. A cut lands at or
-		// past its aim, so the boundary it was aimed at is at or below the cut; a
-		// forced, overlong segment may have run past several boundaries and
-		// realizes each of them.
+		// boundary and crowded boundaries pair off one by one. A completion
+		// realizes the boundary its end is nearer to than to the previous one,
+		// the midpoint included: a cut normally lands on the boundary, a keyframe
+		// cut may sit a little before or after it. The previous one is the last
+		// consumed boundary, or where this segment started when none was
+		// consumed yet. Only a forced, overlong segment realizes more than one:
+		// every further boundary its end has actually run past, allowing for
+		// positions converted from the source timebase one value at a time.
 		constexpr int64_t kRealizedSlackUs = 100;
 
 		int64_t consumed_count = 0;
+
+		int64_t previous_us = completed.start_timestamp_us;
+		if (auto previous = _boundary_feed->GetBoundary(cursor); previous.has_value() == true)
+		{
+			previous_us = previous->timestamp_us;
+		}
 
 		while (true)
 		{
@@ -461,10 +479,22 @@ namespace bmff
 				break;
 			}
 
-			if (boundary->timestamp_us > segment_end_us + kRealizedSlackUs)
+			bool realized;
+			if (consumed_count == 0)
+			{
+				realized = (std::llabs(boundary->timestamp_us - segment_end_us) <= std::llabs(segment_end_us - previous_us));
+			}
+			else
+			{
+				realized = (boundary->timestamp_us <= segment_end_us + kRealizedSlackUs);
+			}
+
+			if (realized == false)
 			{
 				break;
 			}
+
+			previous_us = boundary->timestamp_us;
 
 			cursor = boundary->segment_number;
 			consumed_count++;
