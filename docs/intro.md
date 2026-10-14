@@ -62,13 +62,22 @@ Our goal is to make it easier for you to build a stable broadcasting/streaming s
 
 ## Supported Platforms
 
-We have tested OvenMediaEngine on platforms, listed below. However, we think it can work with other Linux packages as well:
+Building OvenMediaEngine requires libstdc++ 10 or newer. We test on the platforms listed below, and other Linux distributions with a comparable toolchain are likely to work as well:
 
-* Docker ([https://hub.docker.com/r/ovenmedialabs/ovenmediaengine](https://hub.docker.com/r/ovenmedialabs/ovenmediaengine))
-* Ubuntu 18+
-* Rocky Linux 8+
-* AlmaLinux 8+
-* Fedora 28+
+* Docker ([https://hub.docker.com/r/ovenmedialabs/ovenmediaengine](https://hub.docker.com/r/ovenmedialabs/ovenmediaengine)) - the official image is built on Ubuntu 22.04
+* Ubuntu 22.04 / 24.04 / 26.04
+* Rocky Linux 9 / AlmaLinux 9 / RHEL 9
+* Amazon Linux 2023
+* Fedora 34 - 43
+
+
+:::warning[Platforms that are no longer supported]
+
+Ubuntu 18.04 / 20.04, Rocky Linux / AlmaLinux / RHEL 8 and Amazon Linux 2 ship libstdc++ 9 or older. OvenMediaEngine stops at the CMake configure step on those systems, because predicate-based `wait_until()` busy-spins there instead of waiting ([GCC PR 91906](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=91906)). Use the [Docker image](getting-started/getting-started-with-docker.md) instead.
+
+Fedora 44 is not supported yet: jemalloc 5.3.0 does not compile against its libstdc++.
+
+:::
 
 ## Getting Started
 
