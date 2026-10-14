@@ -612,6 +612,45 @@ TEST(SyncedPipelineTest, ABreakInsideASyncedGopClosesAtTheKeyframeBeforeIt)
 	EXPECT_GE(common_segments, 3u);
 }
 
+TEST(SyncedPipelineTest, ASyncedTrackWithNoKeyframeNearTheBoundaryWaitsForTheNextOne)
+{
+	// The synced track's keyframes sit 500 ms after the reference's, further
+	// than a part, so no keyframe is buffered when a boundary is reached and
+	// the nearest-keyframe planner has nothing to pick yet. The segment must
+	// stay open until that keyframe arrives: every segment opens independent
+	// and keeps the reference's numbering.
+	const int64_t synced_lag_ms = 500;
+	auto pair = MakeVideoPair();
+
+	for (int64_t index = 0; 1000 + index * 100 / 3 < 30000; index++)
+	{
+		const int64_t pts = 1000 + index * 100 / 3;
+		const int64_t duration = 1000 + (index + 1) * 100 / 3 - pts;
+
+		bool reference_keyframe = (index % kGopFrames) == 0;
+		bool synced_keyframe = (index == 0) || (index % kGopFrames) == kGopFrames / 2;
+		ASSERT_TRUE(pair.reference.packager->AppendSample(fmp4_test::MakeVideoFrame(0, pts, duration, reference_keyframe, pts)));
+		ASSERT_TRUE(pair.synced.packager->AppendSample(fmp4_test::MakeVideoFrame(1, pts, duration, synced_keyframe, pts)));
+	}
+
+	size_t common_segments = 0;
+	for (int64_t number = 1; number <= pair.reference.storage->GetLastSegmentNumber(); number++)
+	{
+		auto reference_segment = std::static_pointer_cast<bmff::FMP4Segment>(pair.reference.storage->GetSegment(number));
+		auto synced_segment = std::static_pointer_cast<bmff::FMP4Segment>(pair.synced.storage->GetSegment(number));
+		if (reference_segment == nullptr || synced_segment == nullptr || synced_segment->IsCompleted() == false)
+		{
+			continue;
+		}
+
+		common_segments++;
+		ASSERT_GT(synced_segment->GetPartialCount(), 0u) << "segment " << number;
+		EXPECT_TRUE(synced_segment->GetPartialSegment(0)->IsIndependent()) << "segment " << number << " opens on a non-keyframe";
+		EXPECT_EQ(synced_segment->GetStartTimestamp(), reference_segment->GetStartTimestamp() + synced_lag_ms) << "segment " << number;
+	}
+	EXPECT_GE(common_segments, 4u);
+}
+
 TEST(SyncedPipelineTest, SyncedVideoOnAShiftedFrameGridStaysAligned)
 {
 	// A frame rate conversion re-times the synced track a few ms off the

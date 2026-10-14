@@ -751,8 +751,10 @@ namespace bmff
 		// The samples past an exact boundary belong to the next segment, so the
 		// boundary lands exactly where the plan said. Never engages while cuts
 		// fire at the crossing frame (nothing accumulates past the plan then).
+		// Only a keyframe can open the next segment; a track with no keyframe
+		// near the boundary keeps the segment open until its next one arrives
 		else if (can_be_last_chunk == true && no_marker == true && boundary.exact == true &&
-				 buffer_end_us > boundary.end_us)
+				 buffer_end_us > boundary.end_us && boundary_sample_independent == true)
 		{
 			size_t samples_before_boundary = 0;
 			int64_t duration_before_boundary_us = 0;
