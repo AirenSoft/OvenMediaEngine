@@ -13,35 +13,44 @@ If `InstallPrerequisites.cmake` fails, first try running `cmake -P cmake/Install
 
 ### Platform Specific Installation
 
+The build uses Clang by default (`OME_USE_CLANG=ON`), so `clang` and `lld` are part of the package list below. Leave them out if you configure with `-DOME_USE_CLANG=OFF`.
+
 
 <Tabs>
-<TabItem value="ubuntu-18" label="Ubuntu 18">
+<TabItem value="ubuntu" label="Ubuntu 22.04 / 24.04 / 26.04">
 
 ```bash
-sudo apt install -y build-essential nasm autoconf libtool zlib1g-dev tclsh cmake curl
+sudo apt-get install -y build-essential autoconf automake libtool zlib1g-dev \
+    tclsh cmake curl pkg-config bc uuid-dev git libgomp1 ninja-build python3 clang lld
 ```
 
 </TabItem>
-<TabItem value="fedora-28" label="Fedora 28">
+<TabItem value="rhel-9" label="Rocky Linux / AlmaLinux / RHEL 9">
 
 ```bash
-sudo yum install -y gcc-c++ make nasm autoconf libtool zlib-devel tcl cmake
+sudo dnf install -y 'dnf-command(config-manager)'
+sudo dnf config-manager --set-enabled crb || sudo dnf config-manager --set-enabled codeready-builder-for-rhel-9-$(arch)-rpms
+sudo dnf install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake \
+    libuuid-devel which diffutils patch perl perl-IPC-Cmd git libgomp ninja-build python3 \
+    clang lld
 ```
 
 </TabItem>
-<TabItem value="rocky-linux-almalinux-8" label="Rocky Linux/AlmaLinux 8">
+<TabItem value="amazon-linux-2023" label="Amazon Linux 2023">
 
 ```bash
-sudo dnf install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake libuuid-devel
-sudo dnf install -y perl-IPC-Cmd
+sudo dnf install -y bc gcc-c++ make autoconf libtool tcl bzip2 zlib-devel cmake \
+    libuuid-devel which diffutils patch perl perl-IPC-Cmd git libgomp ninja-build python3 \
+    clang
 ```
 
 </TabItem>
-<TabItem value="rocky-linux-almalinux-9" label="Rocky Linux/AlmaLinux 9">
+<TabItem value="fedora" label="Fedora">
 
 ```bash
-sudo dnf install -y bc gcc-c++ autoconf libtool tcl bzip2 zlib-devel cmake libuuid-devel
-sudo dnf install -y perl-IPC-Cmd perl-FindBin
+sudo dnf install -y gcc-c++ make autoconf libtool bzip2 zlib-devel tcl cmake \
+    bc libuuid-devel which diffutils patch perl perl-IPC-Cmd git libgomp ninja-build python3 \
+    clang lld
 ```
 
 </TabItem>

@@ -13,9 +13,24 @@ OvenMediaEngine provides Docker images from OvenMedia Labs Docker Hub (ovenmedia
 
 ## Getting Started with Source Code
 
-### Installing CMake
+### Supported Platforms
 
-OvenMediaEngine supports most Linux distributions. The tested platforms are **Ubuntu 18+**, **Fedora 28+**, **Rocky Linux 8+**, and **AlmaLinux 8+**.
+OvenMediaEngine builds on most Linux distributions that ship **libstdc++ 10 or newer**. The tested platforms are:
+
+* **Ubuntu 22.04 / 24.04 / 26.04**
+* **Rocky Linux 9 / AlmaLinux 9 / RHEL 9**
+* **Amazon Linux 2023**
+* **Fedora 34 - 43**
+
+
+:::warning[Platforms that are no longer supported]
+
+Ubuntu 18.04 / 20.04, Rocky Linux / AlmaLinux / RHEL 8 and Amazon Linux 2 ship libstdc++ 9 or older, and the build stops at the CMake configure step with an explanation. Fedora 44 is not supported yet, because jemalloc 5.3.0 does not compile against its libstdc++. Use the [official Docker image](getting-started-with-docker.md) on those systems.
+
+:::
+
+
+### Installing CMake
 
 OvenMediaEngine requires **CMake 3.24 or later**. Check your installed version with:
 
@@ -61,7 +76,7 @@ Then build and install using the commands for your platform:
 
 
 <Tabs>
-<TabItem value="ubuntu-18" label="Ubuntu 18">
+<TabItem value="ubuntu" label="Ubuntu 22.04 / 24.04 / 26.04">
 
 ```bash
 sudo apt-get update
@@ -77,11 +92,15 @@ sudo systemctl enable ovenmediaengine.service
 ```
 
 </TabItem>
-<TabItem value="fedora-28" label="Fedora 28">
+<TabItem value="rhel-9" label="Rocky Linux / AlmaLinux / RHEL 9">
 
 ```bash
 sudo dnf update
-sudo dnf install -y ninja-build pkg-config
+sudo dnf install -y 'dnf-command(config-manager)'
+# OvenMediaEngine needs packages from the CRB repository, which is named
+# differently on Rocky/AlmaLinux and on RHEL.
+sudo dnf config-manager --set-enabled crb || sudo dnf config-manager --set-enabled codeready-builder-for-rhel-9-$(arch)-rpms
+sudo dnf install -y gcc-c++ ninja-build pkgconf-pkg-config
 cd OvenMediaEngine-master
 cmake -B build/Release -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build/Release
@@ -93,13 +112,11 @@ sudo systemctl enable ovenmediaengine.service
 ```
 
 </TabItem>
-<TabItem value="rocky-linux-8" label="Rocky Linux 8">
+<TabItem value="amazon-linux-2023" label="Amazon Linux 2023">
 
 ```bash
 sudo dnf update
-sudo dnf install -y 'dnf-command(config-manager)'
-sudo dnf config-manager --set-enabled crb || sudo dnf config-manager --set-enabled codeready-builder-for-rhel-8-x86_64-rpms || sudo dnf config-manager --set-enabled powertools || true
-sudo dnf install -y ninja-build pkgconf-pkg-config
+sudo dnf install -y gcc-c++ make ninja-build pkgconf-pkg-config
 cd OvenMediaEngine-master
 cmake -B build/Release -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build/Release
@@ -111,13 +128,11 @@ sudo systemctl enable ovenmediaengine.service
 ```
 
 </TabItem>
-<TabItem value="almalinux-8" label="AlmaLinux 8">
+<TabItem value="fedora" label="Fedora">
 
 ```bash
 sudo dnf update
-sudo dnf install -y 'dnf-command(config-manager)'
-sudo dnf config-manager --set-enabled crb || sudo dnf config-manager --set-enabled codeready-builder-for-rhel-8-x86_64-rpms || sudo dnf config-manager --set-enabled powertools || true
-sudo dnf install -y ninja-build pkgconf-pkg-config
+sudo dnf install -y gcc-c++ ninja-build pkg-config
 cd OvenMediaEngine-master
 cmake -B build/Release -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build/Release
