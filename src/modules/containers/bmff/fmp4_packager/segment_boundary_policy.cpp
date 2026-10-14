@@ -403,6 +403,12 @@ namespace bmff
 				// This segment covers the position, so the marker cut it
 				settled.markers.push_back(it->second);
 				settled.cut_this_segment = true;
+
+				// An immediate OUT inside the segment is where the segment ended
+				if (_cue_out_cut_mode == LLHlsCueOutCutMode::Immediate && it->second->IsOutOfNetwork() == true && it->first > start_us)
+				{
+					settled.immediate_out_cut = true;
+				}
 			}
 			else if (start_us - it->first <= _segment_duration_us)
 			{
@@ -497,6 +503,7 @@ namespace bmff
 		// Only a marker that cut this segment gained it a boundary; one that
 		// merely rides it must not shorten the next target
 		settled.has_marker = settled_markers.cut_this_segment;
+		settled.marker_cut = settled_markers.immediate_out_cut;
 
 		if (discontinuity == true)
 		{

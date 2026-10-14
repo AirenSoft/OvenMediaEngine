@@ -11,6 +11,9 @@
 #include <cmath>
 #include <cstdint>
 
+#include <base/modules/data_format/cue_event/cue_event.h>
+#include <base/modules/marker/marker.h>
+
 #include "synced_boundary_policy.h"
 
 // Synced segmentation: the reference track's policy realizes the boundaries
@@ -521,4 +524,54 @@ TEST(SyncedBoundaryPolicyTest, DiscontinuityIsSettledLikeACompletion)
 	// past the spent number so the next plan does not reissue it
 	synced->OnDiscontinuity(forced);
 	EXPECT_EQ(PlanAt(synced, 3000.0).segment_number, 1);
+}
+
+namespace
+{
+	std::shared_ptr<Marker> MakeCueMarker(CueEvent::CueType type, int64_t timestamp_ms, uint32_t duration_ms)
+	{
+		auto data = CueEvent::Create(type, duration_ms, 0, false)->Serialize();
+		return Marker::CreateMarker(cmn::BitstreamFormat::CUE, timestamp_ms, timestamp_ms, data);
+	}
+}  // namespace
+
+TEST(SyncedBoundaryPolicyTest, OnlyACutAtAnImmediateOutIsACutForTheSyncedTracks)
+{
+	// In immediate mode the reference ends its segment right at a CUE-OUT and
+	// the synced tracks end theirs there too, keyframe or not. An OUT whose
+	// position no media reached only rides the next boundary as a tag; that
+	// boundary is an ordinary one for the synced tracks.
+	auto immediate = MakeConfig(0, "test-reference");
+	immediate.cue_out_cut_mode = LLHlsCueOutCutMode::Immediate;
+	auto reference = std::make_shared<bmff::ReferenceBoundaryPolicy>(immediate, 0.0);
+	auto synced_config = MakeConfig(0, "test-synced");
+	synced_config.cue_out_cut_mode = LLHlsCueOutCutMode::Immediate;
+	auto synced = std::make_shared<bmff::SyncedBoundaryPolicy>(reference, synced_config);
+
+	// The reference cut at the OUT: its segment ends exactly there
+	ASSERT_TRUE(reference->InsertMarker(MakeCueMarker(CueEvent::CueType::OUT, 3000, 10000)));
+	Complete(reference, 0, 0.0, 3000.0);
+
+	auto cut = PlanAt(synced, 0.0);
+	EXPECT_EQ(cut.segment_number, 0);
+	EXPECT_TRUE(cut.marker_cut);
+
+	ASSERT_TRUE(reference->InsertMarker(MakeCueMarker(CueEvent::CueType::IN, 7000, 0)));
+	Complete(reference, 1, 3000.0, 4000.0);
+
+	// The next OUT falls where no media is: the reference closed before its
+	// position and the segment after starts past it, so the tag rides that
+	// segment's boundary without having cut it
+	ASSERT_TRUE(reference->InsertMarker(MakeCueMarker(CueEvent::CueType::OUT, 11000, 10000)));
+	Complete(reference, 2, 7000.0, 3900.0);
+	Complete(reference, 3, 11500.0, 4000.0);
+
+	auto carried = reference->GetBoundaryFeed()->GetBoundaryAfterNumber(2);
+	ASSERT_TRUE(carried.has_value());
+	ASSERT_EQ(carried->markers.size(), 1u);
+	EXPECT_TRUE(carried->markers.front()->IsOutOfNetwork().value_or(false));
+
+	auto ordinary = PlanAt(synced, 11500.0);
+	EXPECT_EQ(ordinary.segment_number, 3);
+	EXPECT_FALSE(ordinary.marker_cut);
 }

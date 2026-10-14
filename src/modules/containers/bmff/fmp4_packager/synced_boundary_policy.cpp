@@ -248,6 +248,7 @@ namespace bmff
 		boundary.segment_number = completed.number;
 		boundary.timestamp_us = completed.start_timestamp_us + completed.duration_us;
 		boundary.markers = covered_markers;
+		boundary.marker_cut = completed.marker_cut;
 
 		_boundary_feed->PublishBoundary(boundary);
 
@@ -361,17 +362,9 @@ namespace bmff
 				plan.end_us = boundary->timestamp_us - kBoundaryBiasUs;
 
 				// An immediate CUE-OUT cut the reference mid-GOP; every track ends
-				// its segment right there as well
-				if (_cue_out_cut_mode == LLHlsCueOutCutMode::Immediate)
-				{
-					for (const auto &marker : boundary->markers)
-					{
-						if (marker != nullptr && marker->IsOutOfNetwork() == true)
-						{
-							plan.marker_cut = true;
-						}
-					}
-				}
+				// its segment right there as well. A marker that only rides the
+				// boundary because the media never reached its position is no cut
+				plan.marker_cut = boundary->marker_cut;
 
 				return plan;
 			}

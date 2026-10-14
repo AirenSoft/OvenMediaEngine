@@ -40,14 +40,16 @@ namespace bmff
 		int64_t segment_number = -1;
 	};
 
-	// What a completed segment actually was. has_marker is filled at the
-	// settlement, from the markers the segment consumed.
+	// What a completed segment actually was. has_marker and marker_cut are
+	// filled at the settlement, from the markers the segment consumed.
 	struct CompletedSegment
 	{
 		int64_t number = -1;
 		int64_t start_timestamp_us = 0;
 		int64_t duration_us = 0;
 		bool has_marker = false;
+		// The segment ended right at an immediate CUE-OUT
+		bool marker_cut = false;
 	};
 
 	// What settling a completion yields for the caller
@@ -293,6 +295,8 @@ namespace bmff
 			// Whether one of them cut this segment, so the pacing knows this
 			// segment gained a boundary
 			bool cut_this_segment = false;
+			// Whether an immediate CUE-OUT ended this segment at its position
+			bool immediate_out_cut = false;
 		};
 
 		// Consume the markers this settlement takes over. A position the media
