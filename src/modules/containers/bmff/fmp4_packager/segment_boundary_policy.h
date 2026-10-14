@@ -237,14 +237,15 @@ namespace bmff
 
 		// A boundary off this track's keyframes is reported once; later ones
 		// go to the debug log
-		bool _nearest_keyframe_warned = false;
+		bool _keyframe_cut_warned = false;
 
 		// The name of the segment accumulating now, advanced by the settlements
 		int64_t _next_segment_number = 0;
 
 	private:
 		// Where a track ends its segment when the sample at an exact boundary
-		// is not one of its keyframes: the nearest keyframe, before or after it
+		// is not one of its keyframes: a keyframe within one part before the
+		// boundary, or else the first one after it
 		struct KeyframeCut
 		{
 			// The keyframe is chosen; count samples go out ahead of it (the

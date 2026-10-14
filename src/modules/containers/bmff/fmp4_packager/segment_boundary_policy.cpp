@@ -655,17 +655,16 @@ namespace bmff
 		// track and the segment ends right there, as it does on audio and on an
 		// immediate marker cut. A track whose keyframes have drifted from that
 		// premise finds no keyframe at the boundary and cannot end there; it ends
-		// at its keyframe nearest to the boundary instead, before or after it, so
-		// the stream keeps playing. The sample at the boundary is the first one
-		// at or past the plan, the convention the split below follows.
+		// at a keyframe of its own instead, one within one part before the
+		// boundary or else the first one after it, so the stream keeps playing.
+		// The sample at the boundary is the first one at or past the plan, the
+		// convention the split below follows.
 		KeyframeCut keyframe_cut;
-		int64_t boundary_sample_us = next_frame.dts_us;
 		bool boundary_sample_independent = next_frame.independent;
 		for (const auto &sample : sample_list)
 		{
 			if (sample.timing.dts_us >= boundary.end_us)
 			{
-				boundary_sample_us = sample.timing.dts_us;
 				boundary_sample_independent = sample.timing.independent;
 				break;
 			}
@@ -815,16 +814,16 @@ namespace bmff
 		if (keyframe_cut.decided == true && decision.completes_segment == true)
 		{
 			int64_t cut_us = (keyframe_cut.count < sample_list.size()) ? sample_list[keyframe_cut.count].timing.dts_us : next_frame.dts_us;
-			if (_nearest_keyframe_warned == false)
+			if (_keyframe_cut_warned == false)
 			{
-				_nearest_keyframe_warned = true;
-				logtw("%s - The boundary at %.3f ms is not a keyframe on this track; the segment closes at the nearest keyframe (%.3f ms) instead",
-					  _log_context.CStr(), boundary_sample_us / 1000.0, cut_us / 1000.0);
+				_keyframe_cut_warned = true;
+				logtw("%s - The boundary at %.3f ms is not a keyframe on this track; the segment closes at the keyframe at %.3f ms instead",
+					  _log_context.CStr(), boundary.end_us / 1000.0, cut_us / 1000.0);
 			}
 			else
 			{
-				logtd("%s - The boundary at %.3f ms is not a keyframe on this track; the segment closes at the nearest keyframe (%.3f ms) instead",
-					  _log_context.CStr(), boundary_sample_us / 1000.0, cut_us / 1000.0);
+				logtd("%s - The boundary at %.3f ms is not a keyframe on this track; the segment closes at the keyframe at %.3f ms instead",
+					  _log_context.CStr(), boundary.end_us / 1000.0, cut_us / 1000.0);
 			}
 		}
 

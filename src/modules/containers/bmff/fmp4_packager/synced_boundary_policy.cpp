@@ -454,12 +454,15 @@ namespace bmff
 		// Consumption is strictly sequential: this completion realizes the next
 		// boundary in numbering order, so two completions can never take the same
 		// boundary and crowded boundaries pair off one by one. A completion
-		// realizes a boundary its end is nearer to than to the previous one, the
-		// midpoint included: a cut normally lands on the boundary, a keyframe
-		// cut may sit a little before or after it, and a forced, overlong
-		// segment may have run past several boundaries and realizes each of
-		// them. The previous one is the last consumed boundary, or where this
-		// segment started when none was consumed yet.
+		// realizes the boundary its end is nearer to than to the previous one,
+		// the midpoint included: a cut normally lands on the boundary, a keyframe
+		// cut may sit a little before or after it. The previous one is the last
+		// consumed boundary, or where this segment started when none was
+		// consumed yet. Only a forced, overlong segment realizes more than one:
+		// every further boundary its end has actually run past, allowing for
+		// positions converted from the source timebase one value at a time.
+		constexpr int64_t kRealizedSlackUs = 100;
+
 		int64_t consumed_count = 0;
 
 		int64_t previous_us = completed.start_timestamp_us;
@@ -476,7 +479,16 @@ namespace bmff
 				break;
 			}
 
-			bool realized = (std::llabs(boundary->timestamp_us - segment_end_us) <= std::llabs(segment_end_us - previous_us));
+			bool realized;
+			if (consumed_count == 0)
+			{
+				realized = (std::llabs(boundary->timestamp_us - segment_end_us) <= std::llabs(segment_end_us - previous_us));
+			}
+			else
+			{
+				realized = (boundary->timestamp_us <= segment_end_us + kRealizedSlackUs);
+			}
+
 			if (realized == false)
 			{
 				break;

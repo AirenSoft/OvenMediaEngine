@@ -375,11 +375,28 @@ TEST(SyncedBoundaryPolicyTest, CrowdedBoundariesAreConsumedSequentially)
 
 	EXPECT_EQ(PlanAt(policy, 3000.0).segment_number, 10);
 
-	// Two quick completions, both within 100 ms of both boundaries: each
-	// consumes exactly one, in order, and the numbering never repeats
-	Complete(policy, 10, 3000.0, 1010.0);
+	// A keyframe cut between the two boundaries realizes only the first, even
+	// though its end is nearer to the second: the next completion takes that
+	// one, so each boundary pairs with one segment and the numbering never
+	// skips or repeats
+	Complete(policy, 10, 3000.0, 1060.0);
 	EXPECT_EQ(policy->GetSegmentBoundary(std::nullopt).segment_number, 11);
-	Complete(policy, 11, 4010.0, 100.0);
+	Complete(policy, 11, 4060.0, 40.0);
+	EXPECT_EQ(policy->GetSegmentBoundary(std::nullopt).segment_number, 12);
+}
+
+TEST(SyncedBoundaryPolicyTest, AnOverlongCompletionEndingOnABoundaryRealizesItToo)
+{
+	auto reference = MakeReference();
+	auto policy = MakeSynced(reference);
+
+	RealizeBoundary(reference, 10, 4000.0);
+	RealizeBoundary(reference, 11, 8000.0);
+
+	EXPECT_EQ(PlanAt(policy, 3000.0).segment_number, 10);
+
+	// A forced cut landing exactly on the second boundary has run past it
+	Complete(policy, 10, 3000.0, 5000.0);
 	EXPECT_EQ(policy->GetSegmentBoundary(std::nullopt).segment_number, 12);
 }
 
