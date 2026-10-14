@@ -11,6 +11,7 @@
 
 #include <monitoring/monitoring.h>
 
+#include "codec/encoder/encoder_whisper.h"
 #include "config/config_manager.h"
 #include "modules/transcode_webhook/transcode_webhook.h"
 #include "orchestrator/orchestrator.h"
@@ -673,7 +674,14 @@ size_t TranscoderStream::CreateOutputStreams()
 																			  model_path,
 																			  input_audio_track->GetId(),
 																			  output_subtitle_track->GetId());
-			speech_to_text_profile.SetSourceLanguage(stt_rendition.GetSourceLanguage());
+			// Normalized here, so the STT track in the stream info shows the language Whisper uses.
+			bool supported_language = true;
+			speech_to_text_profile.SetSourceLanguage(EncoderWhisper::NormalizeSourceLanguage(stt_rendition.GetSourceLanguage(), &supported_language));
+			if (supported_language == false)
+			{
+				logtw("%s STT: Unsupported SourceLanguage \"%s\"; using auto. OutputSubtitleLabel(%s)",
+					  _log_prefix.CStr(), stt_rendition.GetSourceLanguage().CStr(), stt_rendition.GetOutputSubtitleLabel().CStr());
+			}
 			speech_to_text_profile.SetTranslation(stt_rendition.GetTranslation());
 			speech_to_text_profile.SetOutputTrackLabel(stt_rendition.GetOutputSubtitleLabel());
 			speech_to_text_profile.SetStepMs(stt_rendition.GetStepMs());
