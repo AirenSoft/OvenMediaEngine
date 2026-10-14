@@ -2,6 +2,9 @@
 
 #include "llhls_chunklist.h"
 
+#include <base/modules/data_format/cue_event/cue_event.h>
+#include <base/modules/marker/marker.h>
+
 namespace
 {
 	std::shared_ptr<MediaTrack> CreateVideoTrack()
@@ -172,6 +175,31 @@ TEST(LLHlsChunklist, PropagatedBoundaryFlagsWithoutVersionChange)
 	auto first_map_index = playlist.IndexOf("#EXT-X-MAP:URI=\"init_1_video_key_llhls.m4s\"");
 	EXPECT_NE(first_map_index, -1);
 	EXPECT_EQ(playlist.IndexOf("#EXT-X-MAP", first_map_index + 1), -1);
+}
+
+TEST(LLHlsChunklist, CompletionWithoutAChunkCarriesItsMarkers)
+{
+	auto chunklist = CreateChunklist(CreateVideoTrack());
+
+	AppendSegment(chunklist, 0, 1, kInitialMapUri);
+	AppendSegment(chunklist, 1, 1, kInitialMapUri);
+
+	// The segment closed on what was already stored, so its marker never rode
+	// a partial; the completion is the only chance to hand it over
+	auto cue = CueEvent::Create(CueEvent::CueType::OUT, 8000, 0, false);
+	ASSERT_NE(cue, nullptr);
+	auto marker = Marker::CreateMarker(cmn::BitstreamFormat::CUE, 12000, 12000, cue->Serialize());
+	ASSERT_NE(marker, nullptr);
+	chunklist->CompleteSegmentInfo(1, "part_1_2_0_video_key_llhls.m4s", kInitialMapUri, std::nullopt, {marker});
+
+	auto segment = chunklist->GetSegmentInfo(1);
+	ASSERT_NE(segment, nullptr);
+	ASSERT_EQ(segment->GetMarkers().size(), 1u);
+	EXPECT_EQ(segment->GetMarkers().front(), marker);
+
+	// A completion that carries nothing leaves the markers alone
+	chunklist->CompleteSegmentInfo(1, "part_1_2_0_video_key_llhls.m4s", kInitialMapUri);
+	EXPECT_EQ(segment->GetMarkers().size(), 1u);
 }
 
 TEST(LLHlsChunklist, BoundaryCutHintsUpcomingMap)

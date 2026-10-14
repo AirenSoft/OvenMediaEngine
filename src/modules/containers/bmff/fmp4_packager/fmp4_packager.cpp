@@ -393,11 +393,12 @@ namespace bmff
 			}
 			else if (decision.completes_segment == true && decision.emit_count == 0)
 			{
-				// A marker cut with every buffered sample belonging after it: the
+				// A cut with every buffered sample belonging after it, at a marker
+				// or at a keyframe whose preceding part already went out: the
 				// segment closes on what is already stored
 				if (_storage != nullptr)
 				{
-					_storage->CutSegmentAtMarker();
+					_storage->CloseSegmentOnStoredContent();
 				}
 			}
 			else if (decision.emit_count > 0)

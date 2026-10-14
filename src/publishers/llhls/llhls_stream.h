@@ -351,6 +351,9 @@ private:
 	bool IsVttEnabled() const;
 	bool AddVttPackager(const std::shared_ptr<const MediaTrack> &track);
 	std::shared_ptr<webvtt::Packager> GetVttPackager(const int32_t &track_id) const;
+	// Closes the subtitle segment that mirrors the reference's completed segment
+	// and hands it the segment's markers
+	bool MakeVttSegment(const std::shared_ptr<webvtt::Packager> &vtt_packager, const int32_t &vtt_track_id, const int32_t &reference_track_id, const int64_t &segment_number, const std::shared_ptr<base::modules::Segment> &segment);
 	std::map<int32_t, std::shared_ptr<webvtt::Packager>> GetVttPackagers() const;
 
 	bool _vtt_enabled = false;

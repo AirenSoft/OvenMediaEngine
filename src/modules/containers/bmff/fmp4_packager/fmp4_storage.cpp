@@ -303,10 +303,10 @@ namespace bmff
 		NotifySegmentCompleted(completed_segment_number);
 	}
 
-	void FMP4Storage::CutSegmentAtMarker()
+	void FMP4Storage::CloseSegmentOnStoredContent()
 	{
 		// The segment ends on what is already stored: every buffered sample
-		// belongs after the marker, so none of it may join this segment
+		// belongs after the cut, so none of it may join this segment
 		auto completed_segment_number = CompleteLastSegment(false);
 
 		NotifySegmentCompleted(completed_segment_number);

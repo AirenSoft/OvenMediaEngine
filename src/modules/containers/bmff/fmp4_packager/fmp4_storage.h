@@ -73,9 +73,10 @@ namespace bmff
 		// without a configuration change (another track of the stream changed)
 		void CutSegmentForDiscontinuity();
 
-		// Completes the segment in progress at a marker position with nothing
-		// left to append; the buffered samples open the next one
-		void CutSegmentAtMarker();
+		// Completes the segment in progress on what is already stored, with
+		// nothing left to append (a marker cut, or a keyframe cut whose last
+		// part already went out); the buffered samples open the next one
+		void CloseSegmentOnStoredContent();
 
 		// Start a new content version for a DRM key rotation, so the segments encrypted
 		// with the new key are addressed separately from the old key. Called when a new

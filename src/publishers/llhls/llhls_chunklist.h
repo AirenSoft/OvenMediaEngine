@@ -326,7 +326,9 @@ public:
 	// The last partial advertised a next part that will never exist, so its next url
 	// is redirected to the first part of the following segment. The map that part
 	// will be packaged against is hinted as TYPE=MAP until the part is listed.
-	bool CompleteSegmentInfo(uint32_t segment_sequence, const ov::String &next_partial_url, const ov::String &next_partial_map_uri, std::optional<uint32_t> next_partial_track_version = std::nullopt);
+	// markers: the ones the completion attached to the segment. A segment that
+	// closed with nothing left to append never passed them through a partial.
+	bool CompleteSegmentInfo(uint32_t segment_sequence, const ov::String &next_partial_url, const ov::String &next_partial_map_uri, std::optional<uint32_t> next_partial_track_version = std::nullopt, const std::vector<std::shared_ptr<Marker>> &markers = {});
 
 	// Map the first partial of the next discontinuity domain will be packaged
 	// against, emitted as a TYPE=MAP preload hint while it differs from the last

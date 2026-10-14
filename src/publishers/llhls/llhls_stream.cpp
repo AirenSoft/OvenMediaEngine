@@ -2103,6 +2103,27 @@ std::shared_ptr<webvtt::Packager> LLHlsStream::GetVttPackager(const int32_t &tra
 	return it->second;
 }
 
+bool LLHlsStream::MakeVttSegment(const std::shared_ptr<webvtt::Packager> &vtt_packager, const int32_t &vtt_track_id, const int32_t &reference_track_id, const int64_t &segment_number, const std::shared_ptr<base::modules::Segment> &segment)
+{
+	auto start_timestamp_ms = (static_cast<double>(segment->GetStartTimestamp()) / GetTrack(reference_track_id)->GetTimeBase().GetTimescale()) * 1000.0;
+	if (vtt_packager->MakeSegment(segment_number, start_timestamp_ms, segment->GetDurationMs()) == false)
+	{
+		logte("Failed to make segment for VTT track_id = %d, segment_number = %" PRId64, vtt_track_id, segment_number);
+		return false;
+	}
+
+	if (segment->HasMarker() == true)
+	{
+		auto vtt_segment = vtt_packager->GetSegment(segment_number);
+		if (vtt_segment != nullptr)
+		{
+			vtt_segment->SetMarkers(segment->GetMarkers());
+		}
+	}
+
+	return true;
+}
+
 std::map<int32_t, std::shared_ptr<webvtt::Packager>> LLHlsStream::GetVttPackagers() const
 {
 	std::shared_lock<std::shared_mutex> lock(_vtt_packagers_lock);
@@ -2604,24 +2625,9 @@ void LLHlsStream::OnMediaChunkUpdated(const int32_t &track_id, const uint32_t &s
 				continue;
 			}
 
-			if (last_chunk == true)
+			if (last_chunk == true && MakeVttSegment(vtt_packager, vtt_track_id, track_id, segment_number, segment) == false)
 			{
-				// Make segment
-				auto vtt_segment_start_timestamp = (static_cast<double>(segment->GetStartTimestamp()) / GetTrack(track_id)->GetTimeBase().GetTimescale()) * 1000.0;
-				if (vtt_packager->MakeSegment(segment_number, vtt_segment_start_timestamp, segment->GetDurationMs()) == false)
-				{
-					logte("Failed to make segment for VTT track_id = %d, segment_number = %d", vtt_track_id, segment_number);
-					continue;
-				}
-
-				if (segment->HasMarker() == true)
-				{
-					auto vtt_segment = vtt_packager->GetSegment(segment_number);
-					if (vtt_segment != nullptr)
-					{
-						vtt_segment->SetMarkers(segment->GetMarkers());
-					}
-				}
+				continue;
 			}
 			
 			// Update chunklist
@@ -2694,10 +2700,10 @@ void LLHlsStream::OnMediaSegmentCompleted(const int32_t &track_id, const uint32_
 	// boundary it differs from the completed segment's map and is hinted as TYPE=MAP
 	ov::String next_partial_map_uri;
 	std::optional<uint32_t> next_partial_track_version;
-	auto storage = GetFmp4Storage(track_id);
-	if (storage != nullptr)
+	auto fmp4_storage = GetFmp4Storage(track_id);
+	if (fmp4_storage != nullptr)
 	{
-		auto last_segment = storage->GetLastSegment();
+		auto last_segment = fmp4_storage->GetLastSegment();
 		if (last_segment != nullptr)
 		{
 			next_partial_track_version = last_segment->GetTrackVersion();
@@ -2705,9 +2711,36 @@ void LLHlsStream::OnMediaSegmentCompleted(const int32_t &track_id, const uint32_
 		}
 	}
 
-	// Subtitle chunklists are not mirrored here; a configuration change of the VTT
+	// The markers settled on the completed segment; a segment that closed on
+	// what was already stored never passed them through a chunk update
+	std::vector<std::shared_ptr<Marker>> markers;
+	std::shared_ptr<base::modules::Segment> completed_segment;
+	auto storage = GetStorage(track_id);
+	if (storage != nullptr)
+	{
+		completed_segment = storage->GetSegment(segment_number);
+		if (completed_segment != nullptr && completed_segment->HasMarker() == true)
+		{
+			markers = completed_segment->GetMarkers();
+		}
+	}
+
+	// A subtitle chunklist gets no map here; a configuration change of the VTT
 	// reference track is not supported yet
-	playlist->CompleteSegmentInfo(segment_number, GetNextPartialSegmentName(track_id, segment_number, 0, true), next_partial_map_uri, next_partial_track_version);
+	playlist->CompleteSegmentInfo(segment_number, GetNextPartialSegmentName(track_id, segment_number, 0, true), next_partial_map_uri, next_partial_track_version, markers);
+
+	// The subtitle segments mirror the reference's: a completion without a last
+	// chunk closes them here, as the last chunk would have
+	if (completed_segment != nullptr && IsVttEnabled() == true && track_id == _reference_track_id)
+	{
+		for (const auto &[vtt_track_id, vtt_packager] : GetVttPackagers())
+		{
+			if (MakeVttSegment(vtt_packager, vtt_track_id, track_id, segment_number, completed_segment) == true)
+			{
+				OnMediaSegmentCompleted(vtt_track_id, segment_number);
+			}
+		}
+	}
 
 	int64_t last_msn = -1, last_psn = -1;
 	playlist->GetLastSequenceNumber(last_msn, last_psn);

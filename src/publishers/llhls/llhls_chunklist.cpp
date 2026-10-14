@@ -136,7 +136,7 @@ bool LLHlsChunklist::CreateSegmentInfo(const SegmentInfo &info)
 	return true;
 }
 
-bool LLHlsChunklist::CompleteSegmentInfo(uint32_t segment_sequence, const ov::String &next_partial_url, const ov::String &next_partial_map_uri, std::optional<uint32_t> next_partial_track_version)
+bool LLHlsChunklist::CompleteSegmentInfo(uint32_t segment_sequence, const ov::String &next_partial_url, const ov::String &next_partial_map_uri, std::optional<uint32_t> next_partial_track_version, const std::vector<std::shared_ptr<Marker>> &markers)
 {
 	std::shared_ptr<SegmentInfo> segment = GetSegmentInfo(segment_sequence);
 	if (segment == nullptr)
@@ -148,6 +148,10 @@ bool LLHlsChunklist::CompleteSegmentInfo(uint32_t segment_sequence, const ov::St
 	{
 		std::lock_guard<std::shared_mutex> lock(_segments_guard);
 		segment->SetCompleted();
+		if (markers.empty() == false)
+		{
+			segment->SetMarkers(markers);
+		}
 		_last_completed_segment_sequence = segment_sequence;
 		_first_segment = false;
 
