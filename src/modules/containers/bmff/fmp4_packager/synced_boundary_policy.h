@@ -82,20 +82,22 @@ namespace bmff
 		std::deque<Boundary> _boundaries;
 	};
 
-	// The reference track's policy in synced segmentation. It aims each cut at
-	// fixed timeline positions (the segment duration apart, counted from where
-	// the stream's first segment started and snapped to its own frame cadence),
-	// lands on the first cuttable frame at or after them, and publishes every
-	// realized boundary to the feed every synced track follows. The fixed
-	// spacing makes the positions deterministic, and a marker cut re-anchors
-	// simply by the next segment starting where it starts.
+	// The reference track's policy in synced segmentation. Each segment aims
+	// to end a segment duration after its own start (snapped to the frame
+	// cadence), lands on the first cuttable frame at or after that, and every
+	// realized boundary is published to the feed the synced tracks follow.
+	// They follow the realized cuts, so no fixed timeline position has to hold.
+	//
+	// A segment never grows past the target duration while a keyframe allows:
+	// when the next keyframe, as far away as the longest recent interval, would
+	// land past the limit, the segment ends at the keyframe at hand.
 	class ReferenceBoundaryPolicy : public SegmentBoundaryPolicy
 	{
 	public:
-		// video_frame_rate: the cadence the aimed positions snap to, so every
-		// position is a real frame (0 keeps them a plain segment duration
-		// apart). The feed the realized boundaries are published to is created
-		// and owned here; the synced tracks read it through GetBoundaryFeed().
+		// video_frame_rate: the cadence the aimed end snaps to, so it is a real
+		// frame (0 keeps it a plain segment duration after the start). The feed
+		// the realized boundaries are published to is created and owned here;
+		// the synced tracks read it through GetBoundaryFeed().
 		ReferenceBoundaryPolicy(const Config &config, double video_frame_rate);
 
 		SegmentBoundary GetSegmentBoundary(std::optional<int64_t> segment_start_us) override;
@@ -110,30 +112,31 @@ namespace bmff
 		// by this reference
 		std::shared_ptr<const BoundaryFeed> GetBoundaryFeed() const;
 
-		// The first aimed position past the given one (µs), snapped to the frame
-		// cadence. A position within half a frame of one belongs to it, so that
-		// one is not returned. Public for tests.
-		int64_t NextBoundaryUs(int64_t position_us) const;
-
 	protected:
 		CompletionResult DoOnSegmentCompleted(const CompletedSegment &completed, const std::vector<std::shared_ptr<Marker>> &covered_markers) override;
 		CompletionResult DoOnDiscontinuity(const CompletedSegment &completed, const std::vector<std::shared_ptr<Marker>> &covered_markers) override;
 
 	private:
+		// Where a segment starting at the given position ends on the cadence:
+		// a segment duration later, snapped to the frame cadence
+		int64_t CadenceEndUs(int64_t segment_start_us) const;
+
+		// A realized cut goes to the feed every synced track follows
+		void PublishBoundary(const CompletedSegment &completed, const std::vector<std::shared_ptr<Marker>> &covered_markers);
+
 		std::shared_ptr<BoundaryFeed> _boundary_feed;
 		double _video_frame_rate = 0;
+
+		// The longest a segment may run and still round to EXT-X-TARGETDURATION
+		int64_t _segment_limit_us = 0;
 
 		// Whether the opening anchor went out with the first stored chunk; the
 		// reference's media thread is the only writer
 		bool _opening_anchor_published = false;
 
-		// Where the aimed positions start counting. The frames of a stream sit
-		// at their own offset, and counting from zero would aim between two of
-		// them on every segment; taking the first segment start as the origin
-		// puts every aimed position on a frame this stream actually has. Unset
-		// until that start is known, which counts from zero. A first start can
-		// be negative, so the unset state cannot be a value of its own.
-		std::optional<int64_t> _origin_us;
+		// A segment shortened to stay under the target is reported once; later
+		// ones go to the debug log
+		bool _shortened_segment_logged = false;
 	};
 
 	// A synced track's policy: computes no boundaries of its own. Each segment

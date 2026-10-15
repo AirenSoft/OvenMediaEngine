@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <set>
 #include <vector>
 
 #include <base/info/media_track.h>
@@ -86,11 +87,55 @@ namespace
 		return rig.reference_policy->InsertMarker(marker);
 	}
 
+	// The frame indices carrying a keyframe when the GOP lengths (in frames)
+	// repeat in the given order
+	std::set<int64_t> KeyframesEveryGop(const std::vector<int64_t> &gop_frames, int64_t total_frames)
+	{
+		std::set<int64_t> keyframes;
+		size_t cursor = 0;
+		for (int64_t index = 0; index < total_frames; index += gop_frames[cursor++ % gop_frames.size()])
+		{
+			keyframes.insert(index);
+		}
+		return keyframes;
+	}
+
+	// Keyframes every nominal_gop frames, except that a scene cut puts one at
+	// its own frame and the count restarts from there (as x264 does)
+	std::set<int64_t> KeyframesWithSceneCuts(int64_t nominal_gop, const std::vector<int64_t> &scene_cut_indices, int64_t total_frames)
+	{
+		std::set<int64_t> keyframes;
+		int64_t last = 0;
+		keyframes.insert(last);
+		while (true)
+		{
+			int64_t next = last + nominal_gop;
+			for (auto scene_cut : scene_cut_indices)
+			{
+				if (scene_cut > last && scene_cut < next)
+				{
+					next = scene_cut;
+				}
+			}
+
+			if (next >= total_frames)
+			{
+				break;
+			}
+
+			keyframes.insert(next);
+			last = next;
+		}
+		return keyframes;
+	}
+
 	// Drive both pipelines interleaved by delivery time; audio_dts_lead_ms > 0
-	// delivers audio that far ahead of video (the skew the chunk gate absorbs)
+	// delivers audio that far ahead of video (the skew the chunk gate absorbs).
+	// Video keyframes sit every kGopFrames unless keyframe_indices names them.
 	void DriveInterleaved(SyncedRig &rig, int64_t total_duration_ms,
 						  int64_t video_start_ms = 0, int64_t audio_start_ms = 0, int64_t audio_dts_lead_ms = 0,
-						  const std::vector<int64_t> &cue_out_timestamps = {}, uint32_t cue_duration_ms = 0)
+						  const std::vector<int64_t> &cue_out_timestamps = {}, uint32_t cue_duration_ms = 0,
+						  const std::set<int64_t> &keyframe_indices = {})
 	{
 		int64_t video_index = 0;
 		int64_t audio_index = 0;
@@ -117,7 +162,8 @@ namespace
 			if (video_dts <= audio_dts - audio_dts_lead_ms)
 			{
 				const int64_t duration = video_start_ms + (video_index + 1) * 100 / 3 - video_dts;
-				ASSERT_TRUE(rig.video.packager->AppendSample(fmp4_test::MakeVideoFrame(0, video_dts, duration, (video_index % kGopFrames) == 0)));
+				const bool keyframe = keyframe_indices.empty() ? ((video_index % kGopFrames) == 0) : (keyframe_indices.count(video_index) > 0);
+				ASSERT_TRUE(rig.video.packager->AppendSample(fmp4_test::MakeVideoFrame(0, video_dts, duration, keyframe)));
 				video_index++;
 			}
 			else
@@ -173,6 +219,33 @@ namespace
 
 		EXPECT_GE(common_segments, min_common_segments);
 	}
+
+	// The durations (ms) of the reference's completed segments, in order
+	std::vector<double> CompletedVideoSegmentDurations(const SyncedRig &rig)
+	{
+		std::vector<double> durations;
+		for (int64_t number = 0; number <= rig.video.storage->GetLastSegmentNumber(); number++)
+		{
+			auto segment = rig.video.storage->GetSegment(number);
+			if (segment != nullptr && segment->IsCompleted() == true)
+			{
+				durations.push_back(segment->GetDurationMs());
+			}
+		}
+		return durations;
+	}
+
+	// Every completed reference segment lasts between min_ms and max_ms
+	void ExpectVideoSegmentsWithin(const SyncedRig &rig, double min_ms, double max_ms, size_t min_segments)
+	{
+		auto durations = CompletedVideoSegmentDurations(rig);
+		for (size_t index = 0; index < durations.size(); index++)
+		{
+			EXPECT_GE(durations[index], min_ms) << "segment " << index;
+			EXPECT_LE(durations[index], max_ms) << "segment " << index;
+		}
+		EXPECT_GE(durations.size(), min_segments);
+	}
 }  // namespace
 
 TEST(SyncedPipelineTest, SegmentsAlignFromTheStart)
@@ -182,6 +255,7 @@ TEST(SyncedPipelineTest, SegmentsAlignFromTheStart)
 
 	// Keyframes sit on the segment cadence, so the reference cuts exactly at
 	// multiples of the duration and the audio follows within one frame
+	ExpectVideoSegmentsWithin(rig, kSegmentDurationMs - 1.0, kSegmentDurationMs + 1.0, 12);
 	ExpectAlignedSegments(rig, 12);
 }
 
@@ -861,4 +935,92 @@ TEST(SyncedPipelineTest, LateStartingAudioAdoptsTheSlotNumbering)
 	EXPECT_NEAR(static_cast<double>(first_audio_segment->GetStartTimestamp()), 4200.0, kAudioFrameMs + 1.0);
 
 	ExpectAlignedSegments(rig, 7);
+}
+
+// A segment may not run past what rounds to EXT-X-TARGETDURATION (4.5 s here).
+// The reference closes at the last keyframe before that limit, judged by the
+// longest keyframe interval it has seen lately, and the audio follows the
+// realized cuts so the numbering stays aligned.
+
+TEST(SyncedPipelineTest, SegmentsStayUnderTheTargetWhenTheKeyframeIntervalDoesNotDivideIt)
+{
+	// Keyframes every 1.9 s: waiting for the aimed position would close every
+	// other segment at 5.7 s. Every segment closes at 3.8 s instead.
+	auto rig = MakeRig();
+	DriveInterleaved(rig, 60000, 0, 0, 0, {}, 0, KeyframesEveryGop({57}, 1800));
+
+	ExpectVideoSegmentsWithin(rig, 3799.0, 3801.0, 14);
+	ExpectAlignedSegments(rig, 14);
+}
+
+TEST(SyncedPipelineTest, SegmentsStayUnderTheTargetWithAWanderingKeyframeInterval)
+{
+	// The keyframe pattern of a hardware encoder that was asked for 2 s with
+	// B-frames: 57 frames with the odd 59
+	auto rig = MakeRig();
+	DriveInterleaved(rig, 60000, 0, 0, 0, {}, 0, KeyframesEveryGop({59, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 59, 59, 57, 57}, 1800));
+
+	ExpectVideoSegmentsWithin(rig, 3799.0, 3935.0, 14);
+	ExpectAlignedSegments(rig, 14);
+}
+
+TEST(SyncedPipelineTest, AKeyframeIntervalThatRoundsIntoTheTargetIsKept)
+{
+	// Keyframes every 2.1 s: two of them make 4.2 s, which still rounds to the
+	// target, so the segments are not cut down to one interval
+	auto rig = MakeRig();
+	DriveInterleaved(rig, 60000, 0, 0, 0, {}, 0, KeyframesEveryGop({63}, 1800));
+
+	ExpectVideoSegmentsWithin(rig, 4199.0, 4201.0, 13);
+	ExpectAlignedSegments(rig, 13);
+}
+
+TEST(SyncedPipelineTest, TheFirstSegmentAfterABreakStaysUnderTheTarget)
+{
+	// Keyframes every 3 s: every segment closes at the next keyframe, since
+	// the one after it would pass the 4.5 s limit. The keyframe that opens the
+	// timeline after a break counts toward the interval, so the first segment
+	// after the break closes at 3 s too
+	auto rig = MakeRig();
+	const int64_t break_ms = 30000;
+	bool requested = false;
+
+	for (int64_t index = 0; index < 1800; index++)
+	{
+		const int64_t dts = index * 100 / 3;
+		if (requested == false && dts >= break_ms - 500)
+		{
+			rig.reference_policy->RequestDiscontinuity(break_ms * 1000);
+			requested = true;
+		}
+
+		const int64_t duration = (index + 1) * 100 / 3 - dts;
+		ASSERT_TRUE(rig.video.packager->AppendSample(fmp4_test::MakeVideoFrame(0, dts, duration, (index % 90) == 0)));
+	}
+
+	bool break_landed = false;
+	for (int64_t number = 0; number <= rig.video.storage->GetLastSegmentNumber(); number++)
+	{
+		auto segment = rig.video.storage->GetSegment(number);
+		if (segment != nullptr && segment->IsDiscontinuityPoint() == true)
+		{
+			break_landed = true;
+			EXPECT_EQ(segment->GetStartTimestamp(), break_ms);
+		}
+	}
+	EXPECT_TRUE(break_landed);
+
+	ExpectVideoSegmentsWithin(rig, 2999.0, 3001.0, 18);
+}
+
+TEST(SyncedPipelineTest, SceneCutKeyframesDoNotLetASegmentPassTheTarget)
+{
+	// Keyframes every 2 s with scene cuts that restart the count. The short
+	// interval a scene cut leaves must not stand for the next one: judged by
+	// it alone, a segment would wait for a keyframe that comes past the limit.
+	auto rig = MakeRig();
+	DriveInterleaved(rig, 60000, 0, 0, 0, {}, 0, KeyframesWithSceneCuts(60, {90, 465, 840, 1215}, 1800));
+
+	ExpectVideoSegmentsWithin(rig, 2499.0, 4499.0, 15);
+	ExpectAlignedSegments(rig, 15);
 }

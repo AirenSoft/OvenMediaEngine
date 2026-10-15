@@ -11,6 +11,7 @@
 #include <base/modules/marker/marker.h>
 #include <base/ovlibrary/ovlibrary.h>
 
+#include <algorithm>
 #include <atomic>
 #include <map>
 #include <optional>
@@ -196,6 +197,12 @@ namespace bmff
 		CompletionResult OnDiscontinuity(const CompletedSegment &completed);
 
 	protected:
+		// Positions and durations are converted from the source timebase one value
+		// at a time, so a plan can be missed by a microsecond. Missing it costs a
+		// whole keyframe interval, and a millisecond is far below one frame, so it
+		// can never bring a cut forward to the wrong frame.
+		static constexpr int64_t kPlanSlackUs = 1000;
+
 		// The policy's share of the settlements; the marker and numbering
 		// bookkeeping is already taken care of. covered_markers are the pending
 		// markers this segment consumed; they are attached to the segment by the
@@ -223,6 +230,13 @@ namespace bmff
 		int64_t GetFirstSampleEndUs() const
 		{
 			return _first_sample_end_us.load(std::memory_order_relaxed);
+		}
+
+		// The longest keyframe interval seen since the previous segment started,
+		// 0 until two keyframes have arrived; how far away the next keyframe can be
+		int64_t GetLongestRecentKeyframeIntervalUs() const
+		{
+			return std::max(_longest_keyframe_interval_us, _previous_longest_keyframe_interval_us);
 		}
 
 		int64_t _segment_duration_us = 0;
@@ -325,6 +339,13 @@ namespace bmff
 		// The first sample position this track saw; written once, on the same
 		// pass and for the same reason as the newest one
 		std::atomic<int64_t> _first_sample_end_us{-1};
+
+		// The keyframe intervals seen on the plan pass: the longest in the
+		// accumulating segment and in the one before it. A timeline can start
+		// below zero, so no position can stand for "none yet"
+		std::optional<int64_t> _last_keyframe_dts_us;
+		int64_t _longest_keyframe_interval_us = 0;
+		int64_t _previous_longest_keyframe_interval_us = 0;
 
 		// Where a propagated timeline break waits to cut, and where the last one
 		// landed (the dedup floor). A track changing configuration requests the
