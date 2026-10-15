@@ -127,7 +127,8 @@ namespace bmff
 		std::shared_ptr<BoundaryFeed> _boundary_feed;
 		double _video_frame_rate = 0;
 
-		// The longest a segment may run and still round to EXT-X-TARGETDURATION
+		// The longest a segment may run and still round to EXT-X-TARGETDURATION,
+		// less the room the other tracks' frames need
 		int64_t _segment_limit_us = 0;
 
 		// Whether the opening anchor went out with the first stored chunk; the

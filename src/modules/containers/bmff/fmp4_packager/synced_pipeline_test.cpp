@@ -938,9 +938,10 @@ TEST(SyncedPipelineTest, LateStartingAudioAdoptsTheSlotNumbering)
 }
 
 // A segment may not run past what rounds to EXT-X-TARGETDURATION (4.5 s here).
-// The reference closes at the last keyframe before that limit, judged by the
-// longest keyframe interval it has seen lately, and the audio follows the
-// realized cuts so the numbering stays aligned.
+// The reference closes at the last keyframe before that limit, less the room
+// the other tracks' frames need, judged by the longest keyframe interval it
+// has seen lately; the audio follows the realized cuts so the numbering stays
+// aligned
 
 TEST(SyncedPipelineTest, SegmentsStayUnderTheTargetWhenTheKeyframeIntervalDoesNotDivideIt)
 {
@@ -1023,4 +1024,70 @@ TEST(SyncedPipelineTest, SceneCutKeyframesDoNotLetASegmentPassTheTarget)
 
 	ExpectVideoSegmentsWithin(rig, 2499.0, 4499.0, 15);
 	ExpectAlignedSegments(rig, 15);
+}
+
+TEST(SyncedPipelineTest, AudioStaysUnderTheTargetWhenTheVideoEndsNearTheLimit)
+{
+	// 50 fps with a 108 frame keyframe interval and a 6 s target: three
+	// intervals end at 6.48 s, just under the 6.5 s limit, and 44.1 kHz audio
+	// ending at its own first frame after that would run to 6.5016 s. The
+	// reference leaves room for that frame and closes at two intervals instead
+	constexpr uint64_t kTargetMs = 6000;
+	constexpr int64_t kVideoFrameMs50 = 20;
+	constexpr int64_t kGop = 108;
+	constexpr int64_t kAudioRate = 44100;
+	constexpr int64_t kAudioFrameSamples = 1024;
+
+	auto observer = std::make_shared<fmp4_test::NullStorageObserver>();
+	bmff::SegmentBoundaryPolicy::Config policy_config;
+	policy_config.segment_duration_ms = kTargetMs;
+	policy_config.chunk_duration_ms = 500.0;
+
+	auto reference_config = policy_config;
+	reference_config.log_context = "synced_pipeline_test/video50";
+	auto reference_policy = std::make_shared<bmff::ReferenceBoundaryPolicy>(reference_config, 50.0);
+	auto video = fmp4_test::MakePipeline(fmp4_test::MakeVideoTrack(0, 50.0, kGop), observer, reference_policy, kTargetMs, 500.0, "synced_pipeline_test");
+
+	auto synced_config = policy_config;
+	synced_config.log_context = "synced_pipeline_test/audio44";
+	auto synced_policy = std::make_shared<bmff::SyncedBoundaryPolicy>(reference_policy, synced_config);
+	auto audio = fmp4_test::MakePipeline(fmp4_test::MakeAudioTrack(1, kAudioRate), observer, synced_policy, kTargetMs, 500.0, "synced_pipeline_test");
+
+	int64_t video_index = 0;
+	int64_t audio_index = 0;
+	while (video_index * kVideoFrameMs50 < 120000)
+	{
+		const int64_t video_dts_ms = video_index * kVideoFrameMs50;
+		const int64_t audio_dts = audio_index * kAudioFrameSamples;
+
+		// Interleaved by time, the reference first on a tie
+		if (video_dts_ms * kAudioRate <= audio_dts * 1000)
+		{
+			ASSERT_TRUE(video.packager->AppendSample(fmp4_test::MakeVideoFrame(0, video_dts_ms, kVideoFrameMs50, (video_index % kGop) == 0)));
+			video_index++;
+		}
+		else
+		{
+			ASSERT_TRUE(audio.packager->AppendSample(fmp4_test::MakeAudioFrame(1, audio_dts, kAudioFrameSamples)));
+			audio_index++;
+		}
+	}
+
+	size_t audio_segments = 0;
+	for (int64_t number = 0; number <= video.storage->GetLastSegmentNumber(); number++)
+	{
+		auto video_segment = video.storage->GetSegment(number);
+		if (video_segment != nullptr && video_segment->IsCompleted() == true)
+		{
+			EXPECT_NEAR(video_segment->GetDurationMs(), 4320.0, 1.0) << "video segment " << number;
+		}
+
+		auto audio_segment = audio.storage->GetSegment(number);
+		if (audio_segment != nullptr && audio_segment->IsCompleted() == true)
+		{
+			EXPECT_LT(audio_segment->GetDurationMs(), 6500.0) << "audio segment " << number;
+			audio_segments++;
+		}
+	}
+	EXPECT_GE(audio_segments, 20u);
 }

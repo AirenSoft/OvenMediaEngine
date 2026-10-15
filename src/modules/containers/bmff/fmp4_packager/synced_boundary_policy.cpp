@@ -20,6 +20,12 @@ namespace bmff
 	// under is far below a frame and keeps the cut on it
 	constexpr int64_t kBoundaryBiasUs = 1;
 
+	// The other tracks end their segments at their own first frame at or after
+	// the reference's cut, so they can run one of their frames longer. The
+	// reference stops this far short of the limit, which covers an AAC frame at
+	// 44.1 kHz and above, HE-AAC included, and a video frame at 20 fps and above
+	constexpr int64_t kOtherTrackFrameRoomUs = 50000;
+
 	//--------------------------------------------------------------------------
 	// BoundaryFeed
 	//--------------------------------------------------------------------------
@@ -151,7 +157,7 @@ namespace bmff
 		// EXT-X-TARGETDURATION is the segment duration rounded to whole seconds,
 		// and a segment must round to it as well
 		const int64_t target_duration_s = std::llround(static_cast<double>(config.segment_duration_ms) / 1000.0);
-		_segment_limit_us = (target_duration_s * 1000 + 500) * 1000;
+		_segment_limit_us = (target_duration_s * 1000 + 500) * 1000 - kOtherTrackFrameRoomUs;
 	}
 
 	std::shared_ptr<const BoundaryFeed> ReferenceBoundaryPolicy::GetBoundaryFeed() const

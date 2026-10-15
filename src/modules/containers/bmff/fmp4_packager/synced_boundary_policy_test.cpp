@@ -480,18 +480,19 @@ TEST(ReferenceBoundaryPolicyTest, TheAimStopsShortWhenTheNextKeyframeWouldPassTh
 	// Nothing measured yet: the aim is the cadence position
 	EXPECT_NEAR(PlanAt(policy, 0.0).end_us, 4000000.0, 10.0);
 
-	// Keyframes 1.9 s apart: the one at 3.8 s is the last before the 4.5 s
-	// limit, so the aim stops short enough for the cut to land on it
+	// Keyframes 1.9 s apart: the one at 3.8 s is the last before the 4.45 s
+	// limit (4.5 s less the room for the other tracks), so the aim stops short
+	// enough for the cut to land on it
 	Arrive(policy, 0.0);
 	Arrive(policy, 1900.0);
-	EXPECT_NEAR(PlanAt(policy, 0.0).end_us, 2600000.0, 10.0);
+	EXPECT_NEAR(PlanAt(policy, 0.0).end_us, 2550000.0, 10.0);
 }
 
 TEST(ReferenceBoundaryPolicyTest, AKeyframeIntervalOnTheCadenceIsNeverBroughtForward)
 {
 	auto policy = MakeReference(30.0);
 
-	// Keyframes 2 s apart: the aim moves to 2.5 s, past the keyframe at 2 s,
+	// Keyframes 2 s apart: the aim moves to 2.45 s, past the keyframe at 2 s,
 	// so the cut still lands on the one at 4 s
 	Arrive(policy, 0.0);
 	Arrive(policy, 2000.0);
@@ -510,7 +511,7 @@ TEST(ReferenceBoundaryPolicyTest, ASceneCutKeyframeDoesNotShortenTheExpectedInte
 	Arrive(policy, 0.0);
 	Arrive(policy, 2000.0);
 	Arrive(policy, 2500.0);
-	EXPECT_NEAR(PlanAt(policy, 0.0).end_us, 2500000.0, 10.0);
+	EXPECT_NEAR(PlanAt(policy, 0.0).end_us, 2450000.0, 10.0);
 }
 
 TEST(ReferenceBoundaryPolicyTest, AKeyframeIntervalBelowZeroIsMeasuredToo)
@@ -521,7 +522,7 @@ TEST(ReferenceBoundaryPolicyTest, AKeyframeIntervalBelowZeroIsMeasuredToo)
 	// counts like any other
 	Arrive(policy, -500.0);
 	Arrive(policy, 1400.0);
-	EXPECT_NEAR(PlanAt(policy, -500.0).end_us, 2100000.0, 10.0);
+	EXPECT_NEAR(PlanAt(policy, -500.0).end_us, 2050000.0, 10.0);
 }
 
 TEST(ReferenceBoundaryPolicyTest, TheExpectedIntervalIsForgottenTwoSegmentsLater)
@@ -530,12 +531,12 @@ TEST(ReferenceBoundaryPolicyTest, TheExpectedIntervalIsForgottenTwoSegmentsLater
 
 	Arrive(policy, 0.0);
 	Arrive(policy, 2000.0);
-	EXPECT_NEAR(PlanAt(policy, 0.0).end_us, 2500000.0, 10.0);
+	EXPECT_NEAR(PlanAt(policy, 0.0).end_us, 2450000.0, 10.0);
 
 	// The interval seen in a segment still counts for the one after it, and
 	// no longer for the one after that
 	Complete(policy, 0, 0.0, 4000.0);
-	EXPECT_NEAR(PlanAt(policy, 4000.0).end_us, 6500000.0, 10.0);
+	EXPECT_NEAR(PlanAt(policy, 4000.0).end_us, 6450000.0, 10.0);
 
 	Complete(policy, 1, 4000.0, 4000.0);
 	EXPECT_NEAR(PlanAt(policy, 8000.0).end_us, 12000000.0, 10.0);
