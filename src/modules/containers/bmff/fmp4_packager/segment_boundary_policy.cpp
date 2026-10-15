@@ -20,12 +20,6 @@ namespace bmff
 	// microsecond of slack absorbs the rounding of storage-side durations.
 	constexpr int64_t kSettleSlackUs = 1;
 
-	// Positions and durations are converted from the source timebase one value
-	// at a time, so a plan can be missed by a microsecond. Missing it costs a
-	// whole keyframe interval, and a millisecond is far below one frame, so it
-	// can never bring a cut forward to the wrong frame.
-	constexpr int64_t kPlanSlackUs = 1000;
-
 	SegmentBoundaryPolicy::SegmentBoundaryPolicy(const Config &config)
 		: _segment_duration_us(static_cast<int64_t>(config.segment_duration_ms) * 1000),
 		  _chunk_duration_us(static_cast<int64_t>(config.chunk_duration_ms * 1000.0 + 0.5)),
@@ -510,6 +504,22 @@ namespace bmff
 			// The break landed; a propagated cut near it is the same event
 			_pending_discontinuity_cut_us.store(-1, std::memory_order_relaxed);
 			_last_discontinuity_us.store((completed.number >= 0) ? segment_end_us : _newest_sample_end_us.load(std::memory_order_relaxed), std::memory_order_relaxed);
+
+			// The intervals measured on the old timeline say nothing about the new
+			// one. A break closing on the frame at hand leaves that keyframe as the
+			// first of the new timeline, segment in progress or not; an older one
+			// is forgotten
+			_longest_keyframe_interval_us = 0;
+			_previous_longest_keyframe_interval_us = 0;
+			if (_last_keyframe_dts_us != _arriving_dts_us)
+			{
+				_last_keyframe_dts_us.reset();
+			}
+		}
+		else if (completed.number >= 0)
+		{
+			_previous_longest_keyframe_interval_us = _longest_keyframe_interval_us;
+			_longest_keyframe_interval_us = 0;
 		}
 
 		auto completion_result = (discontinuity == true) ? DoOnDiscontinuity(settled, covered_markers)
@@ -547,6 +557,17 @@ namespace bmff
 		if (_first_sample_end_us.load(std::memory_order_relaxed) < 0)
 		{
 			_first_sample_end_us.store(next_frame_end_us, std::memory_order_relaxed);
+		}
+
+		_arriving_dts_us = next_frame.dts_us;
+
+		if (next_frame.independent == true)
+		{
+			if (_last_keyframe_dts_us.has_value() == true && next_frame.dts_us > *_last_keyframe_dts_us)
+			{
+				_longest_keyframe_interval_us = std::max(_longest_keyframe_interval_us, next_frame.dts_us - *_last_keyframe_dts_us);
+			}
+			_last_keyframe_dts_us = next_frame.dts_us;
 		}
 
 		const auto &sample_list = buffered.GetList();

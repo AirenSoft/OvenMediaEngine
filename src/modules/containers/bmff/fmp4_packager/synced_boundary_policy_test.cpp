@@ -419,30 +419,23 @@ TEST(SyncedBoundaryPolicyTest, AnOverlongCompletionRealizesEveryBoundaryItPassed
 // ReferenceBoundaryPolicy
 //------------------------------------------------------------------------------
 
-TEST(ReferenceBoundaryPolicyTest, BoundariesSnapToTheFrameCadence)
+TEST(ReferenceBoundaryPolicyTest, TheAimSnapsToTheFrameCadence)
 {
-	// 29.97 fps: the frame period is 1001/30 ms, so the aimed positions are
-	// not integer multiples of the segment duration
+	// 29.97 fps: the frame period is 1001/30 ms, so a segment duration is not a
+	// whole number of frames; the aim is the nearest frame, 120 frames later
 	const double frame_period_us = 1001000.0 / 30.0;
 	auto policy = MakeReference(30000.0 / 1001.0);
 
-	const int64_t first = policy->NextBoundaryUs(0);
+	const int64_t first = PlanAt(policy, 0.0).end_us + 1;
 	EXPECT_NEAR(first, 120 * frame_period_us, 1.0);  // 4004.0 ms
 
-	const int64_t second = policy->NextBoundaryUs(first);
+	const int64_t second = PlanAt(policy, first / 1000.0).end_us + 1;
 	EXPECT_NEAR(second, 240 * frame_period_us, 1.0);  // 8008.0 ms
-
-	// Every position sits exactly on a frame
-	EXPECT_NEAR(std::remainder(static_cast<double>(first), frame_period_us), 0.0, 1.0);
 }
 
-TEST(ReferenceBoundaryPolicyTest, BoundaryFollowsTheSegmentStart)
+TEST(ReferenceBoundaryPolicyTest, EverySegmentAimsADurationPastItsOwnStart)
 {
 	auto policy = MakeReference(30.0, 7);
-
-	// The aimed positions start where the stream's first segment did; this one
-	// opened at zero, so they fall on plain multiples of the segment duration
-	PlanAt(policy, 0.0);
 
 	// Unknown start: only the numbering is planned. The planned boundaries sit
 	// a microsecond under the true position so a rounding ulp cannot push the
@@ -452,50 +445,19 @@ TEST(ReferenceBoundaryPolicyTest, BoundaryFollowsTheSegmentStart)
 	EXPECT_EQ(unknown.segment_number, 7);
 	EXPECT_FALSE(unknown.exact);
 
-	// A segment starting on a boundary targets the next one
+	EXPECT_NEAR(PlanAt(policy, 0.0).end_us, 4000000.0, 10.0);
 	EXPECT_NEAR(PlanAt(policy, 4000.0).end_us, 8000000.0, 10.0);
 
-	// A segment starting at a marker cut targets the same absolute position,
-	// so the track returns to the shared cadence by itself
-	EXPECT_NEAR(PlanAt(policy, 5500.0).end_us, 8000000.0, 10.0);
-
-	// A boundary right after the segment start is still honored
-	EXPECT_NEAR(PlanAt(policy, 3900.0).end_us, 4000000.0, 10.0);
-}
-
-TEST(ReferenceBoundaryPolicyTest, BoundariesStartWhereTheStreamDid)
-{
-	auto policy = MakeReference(30.0);
-
-	// A stream whose timeline opens away from zero: its frames sit at that
-	// offset, so the aimed positions start there instead of on multiples of
-	// the segment duration
+	// A segment starting at a marker cut or anywhere else counts from there;
+	// the synced tracks follow the realized cut, so no fixed position matters
+	EXPECT_NEAR(PlanAt(policy, 5500.0).end_us, 9500000.0, 10.0);
 	EXPECT_NEAR(PlanAt(policy, 500.0).end_us, 4500000.0, 10.0);
-
-	// and keep the segment duration between them
-	EXPECT_NEAR(PlanAt(policy, 5000.0).end_us, 8500000.0, 10.0);
-
-	// A segment starting at a marker cut targets the same one, so the track
-	// returns to the cadence by itself here too
-	EXPECT_NEAR(PlanAt(policy, 6000.0).end_us, 8500000.0, 10.0);
-}
-
-TEST(ReferenceBoundaryPolicyTest, ATimelineBelowZeroFixesTheOriginToo)
-{
-	auto policy = MakeReference(30.0);
-
-	// A first start below zero is a position like any other, so the aimed
-	// positions follow it instead of counting from zero
 	EXPECT_NEAR(PlanAt(policy, -500.0).end_us, 3500000.0, 10.0);
-	EXPECT_NEAR(PlanAt(policy, 4000.0).end_us, 7500000.0, 10.0);
 }
 
 TEST(ReferenceBoundaryPolicyTest, PublishesRealizedBoundaries)
 {
 	auto policy = MakeReference();
-
-	// The stream's first segment opened at zero, so the aimed positions start there
-	PlanAt(policy, 0.0);
 
 	// A marker cut completed the segment early, at 1400
 	Complete(policy, 5, 0.0, 1400.0);
@@ -505,11 +467,79 @@ TEST(ReferenceBoundaryPolicyTest, PublishesRealizedBoundaries)
 	EXPECT_EQ(boundary->segment_number, 5);
 	EXPECT_EQ(boundary->timestamp_us, 1400000);
 
-	// The next segment starts at the cut, takes the next number, and aims at
-	// the same absolute position, so the track returns to the shared cadence
-	// by itself
-	EXPECT_NEAR(PlanAt(policy, 1400.0).end_us, 4000000.0, 10.0);
+	// The next segment starts at the cut, takes the next number, and aims a
+	// segment duration past it
+	EXPECT_NEAR(PlanAt(policy, 1400.0).end_us, 5400000.0, 10.0);
 	EXPECT_EQ(PlanAt(policy, 1400.0).segment_number, 6);
+}
+
+TEST(ReferenceBoundaryPolicyTest, TheAimStopsShortWhenTheNextKeyframeWouldPassTheTarget)
+{
+	auto policy = MakeReference(30.0);
+
+	// Nothing measured yet: the aim is the cadence position
+	EXPECT_NEAR(PlanAt(policy, 0.0).end_us, 4000000.0, 10.0);
+
+	// Keyframes 1.9 s apart: the one at 3.8 s is the last before the 4.45 s
+	// limit (4.5 s less the room for the other tracks), so the aim stops short
+	// enough for the cut to land on it
+	Arrive(policy, 0.0);
+	Arrive(policy, 1900.0);
+	EXPECT_NEAR(PlanAt(policy, 0.0).end_us, 2550000.0, 10.0);
+}
+
+TEST(ReferenceBoundaryPolicyTest, AKeyframeIntervalOnTheCadenceIsNeverBroughtForward)
+{
+	auto policy = MakeReference(30.0);
+
+	// Keyframes 2 s apart: the aim moves to 2.45 s, past the keyframe at 2 s,
+	// so the cut still lands on the one at 4 s
+	Arrive(policy, 0.0);
+	Arrive(policy, 2000.0);
+
+	auto plan = PlanAt(policy, 0.0);
+	EXPECT_GT(plan.end_us, 2000000);
+	EXPECT_LE(plan.end_us, 4000000);
+}
+
+TEST(ReferenceBoundaryPolicyTest, ASceneCutKeyframeDoesNotShortenTheExpectedInterval)
+{
+	auto policy = MakeReference(30.0);
+
+	// A keyframe 500 ms after the last one is a scene cut, not the cadence; the
+	// longest interval seen still says the next keyframe can be 2 s away
+	Arrive(policy, 0.0);
+	Arrive(policy, 2000.0);
+	Arrive(policy, 2500.0);
+	EXPECT_NEAR(PlanAt(policy, 0.0).end_us, 2450000.0, 10.0);
+}
+
+TEST(ReferenceBoundaryPolicyTest, AKeyframeIntervalBelowZeroIsMeasuredToo)
+{
+	auto policy = MakeReference(30.0);
+
+	// A timeline that starts below zero: the interval from its first keyframe
+	// counts like any other
+	Arrive(policy, -500.0);
+	Arrive(policy, 1400.0);
+	EXPECT_NEAR(PlanAt(policy, -500.0).end_us, 2050000.0, 10.0);
+}
+
+TEST(ReferenceBoundaryPolicyTest, TheExpectedIntervalIsForgottenTwoSegmentsLater)
+{
+	auto policy = MakeReference(30.0);
+
+	Arrive(policy, 0.0);
+	Arrive(policy, 2000.0);
+	EXPECT_NEAR(PlanAt(policy, 0.0).end_us, 2450000.0, 10.0);
+
+	// The interval seen in a segment still counts for the one after it, and
+	// no longer for the one after that
+	Complete(policy, 0, 0.0, 4000.0);
+	EXPECT_NEAR(PlanAt(policy, 4000.0).end_us, 6450000.0, 10.0);
+
+	Complete(policy, 1, 4000.0, 4000.0);
+	EXPECT_NEAR(PlanAt(policy, 8000.0).end_us, 12000000.0, 10.0);
 }
 
 TEST(ReferenceBoundaryPolicyTest, StoredProgressLiftsTheHighWaterMark)

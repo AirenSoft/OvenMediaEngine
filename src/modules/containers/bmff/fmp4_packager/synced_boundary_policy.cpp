@@ -20,6 +20,12 @@ namespace bmff
 	// under is far below a frame and keeps the cut on it
 	constexpr int64_t kBoundaryBiasUs = 1;
 
+	// The other tracks end their segments at their own first frame at or after
+	// the reference's cut, so they can run one of their frames longer. The
+	// reference stops this far short of the limit, which covers an AAC frame at
+	// 44.1 kHz and above, HE-AAC included, and a video frame at 20 fps and above
+	constexpr int64_t kOtherTrackFrameRoomUs = 50000;
+
 	//--------------------------------------------------------------------------
 	// BoundaryFeed
 	//--------------------------------------------------------------------------
@@ -148,6 +154,10 @@ namespace bmff
 		  _boundary_feed(std::make_shared<BoundaryFeed>(config.log_context)),
 		  _video_frame_rate(video_frame_rate)
 	{
+		// EXT-X-TARGETDURATION is the segment duration rounded to whole seconds,
+		// and a segment must round to it as well
+		const int64_t target_duration_s = std::llround(static_cast<double>(config.segment_duration_ms) / 1000.0);
+		_segment_limit_us = (target_duration_s * 1000 + 500) * 1000 - kOtherTrackFrameRoomUs;
 	}
 
 	std::shared_ptr<const BoundaryFeed> ReferenceBoundaryPolicy::GetBoundaryFeed() const
@@ -155,39 +165,17 @@ namespace bmff
 		return _boundary_feed;
 	}
 
-	int64_t ReferenceBoundaryPolicy::NextBoundaryUs(int64_t position_us) const
+	int64_t ReferenceBoundaryPolicy::CadenceEndUs(int64_t segment_start_us) const
 	{
-		// Snap jitter tolerance: a segment that starts exactly on a boundary
-		// (within half a frame) belongs to that boundary, not before it
-		const int64_t tolerance_us = (_video_frame_rate > 0) ? std::llround(500000.0 / _video_frame_rate) : 500;
-
-		const int64_t origin_us = _origin_us.value_or(0);
-
-		// The origin itself is a boundary, so the search starts at it; the check
-		// below rejects it when the segment already starts there
-		int64_t multiple = std::max(static_cast<int64_t>(0), (position_us - origin_us) / _segment_duration_us);
-
-		while (true)
+		// A whole number of frames, so the cut lands exactly on a frame of this
+		// stream when the keyframe cadence allows; the start is one of them
+		if (_video_frame_rate > 0)
 		{
-			int64_t boundary_us = origin_us + (multiple * _segment_duration_us);
-
-			// The aimed position must be a real frame position, so the realized
-			// cut can land exactly on it when the keyframe cadence allows.
-			// Frames are counted from the origin, which is itself a frame of
-			// this stream
-			if (_video_frame_rate > 0)
-			{
-				double frame_index = std::round(static_cast<double>(boundary_us - origin_us) * _video_frame_rate / 1000000.0);
-				boundary_us = origin_us + std::llround(frame_index * 1000000.0 / _video_frame_rate);
-			}
-
-			if (boundary_us > position_us + tolerance_us)
-			{
-				return boundary_us;
-			}
-
-			multiple++;
+			double frames = std::round(static_cast<double>(_segment_duration_us) * _video_frame_rate / 1000000.0);
+			return segment_start_us + std::llround(frames * 1000000.0 / _video_frame_rate);
 		}
+
+		return segment_start_us + _segment_duration_us;
 	}
 
 	SegmentBoundary ReferenceBoundaryPolicy::GetSegmentBoundary(std::optional<int64_t> segment_start_us)
@@ -201,14 +189,20 @@ namespace bmff
 			return plan;
 		}
 
-		// The first start this reference sees fixes where the aimed positions
-		// begin for the stream, whatever its sign
-		if (_origin_us.has_value() == false)
+		int64_t aim_us = CadenceEndUs(*segment_start_us);
+
+		// The keyframe after the one at hand is expected a keyframe interval
+		// away; a segment that would reach the limit by then ends at the one at
+		// hand. An interval that divides the segment duration keeps its cuts:
+		// the keyframe before the aim stays short of this threshold by the
+		// rounding margin, half a second for a whole-second duration.
+		int64_t keyframe_interval_us = GetLongestRecentKeyframeIntervalUs();
+		if (keyframe_interval_us > 0)
 		{
-			_origin_us = *segment_start_us;
+			aim_us = std::min(aim_us, *segment_start_us + _segment_limit_us - keyframe_interval_us);
 		}
 
-		plan.end_us = NextBoundaryUs(*segment_start_us) - kBoundaryBiasUs;
+		plan.end_us = aim_us - kBoundaryBiasUs;
 
 		return plan;
 	}
@@ -242,7 +236,7 @@ namespace bmff
 		_boundary_feed->UpdateHighWaterMark(start_timestamp_us + duration_us);
 	}
 
-	CompletionResult ReferenceBoundaryPolicy::DoOnSegmentCompleted(const CompletedSegment &completed, const std::vector<std::shared_ptr<Marker>> &covered_markers)
+	void ReferenceBoundaryPolicy::PublishBoundary(const CompletedSegment &completed, const std::vector<std::shared_ptr<Marker>> &covered_markers)
 	{
 		BoundaryFeed::Boundary boundary;
 		boundary.segment_number = completed.number;
@@ -251,8 +245,32 @@ namespace bmff
 		boundary.marker_cut = completed.marker_cut;
 
 		_boundary_feed->PublishBoundary(boundary);
+	}
 
-		// Boundaries are absolute positions; nothing accumulates
+	CompletionResult ReferenceBoundaryPolicy::DoOnSegmentCompleted(const CompletedSegment &completed, const std::vector<std::shared_ptr<Marker>> &covered_markers)
+	{
+		PublishBoundary(completed, covered_markers);
+
+		// A segment shorter than the duration with no marker to cut it stopped
+		// at a keyframe so that the next one would not take it past the target
+		// duration. A cut lands up to the plan slack before its aim.
+		const int64_t end_us = completed.start_timestamp_us + completed.duration_us;
+		if (completed.has_marker == false && end_us + kPlanSlackUs < CadenceEndUs(completed.start_timestamp_us))
+		{
+			if (_shortened_segment_logged == false)
+			{
+				_shortened_segment_logged = true;
+				logti("%s - The keyframe interval does not divide the segment duration, so segments end at the last keyframe that keeps them within the target duration (the first one is %.3f ms long, ending at %.3f ms)",
+					  _log_context.CStr(), completed.duration_us / 1000.0, end_us / 1000.0);
+			}
+			else
+			{
+				logtd("%s - The segment ended at %.3f ms after %.3f ms to stay within the target duration",
+					  _log_context.CStr(), end_us / 1000.0, completed.duration_us / 1000.0);
+			}
+		}
+
+		// Every segment counts from its own start; nothing accumulates
 		return {};
 	}
 
@@ -260,12 +278,12 @@ namespace bmff
 	{
 		// A force-closed segment is still a realized boundary; the synced tracks
 		// must learn its end and the markers it carried
-		if (completed.number < 0)
+		if (completed.number >= 0)
 		{
-			return {};
+			PublishBoundary(completed, covered_markers);
 		}
 
-		return DoOnSegmentCompleted(completed, covered_markers);
+		return {};
 	}
 
 	//--------------------------------------------------------------------------
