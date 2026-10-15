@@ -1014,6 +1014,25 @@ TEST(SyncedPipelineTest, TheFirstSegmentAfterABreakStaysUnderTheTarget)
 	ExpectVideoSegmentsWithin(rig, 2999.0, 3001.0, 18);
 }
 
+TEST(SyncedPipelineTest, ABreakDueBeforeTheFirstSampleKeepsTheOpeningKeyframe)
+{
+	// A break propagated before the reference has stored anything closes on
+	// its first keyframe with no segment in progress; that keyframe still
+	// opens the timeline, so the interval is known at the next one and the
+	// first segment closes at 3 s like the rest
+	auto rig = MakeRig();
+	rig.reference_policy->RequestDiscontinuity(0);
+
+	for (int64_t index = 0; index < 900; index++)
+	{
+		const int64_t dts = index * 100 / 3;
+		const int64_t duration = (index + 1) * 100 / 3 - dts;
+		ASSERT_TRUE(rig.video.packager->AppendSample(fmp4_test::MakeVideoFrame(0, dts, duration, (index % 90) == 0)));
+	}
+
+	ExpectVideoSegmentsWithin(rig, 2999.0, 3001.0, 9);
+}
+
 TEST(SyncedPipelineTest, SceneCutKeyframesDoNotLetASegmentPassTheTarget)
 {
 	// Keyframes every 2 s with scene cuts that restart the count. The short

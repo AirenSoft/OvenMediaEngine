@@ -506,11 +506,12 @@ namespace bmff
 			_last_discontinuity_us.store((completed.number >= 0) ? segment_end_us : _newest_sample_end_us.load(std::memory_order_relaxed), std::memory_order_relaxed);
 
 			// The intervals measured on the old timeline say nothing about the new
-			// one. The keyframe opening the new timeline is usually the frame at
-			// hand and already recorded; only an older one is forgotten.
+			// one. A break closing on the frame at hand leaves that keyframe as the
+			// first of the new timeline, segment in progress or not; an older one
+			// is forgotten
 			_longest_keyframe_interval_us = 0;
 			_previous_longest_keyframe_interval_us = 0;
-			if (completed.number < 0 || _last_keyframe_dts_us.has_value() == false || *_last_keyframe_dts_us + kPlanSlackUs < segment_end_us)
+			if (_last_keyframe_dts_us != _arriving_dts_us)
 			{
 				_last_keyframe_dts_us.reset();
 			}
@@ -557,6 +558,8 @@ namespace bmff
 		{
 			_first_sample_end_us.store(next_frame_end_us, std::memory_order_relaxed);
 		}
+
+		_arriving_dts_us = next_frame.dts_us;
 
 		if (next_frame.independent == true)
 		{

@@ -347,6 +347,9 @@ namespace bmff
 		int64_t _longest_keyframe_interval_us = 0;
 		int64_t _previous_longest_keyframe_interval_us = 0;
 
+		// The frame of the latest plan pass; a break decided on it closes there
+		std::optional<int64_t> _arriving_dts_us;
+
 		// Where a propagated timeline break waits to cut, and where the last one
 		// landed (the dedup floor). A track changing configuration requests the
 		// cut on the other tracks' policies from the notification thread, so both
