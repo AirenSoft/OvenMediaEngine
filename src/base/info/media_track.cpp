@@ -100,6 +100,7 @@ bool MediaTrack::Update(const MediaTrack &media_track)
 	_skip_frames_conf = media_track._skip_frames_conf.load();
 	_keyframe_decode_only = media_track._keyframe_decode_only.load();
 	_lookahead_conf = media_track._lookahead_conf.load();
+	_scale_mode_conf = media_track._scale_mode_conf.load();
 	_extra_encoder_options = media_track._extra_encoder_options;
 	SetOverlays(media_track.GetOverlays());
 
@@ -490,6 +491,12 @@ ov::String MediaTrack::GetInfoString() const
 				cmn::GetKeyFrameIntervalTypeToString(GetKeyFrameIntervalTypeByConfig()),
 				GetSkipFramesByConfig(),
 				GetBFrames());
+
+			// Only output tracks set it; stretch is the default
+			if (GetScaleModeByConfig() != cmn::VideoScaleMode::Stretch)
+			{
+				out_str.AppendFormat("ScaleMode(%s) ", cmn::GetVideoScaleModeString(GetScaleModeByConfig()));
+			}
 			break;
 
 		case MediaType::Audio:

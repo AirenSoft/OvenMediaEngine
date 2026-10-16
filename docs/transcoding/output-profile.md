@@ -88,7 +88,7 @@ You can set the video profile as below:
 </Encodes>
 ```
 
-<table><thead><tr><th width="238">Property</th><th>Description</th></tr></thead><tbody><tr><td>Codec*</td><td>Type of codec to be encoded<br />See the table below</td></tr><tr><td>Bitrate*</td><td>Bit per second</td></tr><tr><td>Name*</td><td>Encode name for Renditions<br />No duplicates allowed</td></tr><tr><td>Width</td><td>Width of resolution</td></tr><tr><td>Height</td><td>Height of resolution</td></tr><tr><td>Framerate</td><td>Frames per second</td></tr><tr><td>KeyFrameInterval</td><td>Number of frames between two keyframes (0&#126;600)<br />default is framerate (i.e. 1 second)</td></tr><tr><td>BFrames</td><td>Number of B-frames (0&#126;16)<br />default is 0</td></tr><tr><td>Profile</td><td>H264 only encoding profile (baseline, main, high)</td></tr><tr><td>Preset</td><td>Presets of encoding quality and performance<br />See the table below</td></tr><tr><td>ThreadCount</td><td>Number of threads in encoding</td></tr><tr><td>Lookahead</td><td><p>Number of frames to look ahead <br />default is 0<br />x264 is 0-250</p></td></tr><tr><td>Modules</td><td>An encoder library can be specified; otherwise, the default codec See the table below</td></tr></tbody></table>
+<table><thead><tr><th width="238">Property</th><th>Description</th></tr></thead><tbody><tr><td>Codec*</td><td>Type of codec to be encoded<br />See the table below</td></tr><tr><td>Bitrate*</td><td>Bit per second</td></tr><tr><td>Name*</td><td>Encode name for Renditions<br />No duplicates allowed</td></tr><tr><td>Width</td><td>Width of resolution</td></tr><tr><td>Height</td><td>Height of resolution</td></tr><tr><td>ScaleMode</td><td>How the input is fitted into the output resolution when the aspect ratios differ (fit, crop, stretch)<br />default is stretch<br />See <a href="#scale-mode">Scale Mode</a></td></tr><tr><td>Framerate</td><td>Frames per second</td></tr><tr><td>KeyFrameInterval</td><td>Number of frames between two keyframes (0&#126;600)<br />default is framerate (i.e. 1 second)</td></tr><tr><td>BFrames</td><td>Number of B-frames (0&#126;16)<br />default is 0</td></tr><tr><td>Profile</td><td>H264 only encoding profile (baseline, main, high)</td></tr><tr><td>Preset</td><td>Presets of encoding quality and performance<br />See the table below</td></tr><tr><td>ThreadCount</td><td>Number of threads in encoding</td></tr><tr><td>Lookahead</td><td><p>Number of frames to look ahead <br />default is 0<br />x264 is 0-250</p></td></tr><tr><td>Modules</td><td>An encoder library can be specified; otherwise, the default codec See the table below</td></tr></tbody></table>
 
 \* required (except when `<Bypass>true</Bypass>` is set)
 
@@ -301,7 +301,30 @@ To change the video resolution when transcoding, use the values of width and hei
 </Encodes>
 ```
 
+### Scale Mode
 
+When both **Width** and **Height** are set, the output resolution can have a different aspect ratio from the input. The output resolution is kept for the life of the stream, so this also happens when the input resolution changes during the stream, for example when a broadcaster switches from landscape to portrait. **ScaleMode** decides how the input is fitted into the output.
+
+| ScaleMode           | Aspect ratio | Description                                                                                    |
+| ------------------- | ------------ | ---------------------------------------------------------------------------------------------- |
+| `fit`               | Kept         | The whole input is shown. The remaining area is filled with black (letterbox or pillarbox).    |
+| `crop`              | Kept         | The output is filled. The part of the input that does not fit is cut off evenly on both sides. |
+| `stretch` (default) | Not kept     | The input is scaled to the output resolution as it is, so it looks squeezed or stretched.      |
+
+```xml
+<Encodes>
+    <Video>
+        <Name>h264_720p</Name>
+        <Codec>h264</Codec>
+        <Bitrate>2000000</Bitrate>
+        <Width>1280</Width>
+        <Height>720</Height>
+        <ScaleMode>fit</ScaleMode>
+    </Video>
+</Encodes>
+```
+
+When only **Width** or **Height** is set, the other is calculated from the first input frame, so the three modes give the same result until the input resolution changes.
 
 ### Decoding Thread Configuration
 

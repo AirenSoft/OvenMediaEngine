@@ -8,6 +8,8 @@
 //==============================================================================
 #pragma once
 
+#include <base/mediarouter/media_type.h>
+
 #include "bypass_if_match.h"
 
 namespace cfg
@@ -29,6 +31,8 @@ namespace cfg
 					double _framerate = 0.0;
 					BypassIfMatch _bypass_if_match;
 					int _skip_frames = -1;
+					// fit | crop | stretch
+					ov::String _scale_mode = "stretch";
 
 				public:
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetName, _name)
@@ -39,6 +43,7 @@ namespace cfg
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetFramerate, _framerate)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetBypassIfMatch, _bypass_if_match)
 					CFG_DECLARE_CONST_REF_GETTER_OF(GetSkipFrames, _skip_frames)
+					CFG_DECLARE_CONST_REF_GETTER_OF(GetScaleMode, _scale_mode)
 
 					void SetName(const ov::String &name)
 					{
@@ -64,6 +69,10 @@ namespace cfg
 											   return (_skip_frames >= -1 && _skip_frames <= 120) ? nullptr : CreateConfigErrorPtr("SkipFrames must be -1 or between 0 and 120");
 										   });
 						Register<Optional>("BypassIfMatch", &_bypass_if_match);
+						Register<Optional>("ScaleMode", &_scale_mode, nullptr,
+										   [=]() -> std::shared_ptr<ConfigError> {
+											   return ::cmn::GetVideoScaleModeByName(_scale_mode).has_value() ? nullptr : CreateConfigErrorPtr("ScaleMode must be fit, crop or stretch");
+										   });
 					}
 				};
 			}  // namespace oprf

@@ -867,6 +867,43 @@ namespace cmn
 		return cmn::KeyFrameIntervalType::FRAME;
 	}
 
+	// How the input picture is mapped onto an output resolution of a different aspect ratio
+	enum class VideoScaleMode : uint8_t
+	{
+		// Keep the aspect ratio and fill the remaining area with black
+		Fit = 0,
+		// Keep the aspect ratio and cut off what overflows the output
+		Crop,
+		// Scale to the output resolution, ignoring the aspect ratio
+		Stretch
+	};
+
+	static constexpr const char *GetVideoScaleModeString(cmn::VideoScaleMode mode)
+	{
+		switch (mode)
+		{
+			case cmn::VideoScaleMode::Fit:
+				return "fit";
+			case cmn::VideoScaleMode::Crop:
+				return "crop";
+			case cmn::VideoScaleMode::Stretch:
+				return "stretch";
+		}
+
+		return "unknown";
+	}
+
+	static std::optional<cmn::VideoScaleMode> GetVideoScaleModeByName(ov::String name)
+	{
+		name.MakeLower();
+
+		OV_IF_RETURN(name == "fit", cmn::VideoScaleMode::Fit);
+		OV_IF_RETURN(name == "crop", cmn::VideoScaleMode::Crop);
+		OV_IF_RETURN(name == "stretch", cmn::VideoScaleMode::Stretch);
+
+		return std::nullopt;
+	}
+
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 	// Timebase
 	//////////////////////////////////////////////////////////////////////////////////////////////////
