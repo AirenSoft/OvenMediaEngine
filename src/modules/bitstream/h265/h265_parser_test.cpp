@@ -682,6 +682,12 @@ TEST(H265DecoderConfig, NamesTheProfileAndTheLevelAndReportsTheBitDepth)
 							 Case{3, 153, 0, "Main Still Picture", "5.1", 8},
 							 Case{1, 30, 0, "Main", "1", 8},
 							 Case{2, 186, 2, "Main 10", "6.2", 10},
+							 // Levels 6.3, 7, 7.1, 7.2 and 8.5 of the 09/2023 edition
+							 Case{2, 189, 2, "Main 10", "6.3", 10},
+							 Case{2, 210, 2, "Main 10", "7", 10},
+							 Case{2, 213, 2, "Main 10", "7.1", 10},
+							 Case{2, 216, 2, "Main 10", "7.2", 10},
+							 Case{1, 255, 0, "Main", "8.5", 8},
 							 // Values the specification does not define have no name
 							 Case{9, 123, 0, "", "4.1", 8},
 							 Case{1, 31, 0, "Main", "", 8},

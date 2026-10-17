@@ -206,7 +206,7 @@ ov::String HEVCDecoderConfigurationRecord::GetProfileName() const
 
 ov::String HEVCDecoderConfigurationRecord::GetLevelName() const
 {
-	// ITU-T H.265 Table A.8, general_level_idc is 30 times the level number
+	// ITU-T H.265 (09/2023) Annex A, general_level_idc is 30 times the level number
 	const uint32_t level_idc = _general_level_idc;
 
 	switch (level_idc)
@@ -217,6 +217,7 @@ ov::String HEVCDecoderConfigurationRecord::GetLevelName() const
 		case 120:
 		case 150:
 		case 180:
+		case 210:
 			return ov::String::FormatString("%u", level_idc / 30);
 
 		case 63:
@@ -226,6 +227,10 @@ ov::String HEVCDecoderConfigurationRecord::GetLevelName() const
 		case 156:
 		case 183:
 		case 186:
+		case 189:
+		case 213:
+		case 216:
+		case 255:
 			return ov::String::FormatString("%u.%u", level_idc / 30, (level_idc % 30) / 3);
 
 		default:
