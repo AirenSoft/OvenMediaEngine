@@ -103,13 +103,21 @@ ov::String HEVCDecoderConfigurationRecord::GetCodecsParameter() const
 	return codecs_parameter;
 }
 
+// A flag of the 48 bit general constraint indicator flags, counted from general_progressive_source_flag as 0
+static bool GetConstraintFlag(uint64_t constraint_indicator_flags, int index)
+{
+	return ((constraint_indicator_flags >> (47 - index)) & 0x01) != 0;
+}
+
+// general_one_picture_only_constraint_flag has this position for profile_idc 2 and 4 alike (ITU-T H.265 7.3.3)
+static constexpr int kOnePictureOnlyConstraintFlagIndex = 11;
+
 // ITU-T H.265 Table A.2, a format range extensions profile is named by its general_max_*bit,
 // general_max_*chroma, general_intra and general_one_picture_only constraint flags
 static ov::String GetFormatRangeExtensionsProfileName(uint64_t constraint_indicator_flags)
 {
-	// general_progressive_source_flag is the most significant of the 48 bits
 	auto flag = [constraint_indicator_flags](int index) -> bool {
-		return ((constraint_indicator_flags >> (47 - index)) & 0x01) != 0;
+		return GetConstraintFlag(constraint_indicator_flags, index);
 	};
 
 	const bool max_12bit		= flag(4);
@@ -119,7 +127,7 @@ static ov::String GetFormatRangeExtensionsProfileName(uint64_t constraint_indica
 	const bool max_420chroma	= flag(8);
 	const bool max_monochrome	= flag(9);
 	const bool intra			= flag(10);
-	const bool one_picture_only = flag(11);
+	const bool one_picture_only = flag(kOnePictureOnlyConstraintFlagIndex);
 
 	ov::String name;
 
@@ -191,7 +199,7 @@ ov::String HEVCDecoderConfigurationRecord::GetProfileName() const
 			return "Main";
 
 		case 2:
-			return "Main 10";
+			return GetConstraintFlag(_general_constraint_indicator_flags, kOnePictureOnlyConstraintFlagIndex) ? "Main 10 Still Picture" : "Main 10";
 
 		case 3:
 			return "Main Still Picture";

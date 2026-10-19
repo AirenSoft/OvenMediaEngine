@@ -696,7 +696,7 @@ components:
               description: State of the codec. A bypass track always reports Ready. Other tracks omit this field until a codec reports its state.
             codecs:
               type: string
-              description: RFC 6381 codecs string, such as mp4a.40.2, the value an HLS playlist carries in CODECS. Present once the codec parameters of the track are received.
+              description: RFC 6381 codecs string, such as mp4a.40.2 for AAC or mp4a.40.34 for MP3, the value an HLS playlist carries in CODECS. Present once the codec parameters of the track are received. Omitted for MPEG audio at an MPEG-2.5 sample rate (8, 11.025 or 12 kHz).
             language:
               type: string
               description: Omitted when the track has no language.
@@ -767,7 +767,7 @@ components:
               description: State of the codec. A bypass track always reports Ready. Other tracks omit this field until a codec reports its state.
             codecs:
               type: string
-              description: RFC 6381 codecs string, such as avc1.640028 or hvc1.2.4.L120.90, the value an HLS playlist carries in CODECS. Present once the codec parameters of the track are received.
+              description: RFC 6381 codecs string, such as avc1.640028 or hvc1.2.4.L120.90, the value an HLS playlist carries in CODECS. Present once the codec parameters of the track are received. Omitted for image tracks (JPEG, PNG, WebP and AVIF), which are told apart by codec.
             profile:
               type: string
               description: Codec profile as the codec specification names it, such as Constrained Baseline, High or High 10 for H264, Main, Main 10 or Main 4:2:2 10 for H265, and Main, High or Professional for AV1. Reported for H264, H265 and AV1 tracks once their codec parameters are received. On an encoded track it is the profile the encoder produced, which can differ from the requested one. Omitted for a profile that OvenMediaEngine does not name, such as the H264 and H265 scalable and multiview profiles.

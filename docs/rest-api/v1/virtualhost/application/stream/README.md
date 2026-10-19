@@ -510,7 +510,7 @@ Notes on the track fields
 - `maxWidth`, `maxHeight` and `maxFramerate` are high water marks of the track. They never decrease while the stream lives.
 - `codecModule` is the codec module in use, such as `default`, `x264`, `libopus` or `none`. It is omitted for a bypass track because no codec is involved.
 - `codecStatus` is always `Ready` on a bypass track, because such a track has no codec to initialize. On other tracks it appears once the codec reports `Ready` or `Failed`.
-- `codecs` is the RFC 6381 codecs string of the track, such as `avc1.640028`, `hvc1.2.4.L120.90` or `mp4a.40.2`, the same value an HLS playlist carries in `CODECS`. It sums up the codec, profile and level in one value.
+- `codecs` is the RFC 6381 codecs string of the track, such as `avc1.640028`, `hvc1.2.4.L120.90` or `mp4a.40.2`, the same value an HLS playlist carries in `CODECS`. It sums up the codec, profile and level in one value. Image tracks (JPEG, PNG, WebP and AVIF) have no `codecs` and are told apart by `codec`, and MPEG audio at an MPEG-2.5 sample rate (8, 11.025 or 12 kHz) has none either.
 - `profile`, `level`, `tier` and `bitDepth` describe the video as it is coded, such as `High 10`, `4.1` and `10` for 10 bit H264, or `Main 10` for 10 bit H265. They are reported for H264, H265 and AV1 tracks, and `tier` for H265 and AV1 only.
 - `codecs`, `profile`, `level`, `tier` and `bitDepth` appear once the codec parameters of the track are received. On an encoded track they describe the encoder output.
 - `profile` and `level` use the names of the codec specification. A level is written as `4` or `4.1` for H264 and H265, and as `4.0` or `4.1` for AV1. The profile can differ from the `Profile` requested in an output profile, because it names what the encoder produced: `baseline` is reported as `Constrained Baseline`, and an encoder that does not support the requested profile reports the one it used instead.
@@ -751,7 +751,7 @@ components:
                 - Failed
             codecs:
               type: string
-              description: RFC 6381 codecs string. Present once the codec parameters of the track are received.
+              description: RFC 6381 codecs string. Present once the codec parameters of the track are received. Omitted for image tracks (JPEG, PNG, WebP and AVIF).
             profile:
               type: string
               description: Reported for H264, H265 and AV1 tracks once their codec parameters are received.
@@ -857,7 +857,7 @@ components:
                 - Failed
             codecs:
               type: string
-              description: RFC 6381 codecs string. Present once the codec parameters of the track are received.
+              description: RFC 6381 codecs string. Present once the codec parameters of the track are received. Omitted for MPEG audio at an MPEG-2.5 sample rate.
             language:
               type: string
             characteristics:

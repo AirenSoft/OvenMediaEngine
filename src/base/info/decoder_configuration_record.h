@@ -26,7 +26,7 @@ public:
 	virtual ov::String GetCodecsParameter() const = 0;
 
 	// Profile, level and tier names as the codec specification writes them (e.g. "Main 10", "4.1", "High"),
-	// empty when the codec does not define one or the value is not one the specification defines
+	// empty when OvenMediaEngine does not name the value
 	virtual ov::String GetProfileName() const
 	{
 		return "";

@@ -53,7 +53,7 @@ namespace serdes
 		}
 		SetCodecStatus(object, "codecStatus", track, Optional::True);
 
-		// Only from a ready track, a provider can set a placeholder record before the real parameters arrive
+		// Reported from ready tracks only
 		if (track->IsValid())
 		{
 			SetString(object, "codecs", track->GetCodecsParameter(), Optional::True);

@@ -745,6 +745,19 @@ TEST(H265DecoderConfig, NamesTheFormatRangeExtensionsProfileByItsConstraintFlags
 	}
 }
 
+// general_one_picture_only_constraint_flag has the same position for Main 10 as for the range extensions
+TEST(H265DecoderConfig, NamesMain10StillPicture)
+{
+	SpsOverrides overrides;
+	overrides.profile_idc				 = 2;
+	overrides.constraint_indicator_flags = RextFlags(false, false, false, false, false, false, false, true);
+
+	auto record = BuildRecord(/*sao=*/false, 0, 0, 3, false, false, overrides);
+	ASSERT_NE(record->GetSPS(0), nullptr);
+
+	EXPECT_EQ(record->GetProfileName(), "Main 10 Still Picture");
+}
+
 // An encoder may leave general_profile_idc 0 and signal the profile by the compatibility flags alone
 TEST(H265DecoderConfig, NamesTheProfileFromTheCompatibilityFlagsWhenTheIdcIsZero)
 {
