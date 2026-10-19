@@ -112,6 +112,9 @@ protected:
 	std::thread _codec_thread;
 
 private:
+	// Pairs OnDeleted() with OnCreated(); a failed Configure() never registers
+	bool _registered = false;
+
 	// Set by DequeueInput() once the drain marker is reached.
 	std::atomic<bool> _drain_reached{false};
 
