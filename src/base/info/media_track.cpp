@@ -438,6 +438,39 @@ ov::String MediaTrack::GetCodecsParameter() const
 			return "mp4a.ad";
 		}
 
+		case cmn::MediaCodecId::Mp3:
+		case cmn::MediaCodecId::Mp2:
+		{
+			// The sample rate tells MPEG-1 from MPEG-2, the MPEG-2.5 rates belong to neither
+			bool is_mpeg1 = false;
+
+			switch (GetSampleRate())
+			{
+				case 32000:
+				case 44100:
+				case 48000:
+					is_mpeg1 = true;
+					break;
+
+				case 16000:
+				case 22050:
+				case 24000:
+					break;
+
+				default:
+					return "";
+			}
+
+			// MP3 is MPEG-4 audio object type 34 (Layer III). Mp2 is MPEG-TS audio of any layer,
+			// so it is named by the object type indication of its MPEG version instead
+			if (GetCodecId() == cmn::MediaCodecId::Mp3)
+			{
+				return "mp4a.40.34";
+			}
+
+			return is_mpeg1 ? "mp4a.6B" : "mp4a.69";
+		}
+
 		case cmn::MediaCodecId::Vp8:
 		{
 			return "vp8";
