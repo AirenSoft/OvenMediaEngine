@@ -21,7 +21,9 @@
 namespace mpegts
 {
 	// Best-effort reordering of whole UDP datagrams by their per-PID continuity counters (CCs).
-	// 4-bit CCs wrap quickly, so in practice only adjacent datagram swaps are restored.
+	// A datagram is classified by all the PIDs it carries at once: a video CC wraps every 2 to 3 datagrams,
+	// so a low-rate PID (audio, PCR), which advances about 1 per datagram, reveals a datagram that is behind.
+	// The 4-bit CCs limit restoration to adjacent datagram swaps in practice.
 	//
 	// 1. In order: delivered. Ahead: held until the gap fills or the depth/timeout limit declares it lost.
 	// 2. Stale (behind on a PID): if a held datagram shares a PID, the held ones go out in arrival order
@@ -45,7 +47,8 @@ namespace mpegts
 
 		// A stale datagram matching an arrival within this window (milliseconds) is a network duplicate:
 		// unless it resyncs, it is passed through without becoming the baseline.
-		// About half the shortest interval at which ffmpeg output repeats a datagram key (491 ms).
+		// About half the shortest interval at which ffmpeg output repeats a datagram key (491 ms);
+		// other senders (hardware encoders, gateways) were not measured.
 		static constexpr int64_t DUPLICATE_WINDOW_MSEC = 250;
 
 	public:
