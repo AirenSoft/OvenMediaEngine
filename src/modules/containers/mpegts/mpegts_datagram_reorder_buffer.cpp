@@ -10,6 +10,9 @@
 
 #include <base/ovlibrary/clock.h>
 
+#include <algorithm>
+#include <string_view>
+
 #include "mpegts_packet.h"
 
 namespace mpegts
@@ -29,6 +32,11 @@ namespace mpegts
 	uint8_t DatagramReorderBuffer::Displacement(uint8_t cc, uint8_t expected)
 	{
 		return static_cast<uint8_t>((cc - expected) & 0x0F);
+	}
+
+	uint16_t DatagramReorderBuffer::PacketPid(const uint8_t *packet)
+	{
+		return static_cast<uint16_t>(((packet[1] & 0x1F) << 8) | packet[2]);
 	}
 
 	DatagramReorderBuffer::Summary DatagramReorderBuffer::Parse(const std::shared_ptr<const ov::Data> &datagram)
@@ -58,7 +66,7 @@ namespace mpegts
 			}
 
 			const bool transport_error			   = (data[offset + 1] & 0x80) != 0;
-			const uint16_t pid					   = static_cast<uint16_t>(((data[offset + 1] & 0x1F) << 8) | data[offset + 2]);
+			const uint16_t pid					   = PacketPid(data + offset);
 			const uint8_t adaptation_field_control = (data[offset + 3] >> 4) & 0x03;
 			const uint8_t continuity_counter	   = data[offset + 3] & 0x0F;
 			const bool has_adaptation			   = (adaptation_field_control & 0b10) != 0;
@@ -138,8 +146,6 @@ namespace mpegts
 		}
 		if (any_behind)
 		{
-			// At least one PID is behind expected: this datagram overlaps already-delivered data
-			// (a stale or duplicate datagram), so it is not a future packet.
 			return Placement::Stale;
 		}
 		if (all_exact)
@@ -231,10 +237,8 @@ namespace mpegts
 		return best;
 	}
 
-	size_t DatagramReorderBuffer::FlushIfNeeded(std::vector<std::shared_ptr<const ov::Data>> *out)
+	size_t DatagramReorderBuffer::FlushIfNeeded(std::vector<std::shared_ptr<const ov::Data>> *out, int64_t now)
 	{
-		const int64_t now	 = Now();
-
 		// The head gap is presumed lost once the buffer is full (depth) or the oldest arrival has
 		// waited too long (timeout, evaluated on each arrival - there is no timer thread).
 		// Force the datagram nearest the expected counters out (declaring the gap before it lost) and cascade.
@@ -280,9 +284,108 @@ namespace mpegts
 		}
 	}
 
-	size_t DatagramReorderBuffer::Enqueue(const std::shared_ptr<const ov::Data> &datagram,
-										  std::vector<std::shared_ptr<const ov::Data>> *out)
+	bool DatagramReorderBuffer::Resync(const std::shared_ptr<const ov::Data> &data, const Summary &summary,
+									   std::vector<std::shared_ptr<const ov::Data>> *out, EnqueueResult *result)
 	{
+		const auto shares_pid = std::any_of(_buffer.begin(), _buffer.end(), [&summary](const Pending &pending) {
+			return std::any_of(summary.pid_order.begin(), summary.pid_order.end(), [&pending](uint16_t pid) {
+				return pending.summary.first_cc.find(pid) != pending.summary.first_cc.end();
+			});
+		});
+
+		if (shares_pid == false)
+		{
+			return false;
+		}
+
+		for (uint16_t pid : summary.pid_order)
+		{
+			const auto expected = _expected_cc.find(pid);
+			if ((expected != _expected_cc.end()) && (Displacement(summary.first_cc.at(pid), expected->second) > AHEAD_LIMIT))
+			{
+				result->resync_pids.push_back({pid, summary.first_cc.at(pid), expected->second});
+			}
+		}
+
+		result->resynced	= true;
+		result->resync_held = _buffer.size();
+
+		for (const auto &pending : _buffer)
+		{
+			Deliver(pending.data, pending.summary, out);
+		}
+		_buffer.clear();
+
+		Deliver(data, summary, out);
+		return true;
+	}
+
+	std::optional<uint64_t> DatagramReorderBuffer::ArrivalKey(const std::shared_ptr<const ov::Data> &datagram)
+	{
+		const uint8_t *data = datagram->GetDataAs<uint8_t>();
+		const size_t length = datagram->GetLength();
+
+		auto is_null_packet = [data](size_t offset) { return PacketPid(data + offset) == 0x1FFF; };
+
+		size_t first		= 0;
+		while ((first < length) && is_null_packet(first))
+		{
+			first += MPEGTS_MIN_PACKET_SIZE;
+		}
+		if (first >= length)
+		{
+			return std::nullopt;
+		}
+
+		size_t last = length - MPEGTS_MIN_PACKET_SIZE;
+		while (is_null_packet(last))
+		{
+			last -= MPEGTS_MIN_PACKET_SIZE;
+		}
+
+		const std::hash<std::string_view> hash;
+		auto packet_hash = [&hash, data](size_t offset) {
+			return hash(std::string_view(reinterpret_cast<const char *>(data + offset), MPEGTS_MIN_PACKET_SIZE));
+		};
+		const uint64_t first_hash = packet_hash(first);
+		const uint64_t last_hash  = (last == first) ? first_hash : packet_hash(last);
+
+		return (first_hash * 0x9E3779B97F4A7C15ULL) ^ last_hash ^ (static_cast<uint64_t>(length) * 0xC2B2AE3D27D4EB4FULL);
+	}
+
+	bool DatagramReorderBuffer::RecordArrival(const std::shared_ptr<const ov::Data> &datagram, int64_t now)
+	{
+		if ((_recent_arrivals.empty() == false) && (now < _recent_arrivals.back().first))
+		{
+			_recent_arrivals.clear();
+			_recent_keys.clear();
+		}
+
+		while ((_recent_arrivals.empty() == false) && ((now - _recent_arrivals.front().first) > DUPLICATE_WINDOW_MSEC))
+		{
+			const auto expired = _recent_keys.find(_recent_arrivals.front().second);
+			if (--expired->second == 0)
+			{
+				_recent_keys.erase(expired);
+			}
+			_recent_arrivals.pop_front();
+		}
+
+		const auto key = ArrivalKey(datagram);
+		if (key.has_value() == false)
+		{
+			return false;
+		}
+
+		_recent_arrivals.emplace_back(now, key.value());
+		return (_recent_keys[key.value()]++) > 0;
+	}
+
+	DatagramReorderBuffer::EnqueueResult DatagramReorderBuffer::Enqueue(const std::shared_ptr<const ov::Data> &datagram,
+																		std::vector<std::shared_ptr<const ov::Data>> *out)
+	{
+		EnqueueResult result;
+		const int64_t now	  = Now();
 		const Summary summary = Parse(datagram);
 
 		if ((summary.aligned == false) || summary.discontinuity)
@@ -303,7 +406,7 @@ namespace mpegts
 				// A signalled discontinuity that still carries PIDs: continuity resumes from it.
 				Rebase(summary);
 			}
-			return 0;
+			return result;
 		}
 
 		if (summary.pid_order.empty())
@@ -311,8 +414,11 @@ namespace mpegts
 			// Aligned but carries no payload PID (e.g. a PCR-only or null-padding datagram):
 			// it holds no continuity information, so pass it straight through WITHOUT disturbing sequencing state.
 			out->push_back(datagram);
-			return FlushIfNeeded(out);
+			result.declared_lost = FlushIfNeeded(out, now);
+			return result;
 		}
+
+		const bool recent_copy = RecordArrival(datagram, now);
 
 		switch (Classify(summary))
 		{
@@ -331,18 +437,30 @@ namespace mpegts
 				// so dropping on a match could lose real data.
 				// If a real duplicate is buffered, Cascade's Stale path passes it through out of
 				// order (never drops), and the downstream continuity check absorbs it.
-				_buffer.push_back({datagram, summary, Now()});
+				_buffer.push_back({datagram, summary, now});
 				break;
 
 			case Placement::Stale:
-				// Overlaps already-delivered data (stale/duplicate, or a high-rate PID aliasing a deep reorder).
-				// Never buffer or drop it: pass it through and let the downstream continuity check handle it.
-				// Do not advance the baseline.
-				out->push_back(datagram);
+				// Behind on some PID: a gap that will not fill (loss or source switch), or a late or duplicate datagram.
+				// Resync when a held datagram shares a PID with it; otherwise the stream continues from it, so rebase.
+				// A recent copy is a network duplicate: pass it through and keep the baseline.
+				if (Resync(datagram, summary, out, &result) == false)
+				{
+					if (recent_copy)
+					{
+						out->push_back(datagram);
+					}
+					else
+					{
+						// No held datagram shares its PIDs, so none can follow it: nothing to cascade.
+						Deliver(datagram, summary, out);
+					}
+				}
 				break;
 		}
 
-		return FlushIfNeeded(out);
+		result.declared_lost = FlushIfNeeded(out, now);
+		return result;
 	}
 
 	void DatagramReorderBuffer::Flush(std::vector<std::shared_ptr<const ov::Data>> *out)

@@ -56,11 +56,21 @@ namespace mpegts
 		if (_reorder_buffer != nullptr)
 		{
 			std::vector<std::shared_ptr<const ov::Data>> ordered;
-			const auto gap_loss = _reorder_buffer->Enqueue(datagram, &ordered);
+			const auto enqueue_result = _reorder_buffer->Enqueue(datagram, &ordered);
 
-			if (gap_loss > 0)
+			if (enqueue_result.resynced && _debug_enabled)
 			{
-				logad("MPEG-TS reorder: declared %zu datagram gap(s) lost (depth/timeout flush)", gap_loss);
+				ov::String pids;
+				for (const auto &resync_pid : enqueue_result.resync_pids)
+				{
+					pids.AppendFormat(" (PID: %d Expected: %d Received: %d)", resync_pid.pid, resync_pid.expected_cc, resync_pid.received_cc);
+				}
+				logad("MPEG-TS reorder: resynced on a stale datagram after emitting %zu held datagram(s)%s", enqueue_result.resync_held, pids.CStr());
+			}
+
+			if (enqueue_result.declared_lost > 0)
+			{
+				logad("MPEG-TS reorder: declared %zu datagram gap(s) lost (depth/timeout flush)", enqueue_result.declared_lost);
 			}
 
 			bool result = true;
