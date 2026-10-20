@@ -276,6 +276,7 @@ bool TranscodeDecoder::Configure(std::shared_ptr<MediaTrack> track)
 	}
 
 	tc::TranscodeModules::GetInstance()->OnCreated(false, GetCodecID(), GetModuleID(), GetDeviceID());
+	_registered = true;
 
 	return true;
 }
@@ -288,7 +289,11 @@ void TranscodeDecoder::Stop()
 		_input_buffer.Stop();
 		_codec_thread.join();
 
-		tc::TranscodeModules::GetInstance()->OnDeleted(false, GetCodecID(), GetModuleID(), GetDeviceID());
+		if (_registered)
+		{
+			tc::TranscodeModules::GetInstance()->OnDeleted(false, GetCodecID(), GetModuleID(), GetDeviceID());
+			_registered = false;
+		}
 
 		logtt("decoder %s thread has ended", cmn::GetCodecIdString(GetCodecID()));
 	}
