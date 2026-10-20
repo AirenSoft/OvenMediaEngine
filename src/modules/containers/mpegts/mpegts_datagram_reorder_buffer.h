@@ -13,67 +13,74 @@
 #include <deque>
 #include <functional>
 #include <map>
+#include <optional>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace mpegts
 {
-	// Reorders whole UDP datagrams (each a contiguous run of 188-byte TS packets)
-	// that a lossy network delivered out of order, using the joint per-PID continuity counters
-	// as the sequencing hint.
+	// Best-effort reordering of whole UDP datagrams by their per-PID continuity counters (CCs).
+	// 4-bit CCs wrap quickly, so in practice only adjacent datagram swaps are restored.
 	//
-	// UDP reorders datagrams atomically (the TS packets inside one datagram are always in send order).
-	// A datagram carries several PIDs, each with its own continuity counter;
-	// the buffer keeps the expected next counter per PID and classifies an incoming datagram
-	// by ALL the PIDs it carries at once:
+	// 1. In order: delivered. Ahead: held until the gap fills or the depth/timeout limit declares it lost.
+	// 2. Stale (behind on a PID): if a held datagram shares a PID, the held ones go out in arrival order
+	//    (their CC order is no longer trusted) and the stale one becomes the baseline (resync).
+	//    Otherwise it is delivered and becomes the baseline, unless it is a recent copy (`DUPLICATE_WINDOW_MSEC`).
+	// 3. A datagram that cannot be placed passes through; every datagram is emitted exactly once.
 	//
-	//   - every carried (already-tracked) PID continues exactly  -> in order, deliver
-	//   - every carried PID is ahead of expected                 -> a gap; buffer until it fills
-	//   - any carried PID is behind expected                     -> stale/duplicate; pass through
-	//
-	// The joint check is what makes this robust. The counter is only 4 bits, so a high-rate PID
-	// (video: several packets per datagram) wraps every ~2-3 datagrams and cannot alone tell
-	// "a few datagrams ahead" from "a few datagrams behind".
-	// A low-rate PID (audio/PCR: ~1 packet per datagram) advances its counter by ~1 per datagram,
-	// so it effectively numbers datagrams with a ~16-datagram horizon and reliably reveals a behind/stale datagram even
-	// when the high-rate PID aliases it as "ahead".
-	// Requiring all PIDs to agree therefore rejects stale/duplicate datagrams
-	// (they are passed straight through, never buffered) and admits only genuine gaps.
-	//
-	// A gap that never fills is declared lost after a bounded window (depth) or timeout.
-	// A datagram that cannot be placed (ambiguous, or beyond the window) is passed through, never dropped,
-	// so no received data is lost; downstream continuity checks turn any residual disorder into a clean gap.
-	// Reordering is a best-effort improvement, never worse than not reordering at all.
-	// A datagram carrying only a high-rate PID (a pure video burst with no low-rate anchor) can still be
-	// misjudged within that burst, but the pass-through-never-drop rule keeps that safe.
-	//
-	// Not thread-safe: the owning depacketizer serializes all access under its own lock.
+	// Not thread-safe; the caller serializes access.
 	class DatagramReorderBuffer
 	{
 	public:
 		// Maximum datagrams held before the head gap is declared lost and flushed.
-		static constexpr size_t DEFAULT_MAX_DATAGRAMS = 8;
+		static constexpr size_t DEFAULT_MAX_DATAGRAMS  = 8;
 
 		// Maximum time a datagram waits behind a gap before the gap is declared lost (milliseconds).
-		static constexpr int64_t DEFAULT_TIMEOUT_MSEC = 100;
+		static constexpr int64_t DEFAULT_TIMEOUT_MSEC  = 100;
 
-		// Continuity-counter displacement (mod 16) at or below which a PID is treated as "ahead"
-		// (a plausible future) rather than "behind" (already delivered/stale).
-		// A loss larger than this window puts the stream beyond it, so reordering suspends
-		// (datagrams pass straight through, none dropped) until a signalled discontinuity
-		// or the counter naturally re-enters the window.
-		static constexpr uint8_t AHEAD_LIMIT		  = 7;
+		// Continuity-counter displacement (mod 16) at or below which a PID is "ahead" (a plausible future).
+		// A larger displacement makes the PID "behind" and the datagram stale.
+		static constexpr uint8_t AHEAD_LIMIT		   = 7;
 
+		// A stale datagram matching an arrival within this window (milliseconds) is a network duplicate:
+		// unless it resyncs, it is passed through without becoming the baseline.
+		// About half the shortest interval at which ffmpeg output repeats a datagram key (491 ms).
+		static constexpr int64_t DUPLICATE_WINDOW_MSEC = 250;
+
+	public:
+		// A PID that made a datagram stale when it triggered a resync.
+		struct ResyncPid
+		{
+			uint16_t pid		= 0;
+			uint8_t received_cc = 0;
+			uint8_t expected_cc = 0;
+		};
+
+		// What one `Enqueue()` call did besides emitting datagrams, so the caller can log each event.
+		struct EnqueueResult
+		{
+			// Gaps declared lost by a depth/timeout flush
+			size_t declared_lost = 0;
+			// Whether a stale arrival caused a resync; a resync is not a declared loss
+			bool resynced		 = false;
+			// Held datagrams the resync emitted
+			size_t resync_held	 = 0;
+			// The behind PIDs of the stale datagram that triggered the resync
+			std::vector<ResyncPid> resync_pids;
+		};
+
+	public:
 		// `clock` returns the current time in milliseconds; `nullptr` uses the system clock.
 		// Injecting a clock keeps timeout-driven behavior deterministic in tests.
 		explicit DatagramReorderBuffer(size_t max_datagrams			  = DEFAULT_MAX_DATAGRAMS,
 									   int64_t timeout_msec			  = DEFAULT_TIMEOUT_MSEC,
 									   std::function<int64_t()> clock = nullptr);
 
-		// Feeds one whole datagram. Appends any datagrams that become deliverable, in restored order, to `out`.
-		// Returns the number of datagrams whose preceding gap was declared lost (depth/timeout flush) during this call,
-		// so the caller can log that event.
-		size_t Enqueue(const std::shared_ptr<const ov::Data> &datagram,
-					   std::vector<std::shared_ptr<const ov::Data>> *out);
+		// Feeds one whole datagram and appends the datagrams that become deliverable to `out`, in processing order.
+		// Returns the gaps declared lost (depth/timeout flush) and the resync this call made, reported separately.
+		EnqueueResult Enqueue(const std::shared_ptr<const ov::Data> &datagram,
+							  std::vector<std::shared_ptr<const ov::Data>> *out);
 
 		// Emits everything still buffered (in restored order). Available for an explicit teardown drain;
 		// it is not called automatically on destruction, so if a stream ends while datagrams are held behind a gap,
@@ -115,12 +122,14 @@ namespace mpegts
 			InOrder,
 			// every tracked PID is ahead (a gap); none behind
 			Ahead,
-			// at least one tracked PID is behind (already delivered/duplicate)
+			// at least one tracked PID is behind (a late or duplicate datagram, or a stale baseline)
 			Stale,
 		};
 
+	private:
 		static Summary Parse(const std::shared_ptr<const ov::Data> &datagram);
 		static uint8_t Displacement(uint8_t cc, uint8_t expected);
+		static uint16_t PacketPid(const uint8_t *packet);
 
 		int64_t Now() const;
 		Placement Classify(const Summary &summary) const;
@@ -136,7 +145,7 @@ namespace mpegts
 		std::deque<Pending>::iterator SelectClosest();
 
 		// Returns the number of gaps declared lost (datagrams force-flushed) during this call.
-		size_t FlushIfNeeded(std::vector<std::shared_ptr<const ov::Data>> *out);
+		size_t FlushIfNeeded(std::vector<std::shared_ptr<const ov::Data>> *out, int64_t now);
 
 		// Drains the whole buffer in restored (oldest-first) order.
 		void DrainInOrder(std::vector<std::shared_ptr<const ov::Data>> *out);
@@ -144,6 +153,21 @@ namespace mpegts
 		// Re-seeds the expected counters for the PIDs a datagram carries (used after a discontinuity).
 		void Rebase(const Summary &summary);
 
+		// Resyncs on a stale datagram when a held datagram shares one of its PIDs, and returns false otherwise.
+		// A resync emits the held datagrams in arrival order, then delivers the stale datagram.
+		bool Resync(const std::shared_ptr<const ov::Data> &data, const Summary &summary,
+					std::vector<std::shared_ptr<const ov::Data>> *out, EnqueueResult *result);
+
+		// Identifies an aligned datagram by its length and hashes of its first and last non-null TS packets.
+		// Returns no key when every packet is a null packet.
+		// Two different datagrams can share a key; a collision only makes one stale datagram skip its rebase.
+		static std::optional<uint64_t> ArrivalKey(const std::shared_ptr<const ov::Data> &datagram);
+
+		// Records an arrival and returns whether a datagram with the same key arrived within `DUPLICATE_WINDOW_MSEC`.
+		// A clock that goes backward clears the recorded arrivals.
+		bool RecordArrival(const std::shared_ptr<const ov::Data> &datagram, int64_t now);
+
+	private:
 		size_t _max_datagrams;
 		int64_t _timeout_msec;
 		std::function<int64_t()> _clock;
@@ -152,5 +176,10 @@ namespace mpegts
 		std::map<uint16_t, uint8_t> _expected_cc;
 
 		std::deque<Pending> _buffer;
+
+		// Arrivals within the last `DUPLICATE_WINDOW_MSEC` as (arrival time, key), oldest first.
+		std::deque<std::pair<int64_t, uint64_t>> _recent_arrivals;
+		// Number of `_recent_arrivals` entries per key.
+		std::unordered_map<uint64_t, uint32_t> _recent_keys;
 	};
 }  // namespace mpegts
