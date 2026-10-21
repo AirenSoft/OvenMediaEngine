@@ -419,6 +419,39 @@ namespace mpegts
 		return true;
 	}
 
+	// Parses the descriptors that fill exactly `length` bytes, and fails when one runs past them.
+	static bool ParseDescriptors(BitReader *parser, size_t length, std::vector<std::shared_ptr<Descriptor>> *descriptors)
+	{
+		while (length > 0)
+		{
+			if (length < DESCRIPTOR_HEADER_SIZE)
+			{
+				logtw("Could not parse descriptor because of not enough data size (remaining: %zu, required: %d)", length, DESCRIPTOR_HEADER_SIZE);
+				return false;
+			}
+
+			// The second byte of a descriptor is its data length.
+			const size_t descriptor_length = DESCRIPTOR_HEADER_SIZE + parser->CurrentPosition()[1];
+			if (descriptor_length > length)
+			{
+				logtw("Could not parse descriptor because it runs past the descriptor loop (remaining: %zu, required: %zu)", length, descriptor_length);
+				return false;
+			}
+
+			auto descriptor = Descriptor::Parse(parser);
+			if (descriptor == nullptr)
+			{
+				return false;
+			}
+
+			descriptors->push_back(descriptor);
+
+			length -= descriptor_length;
+		}
+
+		return true;
+	}
+
 	bool Section::ParsePmt(BitReader *parser)
 	{
 		// not enough data size to parse
@@ -452,25 +485,27 @@ namespace mpegts
 		_pmt->_program_info_length_unused_bits = parser->ReadBits<uint8_t>(2);
 		_pmt->_program_info_length = parser->ReadBits<uint16_t>(10);
 
-		// Descriptors
-		auto descriptors_length = _pmt->_program_info_length;
-		while (descriptors_length > 0)
+		if (_pmt->_program_info_length + 4 > parser->BytesRemained())
 		{
-			auto descriptor = Descriptor::Parse(parser);
-			if (descriptor == nullptr)
-			{
-				// error
-				return false;
-			}
+			logtw("Could not parse program descriptors because of not enough data size (current: %zu, required: %d)", parser->BytesRemained(), _pmt->_program_info_length + 4);
+			return false;
+		}
 
-			_pmt->_program_descriptors.push_back(descriptor);
-
-			descriptors_length -= descriptor->GetPacketLength();
+		// Descriptors
+		if (ParseDescriptors(parser, _pmt->_program_info_length, &_pmt->_program_descriptors) == false)
+		{
+			return false;
 		}
 
 		// es info, remaining bytes excluding CRC(32bits)
-		while (parser->BytesRemained() - 4 > 0)
+		while (parser->BytesRemained() > 4)
 		{
+			if (parser->BytesRemained() - 4 < 5)
+			{
+				logtw("Could not parse ES info because of not enough data size (current: %zu, required: 5)", parser->BytesRemained() - 4);
+				return false;
+			}
+
 			auto es_info = std::make_shared<ESInfo>();
 
 			es_info->_stream_type = parser->ReadBytes<uint8_t>();
@@ -480,20 +515,16 @@ namespace mpegts
 			es_info->_es_info_length_unused_bits = parser->ReadBits<uint8_t>(2);
 			es_info->_es_info_length = parser->ReadBits<uint16_t>(10);
 
-			// Descriptors
-			descriptors_length = es_info->_es_info_length;
-			while (descriptors_length > 0)
+			if (es_info->_es_info_length > parser->BytesRemained() - 4)
 			{
-				auto descriptor = Descriptor::Parse(parser);
-				if (descriptor == nullptr)
-				{
-					// error
-					return false;
-				}
+				logtw("Could not parse ES descriptors because of not enough data size (current: %zu, required: %d)", parser->BytesRemained() - 4, es_info->_es_info_length);
+				return false;
+			}
 
-				es_info->_es_descriptors.push_back(descriptor);
-
-				descriptors_length -= descriptor->GetPacketLength();
+			// Descriptors
+			if (ParseDescriptors(parser, es_info->_es_info_length, &es_info->_es_descriptors) == false)
+			{
+				return false;
 			}
 
 			logtt("ES Stream Type: 0x%02X, PID: 0x%04X", es_info->_stream_type, es_info->_elementary_pid);
