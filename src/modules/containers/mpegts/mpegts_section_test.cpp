@@ -109,9 +109,15 @@ TEST(MpegTsSectionTest, RejectsPmtWithTruncatedEsEntry)
 
 TEST(MpegTsSectionTest, RejectsPmtWithEsInfoLengthOverrun)
 {
-	const auto bytes = MakePmtSectionBytes(0, 8);
+	// 0x100 sets no bit of the low byte.
+	for (const uint16_t es_info_length : {0x008, 0x100})
+	{
+		SCOPED_TRACE(es_info_length);
 
-	mpegts::Section section(PMT_PID);
-	EXPECT_EQ(section.AppendData(bytes.data(), bytes.size()), bytes.size());
-	EXPECT_FALSE(section.IsCompleted());
+		const auto bytes = MakePmtSectionBytes(0, es_info_length);
+
+		mpegts::Section section(PMT_PID);
+		EXPECT_EQ(section.AppendData(bytes.data(), bytes.size()), bytes.size());
+		EXPECT_FALSE(section.IsCompleted());
+	}
 }

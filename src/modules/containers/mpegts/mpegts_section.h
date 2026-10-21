@@ -94,7 +94,7 @@ namespace mpegts
 		uint16_t	_elementary_pid; // 13 bits
 		uint8_t		_reserved_bits2 = 0x0F; // 4bits
 		uint8_t		_es_info_length_unused_bits = 0; // 2bits
-		uint8_t		_es_info_length = 0; // 10bits
+		uint16_t	_es_info_length = 0; // 10bits
 		std::vector<std::shared_ptr<Descriptor>> _es_descriptors;
 	};
 
