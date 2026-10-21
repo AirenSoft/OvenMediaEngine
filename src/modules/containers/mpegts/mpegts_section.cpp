@@ -469,8 +469,14 @@ namespace mpegts
 		}
 
 		// es info, remaining bytes excluding CRC(32bits)
-		while (parser->BytesRemained() - 4 > 0)
+		while (parser->BytesRemained() > 4)
 		{
+			if (parser->BytesRemained() - 4 < 5)
+			{
+				logtw("Could not parse ES info because of not enough data size (current: %zu, required: 5)", parser->BytesRemained() - 4);
+				return false;
+			}
+
 			auto es_info = std::make_shared<ESInfo>();
 
 			es_info->_stream_type = parser->ReadBytes<uint8_t>();
@@ -479,6 +485,12 @@ namespace mpegts
 			es_info->_reserved_bits2 = parser->ReadBits<uint8_t>(4);
 			es_info->_es_info_length_unused_bits = parser->ReadBits<uint8_t>(2);
 			es_info->_es_info_length = parser->ReadBits<uint16_t>(10);
+
+			if (es_info->_es_info_length > parser->BytesRemained() - 4)
+			{
+				logtw("Could not parse ES descriptors because of not enough data size (current: %zu, required: %d)", parser->BytesRemained() - 4, es_info->_es_info_length);
+				return false;
+			}
 
 			// Descriptors
 			descriptors_length = es_info->_es_info_length;
