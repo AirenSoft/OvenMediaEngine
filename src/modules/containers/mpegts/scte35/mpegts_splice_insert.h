@@ -75,6 +75,11 @@ namespace mpegts
 			return _splice_event_id;
 		}
 
+		uint8_t GetSpliceEventCancelIndicator() const
+		{
+			return _splice_event_cancel_indicator;
+		}
+
 		uint8_t GetOutofNetworkIndicator() const
 		{
 			return _out_of_network_indicator;
@@ -100,6 +105,11 @@ namespace mpegts
 			return _event_id_compliance_flag;
 		}
 
+		uint8_t GetTimeSpecifiedFlag() const
+		{
+			return _splice_time._time_specified_flag;
+		}
+
 		int64_t GetPTSTime() const
 		{
 			return _splice_time._pts_time;
@@ -115,7 +125,8 @@ namespace mpegts
 			return _break_duration._auto_return != 0;
 		}
 
-		static std::shared_ptr<SpliceInsert> ParseSpliceCommand(const std::shared_ptr<const ov::Data> &data);
+		// Parses a `splice_insert()` at the start of `data`, and stores the bytes it takes in `command_length` when given
+		static std::shared_ptr<SpliceInsert> ParseSpliceCommand(const std::shared_ptr<const ov::Data> &data, size_t *command_length = nullptr);
 		ov::String ToString() const override;
 
 	private:

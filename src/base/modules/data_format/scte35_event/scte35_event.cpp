@@ -35,10 +35,23 @@ std::shared_ptr<Scte35Event> Scte35Event::Create(const std::shared_ptr<const mpe
 		return nullptr;
 	}
 
+	// Scte35Event carries a program splice, so a cancel, a component splice, or a scheduled splice without a time has no event
+	if ((splice_insert->GetSpliceEventCancelIndicator() != 0) ||
+		(splice_insert->GetProgramSpliceFlag() == 0) ||
+		((splice_insert->GetSpliceImmediateFlag() == 0) && (splice_insert->GetTimeSpecifiedFlag() == 0)))
+	{
+		return nullptr;
+	}
+
+	// An immediate splice has no `splice_time()`, so its time is 0 and the caller applies it at the current stream time
+	const int64_t splice_time = (splice_insert->GetSpliceImmediateFlag() != 0)
+									? 0
+									: ((splice_insert->GetPTSTime() + splice_insert->GetPTSAdjustment()) & 0x1FFFFFFFF);
+
 	return Create(splice_insert->GetSpliceCommandType(),
 				  splice_insert->GetSpliceEventId(),
 				  splice_insert->GetOutofNetworkIndicator() != 0,
-				  splice_insert->GetPTSTime() / 90,
+				  splice_time / 90,
 				  splice_insert->GetDuration() / 90,
 				  splice_insert->GetAutoReturn());
 }

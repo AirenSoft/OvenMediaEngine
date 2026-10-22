@@ -8,6 +8,7 @@
 //==============================================================================
 #include "mpegts_section.h"
 
+#include <base/ovlibrary/crc.h>
 #include <gtest/gtest.h>
 
 #include <utility>
@@ -17,8 +18,15 @@ namespace
 {
 	constexpr uint16_t PMT_PID = 0x1000;
 
-	// A PMT section for program 1 with one H.264 ES on PID 0x0100, then `extra_bytes` bytes and the CRC field.
-	// The extra bytes and the CRC field are zero, since Section does not verify the CRC.
+	// Appends the `CRC_32` of `bytes` to it.
+	void AppendCrc(std::vector<uint8_t> &bytes)
+	{
+		const auto crc = ov::CRC::Crc32Mpeg2(bytes.data(), bytes.size());
+
+		bytes.insert(bytes.end(), {static_cast<uint8_t>(crc >> 24), static_cast<uint8_t>(crc >> 16), static_cast<uint8_t>(crc >> 8), static_cast<uint8_t>(crc)});
+	}
+
+	// A PMT section for program 1 with one H.264 ES on PID 0x0100, then `extra_bytes` zero bytes and the CRC field.
 	std::vector<uint8_t> MakePmtSectionBytes(size_t extra_bytes, uint16_t es_info_length = 0)
 	{
 		const auto section_length  = 9 + 5 + extra_bytes + 4;
@@ -37,7 +45,8 @@ namespace
 			static_cast<uint8_t>(0xF0 | ((es_info_length >> 8) & 0x03)),
 			static_cast<uint8_t>(es_info_length & 0xFF)};
 
-		bytes.insert(bytes.end(), extra_bytes + 4, 0x00);
+		bytes.insert(bytes.end(), extra_bytes, 0x00);
+		AppendCrc(bytes);
 
 		return bytes;
 	}
@@ -47,7 +56,7 @@ namespace
 	std::vector<uint8_t> MakePmtSectionBytesWithDescriptors(uint16_t program_info_length, const std::vector<uint8_t> &program_info,
 															uint16_t es_info_length, const std::vector<uint8_t> &es_info)
 	{
-		const auto section_length = 9 + program_info.size() + 5 + es_info.size() + 4;
+		const auto section_length  = 9 + program_info.size() + 5 + es_info.size() + 4;
 
 		std::vector<uint8_t> bytes = {
 			// table_id, section_syntax_indicator=1, private=0, reserved=11, section_length
@@ -66,7 +75,7 @@ namespace
 		// stream_type=H.264, elementary_PID=0x0100, ES_info_length
 		bytes.insert(bytes.end(), {0x1B, 0xE1, 0x00, static_cast<uint8_t>(0xF0 | ((es_info_length >> 8) & 0x03)), static_cast<uint8_t>(es_info_length & 0xFF)});
 		bytes.insert(bytes.end(), es_info.begin(), es_info.end());
-		bytes.insert(bytes.end(), 4, 0x00);
+		AppendCrc(bytes);
 
 		return bytes;
 	}
@@ -210,5 +219,158 @@ TEST(MpegTsSectionTest, RejectsPmtWithProgramInfoLengthOverrun)
 		mpegts::Section section(PMT_PID);
 		EXPECT_EQ(section.AppendData(bytes.data(), bytes.size()), bytes.size());
 		EXPECT_FALSE(section.IsCompleted());
+	}
+}
+
+namespace
+{
+	// A PAT section with the given (`program_number`, PID) entries and `extra_bytes` zero bytes, then the CRC field.
+	std::vector<uint8_t> MakePatSectionBytes(const std::vector<std::pair<uint16_t, uint16_t>> &programs, size_t extra_bytes = 0)
+	{
+		const auto section_length  = 5 + (programs.size() * 4) + extra_bytes + 4;
+
+		std::vector<uint8_t> bytes = {
+			// `table_id`=0, `section_syntax_indicator`=1, private=0, reserved=11, `section_length`
+			0x00,
+			static_cast<uint8_t>(0xB0 | ((section_length >> 8) & 0x03)),
+			static_cast<uint8_t>(section_length & 0xFF),
+			// `transport_stream_id`=1, version=0, current_next=1, `section_number`=0, `last_section_number`=0
+			0x00, 0x01, 0xC1, 0x00, 0x00};
+
+		for (const auto &[program_number, pid] : programs)
+		{
+			bytes.insert(bytes.end(), {static_cast<uint8_t>(program_number >> 8), static_cast<uint8_t>(program_number & 0xFF),
+									   static_cast<uint8_t>(0xE0 | ((pid >> 8) & 0x1F)), static_cast<uint8_t>(pid & 0xFF)});
+		}
+
+		bytes.insert(bytes.end(), extra_bytes, 0x00);
+		AppendCrc(bytes);
+
+		return bytes;
+	}
+
+	std::shared_ptr<mpegts::PAT> ParsePat(const std::vector<uint8_t> &bytes)
+	{
+		mpegts::Section section(0x0000);
+		if ((section.AppendData(bytes.data(), bytes.size()) != bytes.size()) || (section.IsCompleted() == false))
+		{
+			return nullptr;
+		}
+
+		return section.GetPAT();
+	}
+}  // namespace
+
+TEST(MpegTsSectionTest, PatSkipsNetworkInformationEntry)
+{
+	const auto pat = ParsePat(MakePatSectionBytes({{0, 0x0010}, {1, 0x1000}}));
+
+	ASSERT_NE(pat, nullptr);
+	EXPECT_EQ(pat->_program_num, 1);
+	EXPECT_EQ(pat->_program_map_pid, 0x1000);
+}
+
+TEST(MpegTsSectionTest, PatUsesTheFirstOfSeveralPrograms)
+{
+	const auto pat = ParsePat(MakePatSectionBytes({{2, 0x1002}, {1, 0x1001}}));
+
+	ASSERT_NE(pat, nullptr);
+	EXPECT_EQ(pat->_program_num, 2);
+	EXPECT_EQ(pat->_program_map_pid, 0x1002);
+}
+
+TEST(MpegTsSectionTest, RejectsPatWithoutProgram)
+{
+	EXPECT_EQ(ParsePat(MakePatSectionBytes({{0, 0x0010}})), nullptr);
+	EXPECT_EQ(ParsePat(MakePatSectionBytes({})), nullptr);
+}
+
+TEST(MpegTsSectionTest, RejectsPatWithTruncatedEntry)
+{
+	EXPECT_EQ(ParsePat(MakePatSectionBytes({{1, 0x1000}}, 2)), nullptr);
+}
+
+// A rejected PAT leaves no half-filled table behind.
+TEST(MpegTsSectionTest, RejectedPatHasNoTable)
+{
+	for (const auto &bytes : {MakePatSectionBytes({{0, 0x0010}}), MakePatSectionBytes({{1, 0x1000}}, 2)})
+	{
+		SCOPED_TRACE(bytes.size());
+
+		mpegts::Section section(0x0000);
+		EXPECT_EQ(section.AppendData(bytes.data(), bytes.size()), bytes.size());
+		EXPECT_TRUE(section.IsFailed());
+		EXPECT_EQ(section.GetPAT(), nullptr);
+	}
+}
+
+// A rejected PMT leaves no half-filled table behind, on every failure path after the table is created.
+TEST(MpegTsSectionTest, RejectedPmtHasNoTable)
+{
+	const std::vector<std::vector<uint8_t>> rejected = {
+		// `program_info_length` past the section
+		MakePmtSectionBytesWithDescriptors(0x008, {}, 0, {}),
+		// A program descriptor past its loop
+		MakePmtSectionBytesWithDescriptors(4, REGISTRATION_DESCRIPTOR, 0, {}),
+		// An ES entry shorter than 5 bytes
+		MakePmtSectionBytes(2),
+		// `ES_info_length` past the section
+		MakePmtSectionBytes(0, 0x008),
+		// An ES descriptor past its loop
+		MakePmtSectionBytesWithDescriptors(0, {}, 4, LANGUAGE_DESCRIPTOR)};
+
+	for (size_t i = 0; i < rejected.size(); i++)
+	{
+		SCOPED_TRACE(i);
+
+		const auto &bytes = rejected[i];
+
+		mpegts::Section section(PMT_PID);
+		EXPECT_EQ(section.AppendData(bytes.data(), bytes.size()), bytes.size());
+		EXPECT_TRUE(section.IsFailed());
+		EXPECT_EQ(section.GetPMT(), nullptr);
+	}
+}
+
+TEST(MpegTsSectionTest, AcceptsPatWithEncoderCrc)
+{
+	// A PAT written by FFmpeg, whose `CRC_32` is 0x2AB104B2
+	const std::vector<uint8_t> bytes = {0x00, 0xB0, 0x0D, 0x00, 0x01, 0xC1, 0x00, 0x00, 0x00, 0x01, 0xF0, 0x00, 0x2A, 0xB1, 0x04, 0xB2};
+
+	const auto pat					 = ParsePat(bytes);
+	ASSERT_NE(pat, nullptr);
+	EXPECT_EQ(pat->_program_map_pid, 0x1000);
+}
+
+TEST(MpegTsSectionTest, RejectsSectionWithWrongCrc)
+{
+	for (auto bytes : {MakePatSectionBytes({{1, 0x1000}}), MakePmtSectionBytes(0)})
+	{
+		SCOPED_TRACE(static_cast<int>(bytes[0]));
+
+		bytes.back() ^= 0x01;
+
+		mpegts::Section section(0x0000);
+		EXPECT_EQ(section.AppendData(bytes.data(), bytes.size()), bytes.size());
+		EXPECT_FALSE(section.IsCompleted());
+		EXPECT_TRUE(section.IsFailed());
+	}
+}
+
+// PAT and PMT carry a `CRC_32` whatever their `section_syntax_indicator` says, so clearing the bit does not skip the check.
+TEST(MpegTsSectionTest, RejectsPsiWithWrongCrcAndClearedSyntaxIndicator)
+{
+	for (auto bytes : {MakePatSectionBytes({{1, 0x1000}}), MakePmtSectionBytes(0)})
+	{
+		SCOPED_TRACE(static_cast<int>(bytes[0]));
+
+		// `section_syntax_indicator` is the top bit of the second byte; the `CRC_32` is left as it was
+		bytes[1] &= 0x7F;
+
+		mpegts::Section section(0x0000);
+		EXPECT_EQ(section.AppendData(bytes.data(), bytes.size()), bytes.size());
+		EXPECT_FALSE(section.IsCompleted());
+		EXPECT_TRUE(section.IsFailed());
+		EXPECT_TRUE(section.HasCrcMismatch());
 	}
 }
