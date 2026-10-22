@@ -44,6 +44,12 @@ namespace mpegts
 
 	class MpegTsDepacketizer
 	{
+	private:
+		// Continuity-break warnings are rate-limited to one line per this interval, with an aggregated count.
+		static constexpr int64_t MPEGTS_CC_BREAK_WARN_INTERVAL_MSEC = 5000;
+		// Invalid-section warnings (bad `pointer_field`, CRC mismatch) are rate-limited the same way.
+		static constexpr int64_t MPEGTS_INVALID_SECTION_WARN_INTERVAL_MSEC = 5000;
+
 	public:
 		MpegTsDepacketizer();
 		~MpegTsDepacketizer();
@@ -85,6 +91,8 @@ namespace mpegts
 
 		// Emits a rate-limited, count-aggregated continuity-break warning (see `_cc_break_*`).
 		void LogContinuityBreak();
+		// Emits a rate-limited, count-aggregated warning for a dropped section (see `_invalid_section_*`).
+		void LogInvalidSection(uint16_t pid, const char *reason);
 
 		// Whether the packet carries the same payload as the last packet with a payload on the PID
 		bool IsSamePayload(uint16_t pid, const std::shared_ptr<Packet> &packet) const;
@@ -146,10 +154,13 @@ namespace mpegts
 		// Cached at construction: whether debug logging is enabled for this tag, so the per-packet
 		// continuity-break detail is skipped entirely (no formatting) when debug is off.
 		bool _debug_enabled											= false;
-		// Continuity-break warnings are rate-limited to one line per this interval, with an aggregated count.
-		static constexpr int64_t MPEGTS_CC_BREAK_WARN_INTERVAL_MSEC = 5000;
+		// Continuity-break warning state (see `MPEGTS_CC_BREAK_WARN_INTERVAL_MSEC`)
 		int64_t _cc_break_last_warn_msec							= 0;
 		uint64_t _cc_break_count									= 0;
+
+		// Invalid-section warning state (see `MPEGTS_INVALID_SECTION_WARN_INTERVAL_MSEC`)
+		int64_t _invalid_section_last_warn_msec = 0;
+		uint64_t _invalid_section_count			= 0;
 
 		// Non-standard PTS/DTS start bits are reported once per stream (see CompletePes)
 		bool _non_standard_start_bits_warned = false;

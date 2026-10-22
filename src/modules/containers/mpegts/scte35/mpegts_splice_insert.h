@@ -125,7 +125,8 @@ namespace mpegts
 			return _break_duration._auto_return != 0;
 		}
 
-		static std::shared_ptr<SpliceInsert> ParseSpliceCommand(const std::shared_ptr<const ov::Data> &data);
+		// Parses a `splice_insert()` at the start of `data`, and stores the bytes it takes in `command_length` when given
+		static std::shared_ptr<SpliceInsert> ParseSpliceCommand(const std::shared_ptr<const ov::Data> &data, size_t *command_length = nullptr);
 		ov::String ToString() const override;
 
 	private:

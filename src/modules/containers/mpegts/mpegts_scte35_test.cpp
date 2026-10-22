@@ -32,7 +32,7 @@ namespace
 		}
 	}
 
-	// splice_time() with time_specified_flag=1
+	// `splice_time()` with `time_specified_flag`=1
 	void AppendSpliceTime(std::vector<uint8_t> &bytes, uint64_t pts)
 	{
 		bytes.push_back(static_cast<uint8_t>(0xFE | ((pts >> 32) & 0x01)));
@@ -47,7 +47,7 @@ namespace
 		bool immediate						= false;
 		std::optional<uint64_t> pts			= 90000 * 10;
 		std::optional<uint64_t> duration	= BREAK_DURATION;
-		// component_tag per component when program_splice is false; each gets `pts` as its splice time
+		// `component_tag` per component when program_splice is false; each gets `pts` as its splice time
 		std::vector<uint8_t> component_tags = {};
 	};
 
@@ -107,25 +107,27 @@ namespace
 
 	struct SpliceInfoFields
 	{
+		uint8_t sap_type							   = 0x03;
+		bool encrypted_packet						   = false;
 		uint64_t pts_adjustment						   = 0;
 		std::optional<uint16_t> splice_command_length  = std::nullopt;
 		std::vector<uint8_t> descriptors			   = {};
 		std::optional<uint16_t> descriptor_loop_length = std::nullopt;
 	};
 
-	// A splice_info_section carrying `command`, with the lengths taken from the data unless given
+	// A `splice_info_section` carrying `command`, with the lengths taken from the data unless given
 	std::vector<uint8_t> MakeSpliceInfoSection(uint8_t command_type, const std::vector<uint8_t> &command, const SpliceInfoFields &fields = {})
 	{
 		std::vector<uint8_t> body;
 
 		// protocol_version
 		body.push_back(0x00);
-		// encrypted_packet=0, encryption_algorithm=0, pts_adjustment
-		body.push_back(static_cast<uint8_t>((fields.pts_adjustment >> 32) & 0x01));
+		// `encrypted_packet`, `encryption_algorithm`=0, `pts_adjustment`
+		body.push_back(static_cast<uint8_t>((fields.encrypted_packet ? 0x80 : 0x00) | ((fields.pts_adjustment >> 32) & 0x01)));
 		AppendBe(body, fields.pts_adjustment & 0xFFFFFFFF, 4);
 		// cw_index
 		body.push_back(0xFF);
-		// tier=0xFFF, splice_command_length
+		// `tier`=0xFFF, `splice_command_length`
 		const uint16_t command_length = fields.splice_command_length.value_or(static_cast<uint16_t>(command.size()));
 		AppendBe(body, (0xFFFull << 12) | command_length, 3);
 		body.push_back(command_type);
@@ -135,8 +137,8 @@ namespace
 
 		const auto section_length  = body.size() + 4;
 
-		// table_id, section_syntax_indicator=0, private_indicator=0, sap_type=11, section_length
-		std::vector<uint8_t> bytes = {0xFC, static_cast<uint8_t>(0x30 | ((section_length >> 8) & 0x03)), static_cast<uint8_t>(section_length & 0xFF)};
+		// `table_id`, `section_syntax_indicator`=0, `private_indicator`=0, `sap_type`, `section_length` (12 bits)
+		std::vector<uint8_t> bytes = {0xFC, static_cast<uint8_t>(((fields.sap_type & 0x03) << 4) | ((section_length >> 8) & 0x0F)), static_cast<uint8_t>(section_length & 0xFF)};
 		bytes.insert(bytes.end(), body.begin(), body.end());
 		AppendBe(bytes, ov::CRC::Crc32Mpeg2(bytes.data(), bytes.size()), 4);
 
@@ -185,7 +187,7 @@ TEST(MpegTsScte35Test, ParsesProgramSpliceInsert)
 	EXPECT_EQ(splice_insert->GetDuration(), BREAK_DURATION);
 }
 
-// An immediate splice_insert has no splice_time(), so break_duration() follows the flags.
+// An immediate `splice_insert` has no `splice_time()`, so `break_duration()` follows the flags.
 TEST(MpegTsScte35Test, ParsesImmediateSpliceInsert)
 {
 	SpliceInsertFields fields;
@@ -198,7 +200,7 @@ TEST(MpegTsScte35Test, ParsesImmediateSpliceInsert)
 	EXPECT_EQ(splice_insert->GetDuration(), BREAK_DURATION);
 }
 
-// A component splice_insert carries a component loop before break_duration().
+// A component `splice_insert` carries a component loop before `break_duration()`.
 TEST(MpegTsScte35Test, ParsesComponentSpliceInsert)
 {
 	SpliceInsertFields fields;
@@ -224,6 +226,93 @@ TEST(MpegTsScte35Test, ParsesSpliceInfoWithDescriptors)
 	EXPECT_EQ(splice_insert->GetDuration(), BREAK_DURATION);
 }
 
+// `sap_type` 0 to 2 signal a stream access point and are as valid as 3 (not specified).
+TEST(MpegTsScte35Test, AcceptsEverySapType)
+{
+	for (uint8_t sap_type = 0; sap_type <= 3; sap_type++)
+	{
+		SCOPED_TRACE(static_cast<int>(sap_type));
+
+		SpliceInfoFields info;
+		info.sap_type = sap_type;
+
+		EXPECT_NE(ParseSpliceInsert(MakeSpliceInfoSection(SPLICE_INSERT_TYPE, MakeSpliceInsertCommand({}), info)), nullptr);
+	}
+}
+
+// `splice_info_section` allows a `section_length` of up to 4093 bytes.
+TEST(MpegTsScte35Test, AcceptsSectionLongerThanPsiLimit)
+{
+	SpliceInfoFields info;
+	// One private descriptor per 255 bytes until the section passes 1021 bytes
+	for (int i = 0; i < 5; i++)
+	{
+		info.descriptors.insert(info.descriptors.end(), {0xFF, 253, 'C', 'U', 'E', 'I'});
+		info.descriptors.insert(info.descriptors.end(), 249, 0x00);
+	}
+
+	const auto bytes = MakeSpliceInfoSection(SPLICE_INSERT_TYPE, MakeSpliceInsertCommand({}), info);
+	ASSERT_GT(bytes.size() - 3, 1021u);
+
+	const auto splice_insert = ParseSpliceInsert(bytes);
+	ASSERT_NE(splice_insert, nullptr);
+	EXPECT_EQ(splice_insert->GetDuration(), BREAK_DURATION);
+}
+
+TEST(MpegTsScte35Test, RejectsSectionLongerThan4093)
+{
+	// 15 descriptors of 255 bytes and one of 232 bytes make `section_length` 4094
+	SpliceInfoFields info;
+	for (int i = 0; i < 15; i++)
+	{
+		info.descriptors.insert(info.descriptors.end(), {0xFF, 253, 'C', 'U', 'E', 'I'});
+		info.descriptors.insert(info.descriptors.end(), 249, 0x00);
+	}
+	info.descriptors.insert(info.descriptors.end(), {0xFF, 230, 'C', 'U', 'E', 'I'});
+	info.descriptors.insert(info.descriptors.end(), 226, 0x00);
+
+	const auto bytes = MakeSpliceInfoSection(SPLICE_INSERT_TYPE, MakeSpliceInsertCommand({}), info);
+	ASSERT_EQ(bytes.size() - 3, 4094u);
+
+	mpegts::Section section(SCTE35_PID);
+	EXPECT_EQ(section.AppendData(bytes.data(), bytes.size()), 0u);
+}
+
+// `splice_command_length` 0xFFF is a legacy value to be ignored, so the command is read by its own syntax.
+TEST(MpegTsScte35Test, ParsesLegacyCommandLength)
+{
+	for (const bool with_descriptors : {false, true})
+	{
+		SCOPED_TRACE(with_descriptors);
+
+		SpliceInfoFields info;
+		info.splice_command_length = 0xFFF;
+		if (with_descriptors)
+		{
+			// avail_descriptor
+			info.descriptors = {0x00, 0x08, 'C', 'U', 'E', 'I', 0x00, 0x00, 0x00, 0x01};
+		}
+
+		const auto splice_insert = ParseSpliceInsert(MakeSpliceInfoSection(SPLICE_INSERT_TYPE, MakeSpliceInsertCommand({}), info));
+
+		ASSERT_NE(splice_insert, nullptr);
+		EXPECT_EQ(splice_insert->GetPTSTime(), 90000 * 10);
+		EXPECT_EQ(splice_insert->GetDuration(), BREAK_DURATION);
+	}
+}
+
+TEST(MpegTsScte35Test, RejectsLegacyCommandLengthWithTruncatedCommand)
+{
+	SpliceInfoFields info;
+	info.splice_command_length = 0xFFF;
+
+	auto command			   = MakeSpliceInsertCommand({});
+	command.resize(command.size() - 3);
+
+	// Without the `descriptor_loop_length` after it, the command runs into the CRC
+	EXPECT_TRUE(ParseSection(MakeSpliceInfoSection(SPLICE_INSERT_TYPE, command, info))->IsFailed());
+}
+
 TEST(MpegTsScte35Test, RejectsCommandShorterThanItsFields)
 {
 	auto command = MakeSpliceInsertCommand({});
@@ -244,6 +333,15 @@ TEST(MpegTsScte35Test, RejectsDescriptorLoopPastSection)
 {
 	SpliceInfoFields info;
 	info.descriptor_loop_length = 10;
+
+	EXPECT_TRUE(ParseSection(MakeSpliceInfoSection(SPLICE_INSERT_TYPE, MakeSpliceInsertCommand({}), info))->IsFailed());
+}
+
+// An encrypted `splice_command()` cannot be read as a plain one.
+TEST(MpegTsScte35Test, RejectsEncryptedSpliceInfo)
+{
+	SpliceInfoFields info;
+	info.encrypted_packet = true;
 
 	EXPECT_TRUE(ParseSection(MakeSpliceInfoSection(SPLICE_INSERT_TYPE, MakeSpliceInsertCommand({}), info))->IsFailed());
 }

@@ -87,7 +87,7 @@ namespace mpegts
 		return stream.GetDataObject();
 	}
 
-	std::shared_ptr<SpliceInsert> SpliceInsert::ParseSpliceCommand(const std::shared_ptr<const ov::Data> &data)
+	std::shared_ptr<SpliceInsert> SpliceInsert::ParseSpliceCommand(const std::shared_ptr<const ov::Data> &data, size_t *command_length)
 	{
 		BitReader parser(data);
 
@@ -99,7 +99,7 @@ namespace mpegts
 			return value;
 		};
 
-		// splice_time(): time_specified_flag, then pts_time or reserved bits
+		// `splice_time()`: `time_specified_flag`, then `pts_time` or reserved bits
 		auto read_splice_time = [&](SpliceTime *splice_time) {
 			splice_time->_time_specified_flag = read(1);
 			if (splice_time->_time_specified_flag == 1)
@@ -140,7 +140,7 @@ namespace mpegts
 				const auto component_count = read(8);
 				for (uint64_t i = 0; ok && (i < component_count); i++)
 				{
-					read(8); // component_tag
+					read(8); // `component_tag`
 
 					if (splice_insert->_splice_immediate_flag == 0)
 					{
@@ -165,6 +165,11 @@ namespace mpegts
 		if (ok == false)
 		{
 			return nullptr;
+		}
+
+		if (command_length != nullptr)
+		{
+			*command_length = parser.BytesConsumed();
 		}
 
 		return splice_insert;

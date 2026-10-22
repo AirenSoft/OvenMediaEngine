@@ -476,11 +476,16 @@ namespace mpegts
 			// read pointer field - 8 bits
 			auto pointer_field = bit_reader.ReadBytes<uint8_t>();
 
-			// A pointer_field past the payload end makes both the previous section tail and the new section unusable
+			// A `pointer_field` past the payload end makes both the previous section tail and the new section unusable
 			if (pointer_field > bit_reader.BytesRemained())
 			{
-				logaw("Invalid pointer_field(PID: %d, pointer_field: %d, payload remaining: %zu)",
-					  packet->PacketIdentifier(), pointer_field, bit_reader.BytesRemained());
+				if (_debug_enabled)
+				{
+					logad("Invalid pointer_field(PID: %d, pointer_field: %d, payload remaining: %zu)",
+						  packet->PacketIdentifier(), pointer_field, bit_reader.BytesRemained());
+				}
+
+				LogInvalidSection(packet->PacketIdentifier(), "pointer_field past the payload");
 				DiscardSectionDraft(packet->PacketIdentifier());
 				return false;
 			}
@@ -493,6 +498,10 @@ namespace mpegts
 				// 0~pointer_field bytes might be remained data of previous section
 				auto previous_data = bit_reader.CurrentPosition();
 				prev_section->AppendData(previous_data, pointer_field);
+				if (prev_section->HasCrcMismatch())
+				{
+					LogInvalidSection(packet->PacketIdentifier(), "CRC mismatch");
+				}
 
 				if (prev_section->IsCompleted())
 				{
@@ -520,6 +529,11 @@ namespace mpegts
 				auto new_section = std::make_shared<Section>(packet->PacketIdentifier());
 				// There can be more than 2 sections
 				auto consumed_bytes = new_section->AppendData(bit_reader.CurrentPosition(), bit_reader.BytesRemained());
+				if (new_section->HasCrcMismatch())
+				{
+					LogInvalidSection(packet->PacketIdentifier(), "CRC mismatch");
+				}
+
 				if (consumed_bytes == 0)
 				{
 					// Something wrong
@@ -559,6 +573,11 @@ namespace mpegts
 
 			// There is no new section in this packet, so all remained data has to be consumed
 			auto consumed_length = section->AppendData(packet->Payload(), packet->PayloadLength());
+			if (section->HasCrcMismatch())
+			{
+				LogInvalidSection(packet->PacketIdentifier(), "CRC mismatch");
+			}
+
 			if (section->IsFailed())
 			{
 				DiscardSectionDraft(packet->PacketIdentifier());
@@ -785,6 +804,23 @@ namespace mpegts
 
 			_cc_break_last_warn_msec = now;
 			_cc_break_count			 = 0;
+		}
+	}
+
+	void MpegTsDepacketizer::LogInvalidSection(uint16_t pid, const char *reason)
+	{
+		_invalid_section_count++;
+
+		const int64_t now = ov::Clock::NowMSec();
+
+		if ((_invalid_section_last_warn_msec == 0) ||
+			((now - _invalid_section_last_warn_msec) >= MPEGTS_INVALID_SECTION_WARN_INTERVAL_MSEC))
+		{
+			logaw("Dropped an invalid MPEG-TS section (last: %s, PID: %d; %u occurrence(s) since last report)",
+				  reason, pid, static_cast<uint32_t>(_invalid_section_count));
+
+			_invalid_section_last_warn_msec = now;
+			_invalid_section_count			= 0;
 		}
 	}
 

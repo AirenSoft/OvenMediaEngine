@@ -20,13 +20,13 @@ namespace
 
 	// A complete PAT section for program 1 whose PMT is on PID 0x1000.
 	const std::vector<uint8_t> PAT_SECTION = {
-		// table_id=0, section_syntax_indicator=1, section_length=13
+		// `table_id`=0, `section_syntax_indicator`=1, `section_length`=13
 		0x00, 0xB0, 0x0D,
-		// transport_stream_id=1, version=0, current_next=1, section_number=0, last_section_number=0
+		// `transport_stream_id`=1, version=0, current_next=1, `section_number`=0, `last_section_number`=0
 		0x00, 0x01, 0xC1, 0x00, 0x00,
-		// program_number=1, program_map_PID=0x1000
+		// `program_number`=1, `program_map_PID`=0x1000
 		0x00, 0x01, 0xF0, 0x00,
-		// CRC_32
+		// `CRC_32`
 		0x2A, 0xB1, 0x04, 0xB2};
 
 	// A TS packet whose payload is exactly `payload`, padded in front by an adaptation field of stuffing bytes.
@@ -56,18 +56,18 @@ namespace
 		return packet;
 	}
 
-	// A PMT section for program 1 with one H.264 ES on PID 0x0100, whose ES_info_length is `es_info_length`
+	// A PMT section for program 1 with one H.264 ES on PID 0x0100, whose `ES_info_length` is `es_info_length`
 	// though no descriptor byte follows, so a nonzero value makes the section unparsable.
 	std::vector<uint8_t> MakePmtSection(uint16_t es_info_length)
 	{
 		std::vector<uint8_t> bytes = {
-			// table_id=2, section_syntax_indicator=1, section_length=18
+			// `table_id`=2, `section_syntax_indicator`=1, `section_length`=18
 			0x02, 0xB0, 0x12,
-			// program_number=1, version=0, current_next=1, section_number=0, last_section_number=0
+			// `program_number`=1, version=0, current_next=1, `section_number`=0, `last_section_number`=0
 			0x00, 0x01, 0xC1, 0x00, 0x00,
-			// PCR_PID=0x0100, program_info_length=0
+			// `PCR_PID`=0x0100, `program_info_length`=0
 			0xE1, 0x00, 0xF0, 0x00,
-			// stream_type=H.264, elementary_PID=0x0100, ES_info_length
+			// `stream_type`=H.264, `elementary_PID`=0x0100, `ES_info_length`
 			0x1B, 0xE1, 0x00, static_cast<uint8_t>(0xF0 | ((es_info_length >> 8) & 0x03)), static_cast<uint8_t>(es_info_length & 0xFF)};
 
 		const auto crc = ov::CRC::Crc32Mpeg2(bytes.data(), bytes.size());
@@ -103,21 +103,21 @@ namespace
 	}
 }  // namespace
 
-// A PUSI packet whose pointer_field claims more bytes than its payload holds must not complete the pending
+// A PUSI packet whose `pointer_field` claims more bytes than its payload holds must not complete the pending
 // section with bytes from beyond the payload (here, the next packet of the same datagram).
 TEST(MpegTsDepacketizerTest, PointerFieldBeyondPayloadDoesNotCompletePendingSection)
 {
 	mpegts::MpegTsDepacketizer depacketizer;
 
-	// pointer_field=0, then the first 4 bytes of the PAT section, leaving 12 bytes pending
+	// `pointer_field`=0, then the first 4 bytes of the PAT section, leaving 12 bytes pending
 	std::vector<uint8_t> first_payload = {0x00};
 	first_payload.insert(first_payload.end(), PAT_SECTION.begin(), PAT_SECTION.begin() + 4);
 
-	// pointer_field=12 with no byte after it
+	// `pointer_field`=12 with no byte after it
 	const std::vector<uint8_t> second_payload = {0x0C};
 
-	// The next 12 bytes of the datagram complete a valid PAT (transport_stream_id 0x0047, program 1 on PID 0x1000).
-	// They start with a sync byte, and the transport_error_indicator in the next byte makes that packet itself dropped.
+	// The next 12 bytes of the datagram complete a valid PAT (`transport_stream_id` 0x0047, program 1 on PID 0x1000).
+	// They start with a sync byte, and the `transport_error_indicator` in the next byte makes that packet itself dropped.
 	std::vector<uint8_t> pending			  = {PAT_SECTION[0], PAT_SECTION[1], PAT_SECTION[2], PAT_SECTION[3],
 												 0x47, 0xC1, 0x00, 0x00, 0x00, 0x01, 0xF0, 0x00};
 	const auto crc							  = ov::CRC::Crc32Mpeg2(pending.data(), pending.size());
@@ -135,12 +135,12 @@ TEST(MpegTsDepacketizerTest, PointerFieldBeyondPayloadDoesNotCompletePendingSect
 	EXPECT_EQ(depacketizer.GetFirstPAT(), nullptr);
 }
 
-// A PUSI packet whose pointer_field runs past its payload must not have the same bytes parsed as a new section.
+// A PUSI packet whose `pointer_field` runs past its payload must not have the same bytes parsed as a new section.
 TEST(MpegTsDepacketizerTest, PointerFieldBeyondPayloadDropsThePacket)
 {
 	mpegts::MpegTsDepacketizer depacketizer;
 
-	// pointer_field=200, though only the 16 bytes of the PAT section follow it
+	// `pointer_field`=200, though only the 16 bytes of the PAT section follow it
 	std::vector<uint8_t> payload = {200};
 	payload.insert(payload.end(), PAT_SECTION.begin(), PAT_SECTION.end());
 
@@ -154,7 +154,7 @@ TEST(MpegTsDepacketizerTest, PointerFieldWithinPayloadParsesTheNewSection)
 {
 	mpegts::MpegTsDepacketizer depacketizer;
 
-	// pointer_field=3, three bytes of a previous section tail, then the PAT section
+	// `pointer_field`=3, three bytes of a previous section tail, then the PAT section
 	std::vector<uint8_t> payload = {0x03, 0xAA, 0xAA, 0xAA};
 	payload.insert(payload.end(), PAT_SECTION.begin(), PAT_SECTION.end());
 
@@ -196,7 +196,7 @@ TEST(MpegTsDepacketizerTest, IncompleteSectionIsDiscardedAtTheNextSectionStart)
 	const std::vector<uint8_t> first_part = WithPointerField(0x00, std::vector<uint8_t>(valid_pmt.begin(), valid_pmt.begin() + 10));
 	const std::vector<uint8_t> second_part(valid_pmt.begin() + 10, valid_pmt.end());
 
-	// The start of a 30-byte section that never gets the rest, then the PMT starting with pointer_field 0
+	// The start of a 30-byte section that never gets the rest, then the PMT starting with `pointer_field` 0
 	const std::vector<uint8_t> stray_start = WithPointerField(0x00, {0x02, 0xB0, 0x1E, 0x00, 0x01, 0xC1, 0x00, 0x00});
 
 	depacketizer.AddPacket(ToData({MakePacket(0x0000, true, 0, WithPointerField(0x00, PAT_SECTION)),
@@ -212,7 +212,7 @@ TEST(MpegTsDepacketizerTest, UnsupportedTableDoesNotStopTheFollowingSection)
 {
 	mpegts::MpegTsDepacketizer depacketizer;
 
-	// A section with an unhandled table_id 0xC0, section_length 5 and a valid CRC_32, then the PAT
+	// A section with an unhandled `table_id` 0xC0, `section_length` 5 and a valid `CRC_32`, then the PAT
 	std::vector<uint8_t> payload = WithPointerField(0x00, {0xC0, 0xB0, 0x05, 0x00, 0xED, 0x05, 0x8B, 0x56});
 	payload.insert(payload.end(), PAT_SECTION.begin(), PAT_SECTION.end());
 

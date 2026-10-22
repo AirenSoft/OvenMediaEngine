@@ -18,7 +18,7 @@ namespace
 {
 	constexpr uint16_t PMT_PID = 0x1000;
 
-	// Appends the CRC_32 of `bytes` to it.
+	// Appends the `CRC_32` of `bytes` to it.
 	void AppendCrc(std::vector<uint8_t> &bytes)
 	{
 		const auto crc = ov::CRC::Crc32Mpeg2(bytes.data(), bytes.size());
@@ -224,17 +224,17 @@ TEST(MpegTsSectionTest, RejectsPmtWithProgramInfoLengthOverrun)
 
 namespace
 {
-	// A PAT section with the given (program_number, PID) entries and `extra_bytes` zero bytes, then the CRC field.
+	// A PAT section with the given (`program_number`, PID) entries and `extra_bytes` zero bytes, then the CRC field.
 	std::vector<uint8_t> MakePatSectionBytes(const std::vector<std::pair<uint16_t, uint16_t>> &programs, size_t extra_bytes = 0)
 	{
 		const auto section_length = 5 + (programs.size() * 4) + extra_bytes + 4;
 
 		std::vector<uint8_t> bytes = {
-			// table_id=0, section_syntax_indicator=1, private=0, reserved=11, section_length
+			// `table_id`=0, `section_syntax_indicator`=1, private=0, reserved=11, `section_length`
 			0x00,
 			static_cast<uint8_t>(0xB0 | ((section_length >> 8) & 0x03)),
 			static_cast<uint8_t>(section_length & 0xFF),
-			// transport_stream_id=1, version=0, current_next=1, section_number=0, last_section_number=0
+			// `transport_stream_id`=1, version=0, current_next=1, `section_number`=0, `last_section_number`=0
 			0x00, 0x01, 0xC1, 0x00, 0x00};
 
 		for (const auto &[program_number, pid] : programs)
@@ -292,7 +292,7 @@ TEST(MpegTsSectionTest, RejectsPatWithTruncatedEntry)
 
 TEST(MpegTsSectionTest, AcceptsPatWithEncoderCrc)
 {
-	// A PAT written by FFmpeg, whose CRC_32 is 0x2AB104B2
+	// A PAT written by FFmpeg, whose `CRC_32` is 0x2AB104B2
 	const std::vector<uint8_t> bytes = {0x00, 0xB0, 0x0D, 0x00, 0x01, 0xC1, 0x00, 0x00, 0x00, 0x01, 0xF0, 0x00, 0x2A, 0xB1, 0x04, 0xB2};
 
 	const auto pat = ParsePat(bytes);

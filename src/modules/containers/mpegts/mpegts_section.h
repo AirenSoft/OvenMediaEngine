@@ -22,6 +22,10 @@ namespace mpegts
 {	
 	constexpr int MPEGTS_TABLE_HEADER_SIZE = 3;
 	constexpr int MPEGTS_MIN_TABLE_DATA_SIZE = 9;
+	// Largest `section_length` of a PSI section such as PAT and PMT (ISO/IEC 13818-1)
+	constexpr int MPEGTS_MAX_PSI_SECTION_LENGTH = 1021;
+	// Largest `section_length` of a `splice_info_section` (ANSI/SCTE 35: the 12-bit field shall not exceed 4093)
+	constexpr int MPEGTS_MAX_SPLICE_INFO_SECTION_LENGTH = 4093;
 
 	struct PAT
 	{
@@ -155,6 +159,8 @@ namespace mpegts
 		bool IsCompleted();
 		// return true when all bytes of the section arrived but its table was not accepted
 		bool IsFailed();
+		// return true when the section was not accepted because of its `CRC_32`
+		bool HasCrcMismatch();
 
 		// Getter
 		uint16_t PID();
@@ -183,6 +189,7 @@ namespace mpegts
 		bool _header_parsed = false;
 		bool _completed = false;
 		bool _failed = false;
+		bool _crc_mismatch = false;
 
 		uint16_t _pid; // from MPEGTS Header
 
@@ -192,7 +199,7 @@ namespace mpegts
 		uint8_t	_private_bit = 0; // 1bit (PAT/PMT/CAT:0 Others:1)
 		uint8_t	_reserved_bits = 0x03; // 2bits
 		uint8_t	_section_length_unused_bits = 0; // 2bits
-		uint16_t _section_length = 0; // 10bits, <=1021
+		uint16_t _section_length = 0; // 10bits, <= MPEGTS_MAX_PSI_SECTION_LENGTH (12bits, <= MPEGTS_MAX_SPLICE_INFO_SECTION_LENGTH for `splice_info_section`)
 
 		ov::Data _data; // All section data
 		uint32_t _crc; // checksum, excluding the pointer field
