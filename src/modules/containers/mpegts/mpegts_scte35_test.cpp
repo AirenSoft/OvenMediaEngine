@@ -371,14 +371,25 @@ TEST(MpegTsScte35Test, SpliceInsertWithoutSpliceTimeCreatesNoEvent)
 	unspecified.pts = std::nullopt;
 	EXPECT_EQ(CreateEvent(unspecified), nullptr);
 
-	SpliceInsertFields immediate;
-	immediate.immediate = true;
-	EXPECT_EQ(CreateEvent(immediate), nullptr);
-
 	SpliceInsertFields component;
 	component.program_splice = false;
 	component.component_tags = {0x01};
 	EXPECT_EQ(CreateEvent(component), nullptr);
+}
+
+// An immediate `splice_insert` has no time to carry, so its event leaves the time to the caller.
+TEST(MpegTsScte35Test, ImmediateSpliceInsertCreatesEventWithoutTime)
+{
+	SpliceInsertFields immediate;
+	immediate.immediate = true;
+
+	const auto event	= CreateEvent(immediate);
+
+	ASSERT_NE(event, nullptr);
+	EXPECT_EQ(event->GetID(), SPLICE_EVENT_ID);
+	EXPECT_TRUE(event->IsOutOfNetwork());
+	EXPECT_EQ(event->GetTimestampMsec(), 0);
+	EXPECT_EQ(event->GetDurationMsec(), 30000);
 }
 
 TEST(MpegTsScte35Test, EventAddsPtsAdjustment)
@@ -404,4 +415,24 @@ TEST(MpegTsScte35Test, EventWrapsPtsAdjustmentAt33Bits)
 
 	ASSERT_NE(event, nullptr);
 	EXPECT_EQ(event->GetTimestampMsec(), 1000);
+}
+
+// A section that OME writes for an `Scte35Event` reads back as the same event.
+TEST(MpegTsScte35Test, BuiltSectionParsesBack)
+{
+	const auto built = Scte35Event::Create(mpegts::SpliceCommandType::SPLICE_INSERT, SPLICE_EVENT_ID, true, 12345, 30000, true);
+	const auto data	 = built->MakeScteData();
+	ASSERT_NE(data, nullptr);
+
+	mpegts::Section section(SCTE35_PID);
+	ASSERT_EQ(section.AppendData(data->GetDataAs<uint8_t>(), data->GetLength()), data->GetLength());
+	ASSERT_TRUE(section.IsCompleted());
+
+	const auto event = Scte35Event::Create(section.GetSpliceInfo());
+	ASSERT_NE(event, nullptr);
+	EXPECT_EQ(event->GetID(), SPLICE_EVENT_ID);
+	EXPECT_TRUE(event->IsOutOfNetwork());
+	EXPECT_EQ(event->GetTimestampMsec(), 12345);
+	EXPECT_EQ(event->GetDurationMsec(), 30000);
+	EXPECT_TRUE(event->IsAutoReturn());
 }

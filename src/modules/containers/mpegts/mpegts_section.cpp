@@ -448,6 +448,7 @@ namespace mpegts
 		if ((parser->BytesRemained() - 4) % 4 != 0)
 		{
 			logtw("Could not parse PAT because the program loop is not a multiple of 4 bytes (%zu)", parser->BytesRemained() - 4);
+			_pat.reset();
 			return false;
 		}
 
@@ -478,6 +479,7 @@ namespace mpegts
 		if (program_count == 0)
 		{
 			logtw("Could not find a program in PAT");
+			_pat.reset();
 			return false;
 		}
 

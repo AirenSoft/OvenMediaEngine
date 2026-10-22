@@ -290,6 +290,20 @@ TEST(MpegTsSectionTest, RejectsPatWithTruncatedEntry)
 	EXPECT_EQ(ParsePat(MakePatSectionBytes({{1, 0x1000}}, 2)), nullptr);
 }
 
+// A rejected PAT leaves no half-filled table behind.
+TEST(MpegTsSectionTest, RejectedPatHasNoTable)
+{
+	for (const auto &bytes : {MakePatSectionBytes({{0, 0x0010}}), MakePatSectionBytes({{1, 0x1000}}, 2)})
+	{
+		SCOPED_TRACE(bytes.size());
+
+		mpegts::Section section(0x0000);
+		EXPECT_EQ(section.AppendData(bytes.data(), bytes.size()), bytes.size());
+		EXPECT_TRUE(section.IsFailed());
+		EXPECT_EQ(section.GetPAT(), nullptr);
+	}
+}
+
 TEST(MpegTsSectionTest, AcceptsPatWithEncoderCrc)
 {
 	// A PAT written by FFmpeg, whose `CRC_32` is 0x2AB104B2
