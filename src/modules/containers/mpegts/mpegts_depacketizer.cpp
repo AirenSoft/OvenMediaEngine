@@ -260,6 +260,7 @@ namespace mpegts
 			DiscardSectionDraft(pid);
 			_last_continuity_counter_map.erase(pid);
 			_cc_duplicate_seen.erase(pid);
+			_last_payload_map.erase(pid);
 		}
 
 		// The continuity counter only advances on packets that carry a payload (adaptation-field-only
@@ -278,12 +279,10 @@ namespace mpegts
 				{
 					_cc_duplicate_seen.erase(pid);
 				}
-				else if ((counter == prev_counter) && (_cc_duplicate_seen.count(pid) == 0))
+				else if ((counter == prev_counter) && (_cc_duplicate_seen.count(pid) == 0) && IsSamePayload(pid, packet))
 				{
 					// A packet may legally be duplicated once with the same continuity counter and
 					// identical content. Drop the duplicate so its payload is not appended twice.
-					// (With only a 4-bit counter, losing exactly a multiple of 16 payload packets is
-					// indistinguishable from a duplicate; that residual ambiguity is unavoidable.)
 					_cc_duplicate_seen.insert(pid);
 					logad("Dropped duplicate MPEG-TS packet (PID: %d CC: %d)", pid, counter);
 					return true;
@@ -310,6 +309,7 @@ namespace mpegts
 			}
 
 			_last_continuity_counter_map[pid] = counter;
+			_last_payload_map[pid].assign(packet->Payload(), packet->Payload() + packet->PayloadLength());
 		}
 
 		// If PAT and PMT are completed, it doesn't need to parse anymore
@@ -423,6 +423,20 @@ namespace mpegts
 		return section;
 	}
 
+	bool MpegTsDepacketizer::IsSamePayload(uint16_t pid, const std::shared_ptr<Packet> &packet) const
+	{
+		auto it = _last_payload_map.find(pid);
+		if (it == _last_payload_map.end())
+		{
+			return false;
+		}
+
+		const auto &last_payload = it->second;
+
+		return (last_payload.size() == packet->PayloadLength()) &&
+			   std::equal(last_payload.begin(), last_payload.end(), packet->Payload());
+	}
+
 	PacketType MpegTsDepacketizer::GetPacketType(const std::shared_ptr<Packet> &packet)
 	{
 		switch (packet->PacketIdentifier())
@@ -462,6 +476,15 @@ namespace mpegts
 			// read pointer field - 8 bits
 			auto pointer_field = bit_reader.ReadBytes<uint8_t>();
 
+			// A pointer_field past the payload end makes both the previous section tail and the new section unusable
+			if (pointer_field > bit_reader.BytesRemained())
+			{
+				logaw("Invalid pointer_field(PID: %d, pointer_field: %d, payload remaining: %zu)",
+					  packet->PacketIdentifier(), pointer_field, bit_reader.BytesRemained());
+				DiscardSectionDraft(packet->PacketIdentifier());
+				return false;
+			}
+
 			// Check if there was an incomplete section
 			auto prev_section = GetSectionDraft(packet->PacketIdentifier());
 			if (prev_section != nullptr)
@@ -482,8 +505,9 @@ namespace mpegts
 				}
 				else
 				{
-					// Something wrong
-					logae("Could not complete section(PID: %d)", packet->PacketIdentifier());
+					// The previous section did not end in a usable table before the new one starts, so it is dropped
+					logad("Discarded the previous section(PID: %d)", packet->PacketIdentifier());
+					DiscardSectionDraft(packet->PacketIdentifier());
 				}
 			}
 
@@ -513,7 +537,7 @@ namespace mpegts
 						return false;
 					}
 				}
-				else
+				else if (new_section->IsFailed() == false)
 				{
 					// Store incompleted section
 					SaveSectionDraft(new_section);
@@ -526,15 +550,21 @@ namespace mpegts
 			auto section = GetSectionDraft(packet->PacketIdentifier());
 			if (section == nullptr)
 			{
-				// Expected when the section draft for this PID was discarded on a continuity break:
+				// Expected when the section draft for this PID was discarded on a continuity break or as unusable:
 				// the following continuation packets then have no draft to append to. This is normal recovery
-				// (a warning was already logged at the break), so trace it rather than error.
-				logad("No section draft for continuation (PID: %d); likely discarded on a continuity break", packet->PacketIdentifier());
+				// (the discard was already logged), so trace it rather than error.
+				logad("No section draft for continuation (PID: %d); likely discarded", packet->PacketIdentifier());
 				return false;
 			}
 
 			// There is no new section in this packet, so all remained data has to be consumed
 			auto consumed_length = section->AppendData(packet->Payload(), packet->PayloadLength());
+			if (section->IsFailed())
+			{
+				DiscardSectionDraft(packet->PacketIdentifier());
+				return false;
+			}
+
 			if (consumed_length != packet->PayloadLength())
 			{
 				return false;
@@ -628,7 +658,7 @@ namespace mpegts
 	{
 		std::lock_guard<std::shared_mutex> lock(_section_draft_map_lock);
 
-		_section_draft_map.emplace(section->PID(), section);
+		_section_draft_map[section->PID()] = section;
 
 		return true;
 	}
@@ -714,8 +744,7 @@ namespace mpegts
 		else
 		{
 			// Unsupported section
-			logai("Ignored unsupported or unknown section (table id: %d)", section->TableId());
-			return false;
+			logad("Ignored unsupported or unknown section (table id: %d)", section->TableId());
 		}
 
 		return true;

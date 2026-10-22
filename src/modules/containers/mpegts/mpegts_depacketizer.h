@@ -86,6 +86,9 @@ namespace mpegts
 		// Emits a rate-limited, count-aggregated continuity-break warning (see `_cc_break_*`).
 		void LogContinuityBreak();
 
+		// Whether the packet carries the same payload as the last packet with a payload on the PID
+		bool IsSamePayload(uint16_t pid, const std::shared_ptr<Packet> &packet) const;
+
 		PacketType GetPacketType(const std::shared_ptr<Packet> &packet);
 
 		bool ParseSection(const std::shared_ptr<Packet> &packet);
@@ -135,6 +138,8 @@ namespace mpegts
 		// PIDs for which a legal single duplicate has already been consumed (a second
 		// consecutive same-counter packet is then treated as a continuity error).
 		std::set<uint16_t> _cc_duplicate_seen;
+		// PID : Payload of the last packet with a payload, to tell a duplicate from a packet that reuses its counter
+		std::map<uint16_t, std::vector<uint8_t>> _last_payload_map;
 
 		// Owning stream's name path, prefixed on every log line (set via `SetNamePath()`).
 		ov::String _name_path{"?"};

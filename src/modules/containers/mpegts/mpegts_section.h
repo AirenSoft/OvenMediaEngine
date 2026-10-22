@@ -153,6 +153,8 @@ namespace mpegts
 		size_t AppendData(const uint8_t *data, uint32_t length);
 		// return true when section is completed
 		bool IsCompleted();
+		// return true when all bytes of the section arrived but its table was not accepted
+		bool IsFailed();
 
 		// Getter
 		uint16_t PID();
@@ -180,6 +182,7 @@ namespace mpegts
 
 		bool _header_parsed = false;
 		bool _completed = false;
+		bool _failed = false;
 
 		uint16_t _pid; // from MPEGTS Header
 

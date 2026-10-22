@@ -69,6 +69,11 @@ namespace mpegts
 			_pts_adjustment = pts_adjustment & 0x1FFFFFFFF;
 		}
 
+		uint64_t GetPTSAdjustment() const
+		{
+			return _pts_adjustment;
+		}
+
 		void SetCWIndex(uint8_t cw_index)
 		{
 			_cw_index = cw_index;

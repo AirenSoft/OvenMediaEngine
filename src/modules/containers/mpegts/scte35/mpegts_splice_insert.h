@@ -75,6 +75,11 @@ namespace mpegts
 			return _splice_event_id;
 		}
 
+		uint8_t GetSpliceEventCancelIndicator() const
+		{
+			return _splice_event_cancel_indicator;
+		}
+
 		uint8_t GetOutofNetworkIndicator() const
 		{
 			return _out_of_network_indicator;
@@ -98,6 +103,11 @@ namespace mpegts
 		uint8_t GetEventIdComplianceFlag() const
 		{
 			return _event_id_compliance_flag;
+		}
+
+		uint8_t GetTimeSpecifiedFlag() const
+		{
+			return _splice_time._time_specified_flag;
 		}
 
 		int64_t GetPTSTime() const

@@ -58,7 +58,7 @@ namespace mpegts
 			stream.WriteBits(1, _event_id_compliance_flag);
 			stream.WriteBits(3, _reserved2);
 
-			if (_program_splice_flag == 1)
+			if ((_program_splice_flag == 1) && (_splice_immediate_flag == 0))
 			{
 				stream.WriteBits(1, _splice_time._time_specified_flag);
 				if (_splice_time._time_specified_flag == 1)
@@ -91,46 +91,80 @@ namespace mpegts
 	{
 		BitReader parser(data);
 
-		auto splice_event_id = parser.ReadBytes<uint32_t>();
-		auto splice_event_cancel_indicator = parser.ReadBits<uint8_t>(1);
-		parser.ReadBits<uint8_t>(7); // reserved
+		// Any read past the end of the command clears `ok`, so a command shorter than its flags require is rejected
+		bool ok = true;
+		auto read = [&](uint8_t bits) -> uint64_t {
+			uint64_t value = 0;
+			ok = ok && parser.ReadBits<uint64_t>(bits, value);
+			return value;
+		};
+
+		// splice_time(): time_specified_flag, then pts_time or reserved bits
+		auto read_splice_time = [&](SpliceTime *splice_time) {
+			splice_time->_time_specified_flag = read(1);
+			if (splice_time->_time_specified_flag == 1)
+			{
+				read(6); // reserved
+				splice_time->_pts_time = read(33);
+			}
+			else
+			{
+				read(7); // reserved
+			}
+		};
+
+		auto splice_event_id = static_cast<uint32_t>(read(32));
+		auto splice_event_cancel_indicator = static_cast<uint8_t>(read(1));
+		read(7); // reserved
 
 		auto splice_insert = std::make_shared<SpliceInsert>(splice_event_id);
 		splice_insert->_splice_event_cancel_indicator = splice_event_cancel_indicator;
 
 		if (splice_event_cancel_indicator == 0)
 		{
-			splice_insert->_out_of_network_indicator = parser.ReadBits<uint8_t>(1);
-			splice_insert->_program_splice_flag = parser.ReadBits<uint8_t>(1);
-			splice_insert->_duration_flag = parser.ReadBits<uint8_t>(1);
-			splice_insert->_splice_immediate_flag = parser.ReadBits<uint8_t>(1);
-			splice_insert->_event_id_compliance_flag = parser.ReadBits<uint8_t>(1);
-			parser.ReadBits<uint8_t>(3); // reserved
+			splice_insert->_out_of_network_indicator = read(1);
+			splice_insert->_program_splice_flag = read(1);
+			splice_insert->_duration_flag = read(1);
+			splice_insert->_splice_immediate_flag = read(1);
+			splice_insert->_event_id_compliance_flag = read(1);
+			read(3); // reserved
 
-			if (splice_insert->_program_splice_flag == 1)
+			if ((splice_insert->_program_splice_flag == 1) && (splice_insert->_splice_immediate_flag == 0))
 			{
-				splice_insert->_splice_time._time_specified_flag = parser.ReadBits<uint8_t>(1);
-				if (splice_insert->_splice_time._time_specified_flag == 1)
+				read_splice_time(&splice_insert->_splice_time);
+			}
+
+			// Component splice times are not kept: only program splices are carried downstream
+			if (splice_insert->_program_splice_flag == 0)
+			{
+				const auto component_count = read(8);
+				for (uint64_t i = 0; ok && (i < component_count); i++)
 				{
-					parser.ReadBits<uint8_t>(6); // reserved
-					splice_insert->_splice_time._pts_time = parser.ReadBits<uint64_t>(33);
-				}
-				else
-				{
-					parser.ReadBits<uint8_t>(7); // reserved2
+					read(8); // component_tag
+
+					if (splice_insert->_splice_immediate_flag == 0)
+					{
+						SpliceTime component_splice_time;
+						read_splice_time(&component_splice_time);
+					}
 				}
 			}
 
 			if (splice_insert->_duration_flag == 1)
 			{
-				splice_insert->_break_duration._auto_return = parser.ReadBits<uint8_t>(1);
-				parser.ReadBits<uint8_t>(6); // reserved
-				splice_insert->_break_duration._duration = parser.ReadBits<uint64_t>(33);
+				splice_insert->_break_duration._auto_return = read(1);
+				read(6); // reserved
+				splice_insert->_break_duration._duration = read(33);
 			}
 
-			splice_insert->_unique_program_id = parser.ReadBytes<uint16_t>();
-			splice_insert->_avail_num = parser.ReadBytes<uint8_t>();
-			splice_insert->_avails_expected = parser.ReadBytes<uint8_t>();
+			splice_insert->_unique_program_id = read(16);
+			splice_insert->_avail_num = read(8);
+			splice_insert->_avails_expected = read(8);
+		}
+
+		if (ok == false)
+		{
+			return nullptr;
 		}
 
 		return splice_insert;
@@ -150,7 +184,7 @@ namespace mpegts
 			str += ov::String::FormatString("  Splice Immediate Flag: %u\n", _splice_immediate_flag);
 			str += ov::String::FormatString("  Event Id Compliance Flag: %u\n", _event_id_compliance_flag);
 
-			if (_program_splice_flag == 1)
+			if ((_program_splice_flag == 1) && (_splice_immediate_flag == 0))
 			{
 				str += ov::String::FormatString("  Splice Time:\n");
 				str += ov::String::FormatString("    Time Specified Flag: %u\n", _splice_time._time_specified_flag);

@@ -220,6 +220,25 @@ TEST(MpegTsDepacketizerCc, DuplicatePacketNotAppendedTwice)
 	EXPECT_EQ(emitted_payload_length(true), without_duplicate);
 }
 
+TEST(MpegTsDepacketizerCc, SameCounterWithDifferentPayloadIsNotADuplicate)
+{
+	// A packet that repeats the previous continuity counter but carries other bytes starts new data,
+	// as when another encoder takes over the PID; it must not be dropped as a duplicate.
+	mpegts::MpegTsDepacketizer depacketizer;
+	depacketizer.AddPacket(MakePatPacket(0));
+	depacketizer.AddPacket(MakePmtPacket(0));
+	depacketizer.AddPacket(MakePesTsPacket(0x0100, 0, true, 0xAA));	  // PES1 start (cc 0)
+	depacketizer.AddPacket(MakePesTsPacket(0x0100, 1, false, 0xBB));  // PES1 continuation (cc 1)
+	depacketizer.AddPacket(MakePesTsPacket(0x0100, 1, true, 0xCC));	  // PES2 start with the same cc 1
+	depacketizer.AddPacket(MakePesTsPacket(0x0100, 2, true, 0xDD));	  // PES3 start completes PES2
+
+	auto pes = depacketizer.PopES();
+	ASSERT_NE(pes, nullptr);
+	ASSERT_GT(pes->PayloadLength(), 0u);
+	// PES1 was discarded on the break; the first emitted PES is PES2 (0xCC).
+	EXPECT_EQ(pes->Payload()[0], 0xCC);
+}
+
 TEST(MpegTsDepacketizerCc, ContinuityBreakDiscardsPesDraft)
 {
 	// A genuine continuity break discards the in-progress PES so a corrupt frame is not forwarded.

@@ -251,7 +251,7 @@ namespace mpegts
 			// completed
 			BitReader parser(_data.GetWritableDataAs<uint8_t>(), _data.GetLength());
 			parser.SkipBytes(MPEGTS_TABLE_HEADER_SIZE);
-			ParseTableData(&parser);
+			_failed = (ParseTableData(&parser) == false);
 
 			if (consumed_length < length)
 			{
@@ -335,6 +335,28 @@ namespace mpegts
 			return false;
 		}
 
+		if (_section_length < 4)
+		{
+			logtw("Could not parse CRC because of not enough data size (section_length: %d, required: 4)", _section_length);
+			return false;
+		}
+
+		// CRC_32 is the last 4 bytes of a long-form section, and of splice_info_section although it is short-form
+		if (_section_syntax_indicator || (_table_id == static_cast<uint8_t>(WellKnownTableId::SPLICE_INFO_SECTION)))
+		{
+			const auto section_data = _data.GetDataAs<uint8_t>();
+			const auto crc_offset = _data.GetLength() - 4;
+			_crc = (static_cast<uint32_t>(section_data[crc_offset]) << 24) | (static_cast<uint32_t>(section_data[crc_offset + 1]) << 16) |
+				   (static_cast<uint32_t>(section_data[crc_offset + 2]) << 8) | static_cast<uint32_t>(section_data[crc_offset + 3]);
+
+			const auto expected_crc = ov::CRC::Crc32Mpeg2(section_data, crc_offset);
+			if (_crc != expected_crc)
+			{
+				logtw("Could not parse section because of CRC mismatch (table id: %d, CRC: 0x%08X, expected: 0x%08X)", _table_id, _crc, expected_crc);
+				return false;
+			}
+		}
+
 		switch (_table_id)
 		{
 			case static_cast<uint8_t>(WellKnownTableId::PROGRAM_ASSOCIATION_SECTION):
@@ -367,16 +389,6 @@ namespace mpegts
 			logtw("Could not parse CRC because of not enough data size (current: %zu, required: 4)", parser->BytesRemained());
 			return false;
 		}
-		_crc = parser->ReadBytes<uint32_t>();
-
-		/*TODO(Getroot): It seems having a problem, check later
-		auto _check_crc = ov::CRC::Crc32(0, _data.GetWritableDataAs<uint8_t>(), MPEGTS_TABLE_HEADER_SIZE + _section_length - 4); // excluding last 4 bytes for crc
-		if(_crc != _check_crc)
-		{
-			// error
-			return false;
-		}
-		*/
 
 		_completed = true;
 
@@ -412,9 +424,47 @@ namespace mpegts
 			logtw("Now it only supports one section for PAT and PMT");
 		}
 
-		_pat->_program_num = parser->ReadBytes<uint16_t>();
-		_pat->_reserved_bits2 = parser->ReadBits<uint8_t>(3);
-		_pat->_program_map_pid = parser->ReadBits<uint16_t>(13);
+		// Program entries are 4 bytes each and fill the section up to the CRC.
+		if ((parser->BytesRemained() - 4) % 4 != 0)
+		{
+			logtw("Could not parse PAT because the program loop is not a multiple of 4 bytes (%zu)", parser->BytesRemained() - 4);
+			return false;
+		}
+
+		size_t program_count = 0;
+
+		while (parser->BytesRemained() > 4)
+		{
+			const auto program_num = parser->ReadBytes<uint16_t>();
+			const auto reserved_bits2 = parser->ReadBits<uint8_t>(3);
+			const auto pid = parser->ReadBits<uint16_t>(13);
+
+			// program_number 0 points to the network PID, not to a PMT
+			if (program_num == 0)
+			{
+				continue;
+			}
+
+			if (program_count == 0)
+			{
+				_pat->_program_num = program_num;
+				_pat->_reserved_bits2 = reserved_bits2;
+				_pat->_program_map_pid = pid;
+			}
+
+			program_count++;
+		}
+
+		if (program_count == 0)
+		{
+			logtw("Could not find a program in PAT");
+			return false;
+		}
+
+		if (program_count > 1)
+		{
+			logtw("PAT has %zu programs, but only the first one (program_number: %d) is used", program_count, _pat->_program_num);
+		}
 
 		return true;
 	}
@@ -563,46 +613,49 @@ namespace mpegts
 		// Splice Command Type : 8 bits
 		uint8_t splice_command_type = parser->ReadBytes<uint8_t>();
 
-		// Splice Command : variable length
-		std::shared_ptr<ov::Data> splice_command;
-		if (splice_command_length > 0)
-		for(int i = 0; i < splice_command_length; i++)
+		// Only splice_insert is handled; splice_null heartbeats and other commands are skipped quietly
+		if (splice_command_type != static_cast<uint8_t>(SpliceCommandType::SPLICE_INSERT))
 		{
-			uint8_t byte = parser->ReadBytes<uint8_t>();
-			if (splice_command == nullptr)
-			{
-				splice_command = std::make_shared<ov::Data>();
-			}
-			splice_command->Append(&byte, 1);
+			logtd("Unsupported Splice Command Type: %d", splice_command_type);
+			return false;
 		}
+
+		// The command is followed by descriptor_loop_length (2 bytes) and CRC_32 (4 bytes)
+		if (static_cast<size_t>(splice_command_length) + 2 + 4 > parser->BytesRemained())
+		{
+			logtw("Could not parse Splice Command because it runs past the section (splice_command_length: %d, remaining: %zu)", splice_command_length, parser->BytesRemained());
+			return false;
+		}
+
+		// Splice Command : variable length
+		auto splice_command = std::make_shared<ov::Data>(parser->CurrentPosition(), splice_command_length);
+		parser->SkipBytes(splice_command_length);
 
 		// Descriptor Loop Length : 16 bits
 		uint16_t descriptor_loop_length = parser->ReadBytes<uint16_t>();
+		if (static_cast<size_t>(descriptor_loop_length) + 4 > parser->BytesRemained())
+		{
+			logtw("Could not parse Splice Descriptors because they run past the section (descriptor_loop_length: %d, remaining: %zu)", descriptor_loop_length, parser->BytesRemained());
+			return false;
+		}
+		parser->SkipBytes(descriptor_loop_length);
 
 		logtt("Splice Info: Protocol Version: %d, Encrypted Packet: %d, Encryption Algorithm: %d, PTS Adjustment: %" PRIu64 ", CW Index: %d, Tier: %d, Splice Command Length: %d, Splice Command Type: %d, Descriptor Loop Length: %d",
 			  protocol_version, encrypted_packet, encryption_algorithm, pts_adjustment, cw_index, tier, splice_command_length, splice_command_type, descriptor_loop_length);
 
-		if (!splice_command || splice_command->GetLength() == 0)
+		if (splice_command->GetLength() == 0)
 		{
-			logte("Splice Command Data is empty");
+			logtw("Splice Command Data is empty");
 			return false;
 		}
-		
-		if (splice_command_type == static_cast<uint8_t>(SpliceCommandType::SPLICE_INSERT))
+
+		auto splice_insert = SpliceInsert::ParseSpliceCommand(splice_command);
+		if (splice_insert == nullptr)
 		{
-			auto splice_insert = SpliceInsert::ParseSpliceCommand(splice_command);
-			if (splice_insert == nullptr)
-			{
-				logte("Could not parse Splice Insert Command");
-				return false;
-			}
-			_splice_info = splice_insert;
-		}
-		else
-		{
-			logtw("Unsupported Splice Command Type: %d", splice_command_type);
+			logtw("Could not parse Splice Insert Command");
 			return false;
 		}
+		_splice_info = splice_insert;
 
 		_splice_info->SetProtocolVersion(protocol_version);
 		_splice_info->SetEncryptedPacket(encrypted_packet);
@@ -620,6 +673,11 @@ namespace mpegts
 	bool Section::IsCompleted()
 	{
 		return _completed;
+	}
+
+	bool Section::IsFailed()
+	{
+		return _failed;
 	}
 
 	// Getter
