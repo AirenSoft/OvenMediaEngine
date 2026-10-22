@@ -560,12 +560,14 @@ namespace mpegts
 		if (_pmt->_program_info_length + 4 > parser->BytesRemained())
 		{
 			logtw("Could not parse program descriptors because of not enough data size (current: %zu, required: %d)", parser->BytesRemained(), _pmt->_program_info_length + 4);
+			_pmt.reset();
 			return false;
 		}
 
 		// Descriptors
 		if (ParseDescriptors(parser, _pmt->_program_info_length, &_pmt->_program_descriptors) == false)
 		{
+			_pmt.reset();
 			return false;
 		}
 
@@ -575,6 +577,7 @@ namespace mpegts
 			if (parser->BytesRemained() - 4 < 5)
 			{
 				logtw("Could not parse ES info because of not enough data size (current: %zu, required: 5)", parser->BytesRemained() - 4);
+				_pmt.reset();
 				return false;
 			}
 
@@ -590,12 +593,14 @@ namespace mpegts
 			if (es_info->_es_info_length > parser->BytesRemained() - 4)
 			{
 				logtw("Could not parse ES descriptors because of not enough data size (current: %zu, required: %d)", parser->BytesRemained() - 4, es_info->_es_info_length);
+				_pmt.reset();
 				return false;
 			}
 
 			// Descriptors
 			if (ParseDescriptors(parser, es_info->_es_info_length, &es_info->_es_descriptors) == false)
 			{
+				_pmt.reset();
 				return false;
 			}
 

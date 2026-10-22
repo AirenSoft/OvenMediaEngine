@@ -304,6 +304,34 @@ TEST(MpegTsSectionTest, RejectedPatHasNoTable)
 	}
 }
 
+// A rejected PMT leaves no half-filled table behind, on every failure path after the table is created.
+TEST(MpegTsSectionTest, RejectedPmtHasNoTable)
+{
+	const std::vector<std::vector<uint8_t>> rejected = {
+		// `program_info_length` past the section
+		MakePmtSectionBytesWithDescriptors(0x008, {}, 0, {}),
+		// A program descriptor past its loop
+		MakePmtSectionBytesWithDescriptors(4, REGISTRATION_DESCRIPTOR, 0, {}),
+		// An ES entry shorter than 5 bytes
+		MakePmtSectionBytes(2),
+		// `ES_info_length` past the section
+		MakePmtSectionBytes(0, 0x008),
+		// An ES descriptor past its loop
+		MakePmtSectionBytesWithDescriptors(0, {}, 4, LANGUAGE_DESCRIPTOR)};
+
+	for (size_t i = 0; i < rejected.size(); i++)
+	{
+		SCOPED_TRACE(i);
+
+		const auto &bytes = rejected[i];
+
+		mpegts::Section section(PMT_PID);
+		EXPECT_EQ(section.AppendData(bytes.data(), bytes.size()), bytes.size());
+		EXPECT_TRUE(section.IsFailed());
+		EXPECT_EQ(section.GetPMT(), nullptr);
+	}
+}
+
 TEST(MpegTsSectionTest, AcceptsPatWithEncoderCrc)
 {
 	// A PAT written by FFmpeg, whose `CRC_32` is 0x2AB104B2
