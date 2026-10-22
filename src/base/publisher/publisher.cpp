@@ -261,10 +261,10 @@ namespace pub
 			return false;
 		}
 
-		auto item = ocst::Orchestrator::GetInstance()->GetHostInfo(vhost_name);
-		if (item.has_value())
+		auto host_info = orchestrator->GetHostInfoPtr(vhost_name);
+		if (host_info != nullptr)
 		{
-			auto vhost_item = item.value();
+			const auto &vhost_item = *host_info;
 
 			auto &webhooks_config = vhost_item.GetAdmissionWebhooks();
 			auto &signed_policy_config = vhost_item.GetSignedPolicy();

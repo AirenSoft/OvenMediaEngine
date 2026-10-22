@@ -234,6 +234,17 @@ namespace ocst
 		return std::nullopt;
 	}
 
+	std::shared_ptr<const info::Host> Orchestrator::GetHostInfoPtr(const ov::String &vhost_name)
+	{
+		auto vhost = GetVirtualHost(vhost_name);
+		if (vhost == nullptr)
+		{
+			return nullptr;
+		}
+
+		return std::shared_ptr<const info::Host>(vhost, &vhost->GetHostInfo());
+	}
+
 	ocst::Result Orchestrator::CreateApplication(const info::Host &host_info, const cfg::vhost::app::Application &app_config, bool is_dynamic)
 	{
 		auto vhost_name = host_info.GetName();
