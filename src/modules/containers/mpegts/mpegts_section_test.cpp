@@ -56,7 +56,7 @@ namespace
 	std::vector<uint8_t> MakePmtSectionBytesWithDescriptors(uint16_t program_info_length, const std::vector<uint8_t> &program_info,
 															uint16_t es_info_length, const std::vector<uint8_t> &es_info)
 	{
-		const auto section_length = 9 + program_info.size() + 5 + es_info.size() + 4;
+		const auto section_length  = 9 + program_info.size() + 5 + es_info.size() + 4;
 
 		std::vector<uint8_t> bytes = {
 			// table_id, section_syntax_indicator=1, private=0, reserved=11, section_length
@@ -227,7 +227,7 @@ namespace
 	// A PAT section with the given (`program_number`, PID) entries and `extra_bytes` zero bytes, then the CRC field.
 	std::vector<uint8_t> MakePatSectionBytes(const std::vector<std::pair<uint16_t, uint16_t>> &programs, size_t extra_bytes = 0)
 	{
-		const auto section_length = 5 + (programs.size() * 4) + extra_bytes + 4;
+		const auto section_length  = 5 + (programs.size() * 4) + extra_bytes + 4;
 
 		std::vector<uint8_t> bytes = {
 			// `table_id`=0, `section_syntax_indicator`=1, private=0, reserved=11, `section_length`
@@ -295,7 +295,7 @@ TEST(MpegTsSectionTest, AcceptsPatWithEncoderCrc)
 	// A PAT written by FFmpeg, whose `CRC_32` is 0x2AB104B2
 	const std::vector<uint8_t> bytes = {0x00, 0xB0, 0x0D, 0x00, 0x01, 0xC1, 0x00, 0x00, 0x00, 0x01, 0xF0, 0x00, 0x2A, 0xB1, 0x04, 0xB2};
 
-	const auto pat = ParsePat(bytes);
+	const auto pat					 = ParsePat(bytes);
 	ASSERT_NE(pat, nullptr);
 	EXPECT_EQ(pat->_program_map_pid, 0x1000);
 }
@@ -312,5 +312,23 @@ TEST(MpegTsSectionTest, RejectsSectionWithWrongCrc)
 		EXPECT_EQ(section.AppendData(bytes.data(), bytes.size()), bytes.size());
 		EXPECT_FALSE(section.IsCompleted());
 		EXPECT_TRUE(section.IsFailed());
+	}
+}
+
+// PAT and PMT carry a `CRC_32` whatever their `section_syntax_indicator` says, so clearing the bit does not skip the check.
+TEST(MpegTsSectionTest, RejectsPsiWithWrongCrcAndClearedSyntaxIndicator)
+{
+	for (auto bytes : {MakePatSectionBytes({{1, 0x1000}}), MakePmtSectionBytes(0)})
+	{
+		SCOPED_TRACE(static_cast<int>(bytes[0]));
+
+		// `section_syntax_indicator` is the top bit of the second byte; the `CRC_32` is left as it was
+		bytes[1] &= 0x7F;
+
+		mpegts::Section section(0x0000);
+		EXPECT_EQ(section.AppendData(bytes.data(), bytes.size()), bytes.size());
+		EXPECT_FALSE(section.IsCompleted());
+		EXPECT_TRUE(section.IsFailed());
+		EXPECT_TRUE(section.HasCrcMismatch());
 	}
 }

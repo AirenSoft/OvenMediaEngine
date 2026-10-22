@@ -355,8 +355,13 @@ namespace mpegts
 			return false;
 		}
 
-		// `CRC_32` is the last 4 bytes of a long-form section, and of `splice_info_section` although it is short-form
-		if (_section_syntax_indicator || (_table_id == static_cast<uint8_t>(WellKnownTableId::SPLICE_INFO_SECTION)))
+		// `CRC_32` is the last 4 bytes of a long-form section and of every table parsed here,
+		// so PAT and PMT are checked even when their `section_syntax_indicator` is cleared
+		const bool has_crc = _section_syntax_indicator ||
+							 (_table_id == static_cast<uint8_t>(WellKnownTableId::PROGRAM_ASSOCIATION_SECTION)) ||
+							 (_table_id == static_cast<uint8_t>(WellKnownTableId::PROGRAM_MAP_SECTION)) ||
+							 (_table_id == static_cast<uint8_t>(WellKnownTableId::SPLICE_INFO_SECTION));
+		if (has_crc)
 		{
 			const auto section_data = _data.GetDataAs<uint8_t>();
 			const auto crc_offset = _data.GetLength() - 4;
