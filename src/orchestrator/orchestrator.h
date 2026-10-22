@@ -92,6 +92,8 @@ namespace ocst
 		CommonErrorCode ReloadAllCertificates();
 
 		std::optional<info::Host> GetHostInfo(ov::String vhost_name);
+		// Shares the host info of the virtual host instead of copying it
+		std::shared_ptr<const info::Host> GetHostInfoPtr(const ov::String &vhost_name);
 
 		bool CreateVirtualHosts(const std::vector<cfg::vhost::VirtualHost> &vhost_conf_list);
 

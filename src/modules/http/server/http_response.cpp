@@ -28,8 +28,7 @@ namespace http
 
 			_created_time = std::chrono::system_clock::now();
 
-			auto module_config = cfg::ConfigManager::GetInstance()->GetServer()->GetModules();
-			_etag_enabled_by_config = module_config.GetETag().IsEnabled();
+			_etag_enabled_by_config = cfg::ConfigManager::GetInstance()->GetServer()->GetModules().GetETag().IsEnabled();
 		}
 
 		HttpResponse::HttpResponse(const std::shared_ptr<HttpResponse> &http_response)

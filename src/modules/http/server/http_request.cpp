@@ -46,7 +46,13 @@ namespace http
 		void HttpRequest::SetConnectionType(ConnectionType type)
 		{
 			_connection_type = type;
-			UpdateUri();
+
+			// Before the headers are parsed there is no request target to build the URI from;
+			// PostHeaderParsedProcess() builds it then
+			if (_request_uri.IsEmpty() == false)
+			{
+				UpdateUri();
+			}
 		}
 
 		ConnectionType HttpRequest::GetConnectionType() const
